@@ -1,0 +1,70 @@
+:root {
+  /* Cream / paper surface */
+  --color-background-400: #f5efe6;
+  --color-beige-700: rgb(223, 209, 188);
+  --color-beige-600: rgb(233, 222, 208);
+  --color-beige-500: rgb(241, 229, 213);
+  --color-beige-400: #f5efe6;
+
+  /* Text */
+  --color-text-400: #21252b;
+  --color-text-300: #4d5560;
+  --color-text-200: #7a828c;
+
+  /* Navy — command / control surfaces */
+  --color-navy-700: #071431;
+  --color-navy-600: #0b1c42;
+  --color-navy-500: #122a5c;
+  --color-navy-400: #1c3d7a;
+
+  /* Cyan — data accent */
+  --color-cyan-500: #0086bb;
+  --color-cyan-400: #34bfff;
+  --color-text-cyan-400: #e1f5ff;
+  --color-text-cyan-300: #81bdd8;
+
+  /* Orange — CTA / active state */
+  --color-orange-400: #ff8400;
+  --color-orange-muted: rgba(255, 132, 0, 0.12);
+
+  --color-white-400: #ffffff;
+  --color-black-400: #14181d;
+
+  /* Category accents */
+  --accent-cyan: #0086bb;
+  --accent-navy: #234ba2;
+  --accent-orange: #ff8400;
+  --accent-teal: #0a9b8a;
+  --accent-purple: #6d4fd6;
+  --accent-amber: #c98a12;
+  --accent-slate: #56626f;
+  --accent-magenta: #c23b83;
+  --accent-indigo: #4a3f9e;
+  --accent-gray: #6b7280;
+
+  /* Status */
+  --status-active: #0a9b5c;
+  --status-review: #c98a12;
+  --status-blocked: #d1453b;
+  --status-archived: #8a8f98;
+
+  /* Criticality */
+  --criticality-high: #d1453b;
+  --criticality-medium: #c98a12;
+  --criticality-low: #56626f;
+
+  /* Premium card surfaces */
+  --color-card-bg: rgba(255, 255, 255, 0.66);
+  --color-card-bg-hover: rgba(255, 255, 255, 0.9);
+  --color-card-border: rgba(7, 20, 49, 0.08);
+  --color-card-border-hover: rgba(7, 20, 49, 0.16);
+  --shadow-card: 0 1px 3px rgba(7, 20, 49, 0.06), 0 4px 16px rgba(7, 20, 49, 0.05);
+  --shadow-card-hover: 0 2px 10px rgba(7, 20, 49, 0.09), 0 12px 36px rgba(7, 20, 49, 0.08);
+
+  /* Dark command sections (hero, operations map) */
+  --color-command-bg: #071431;
+  --color-command-bg-soft: #0b1c42;
+  --color-command-border: rgba(255, 255, 255, 0.1);
+  --color-command-text: rgba(255, 255, 255, 0.92);
+  --color-command-text-muted: rgba(225, 234, 255, 0.6);
+}

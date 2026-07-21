@@ -1,0 +1,93 @@
+:root {
+  /* Heights */
+  --height-header: 72px;
+
+  /* Layout */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 840px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-xxl: 1600px;
+  --breakpoint-xxxl: 1920px;
+
+  /* Icons */
+  --icon-size-xxs: 12px;
+  --icon-size-xs: 16px;
+  --icon-size-sm: 20px;
+  --icon-size-md: 28px;
+  --icon-size-lg: 36px;
+
+  /* Eases */
+  --ease-smooth: cubic-bezier(0.6, 0, 0.25, 1);
+  --ease-power2-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-power2-in: cubic-bezier(0.165, 0.84, 0.44, 1);
+
+  --transition-route-duration: 0.5s;
+  --transition-route-ease: cubic-bezier(0.6, 0, 0.25, 1);
+
+  /* Z-index */
+  --z-index-background: 0;
+  --z-index-layout: 10;
+  --z-index-cards: 20;
+  --z-index-header: 90;
+
+  /* Line Heights */
+  --line-height-copy: 1.4;
+  --line-height-title: 1.1;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-card: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-xxl: 24px;
+  --radius-pill: 999px;
+
+  /* Font Sizes */
+  --font-size-xxs: 12px;
+  --font-size-xs: 13px;
+  --font-size-sm: 15px;
+  --font-size-md: 17px;
+  --font-size-lg: 19px;
+  --font-size-xl: 21px;
+  --font-size-xxl: 27px;
+
+  --font-size-title-xxs: 19px;
+  --font-size-title-xs: 23px;
+  --font-size-title-sm: 30px;
+  --font-size-title-md: 40px;
+  --font-size-title-lg: 52px;
+  --font-size-title-xl: 68px;
+  --font-size-title-xxl: 84px;
+
+  /* Space */
+  --space-outer: 16px;
+
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 18px;
+  --space-lg: 28px;
+  --space-xl: 36px;
+  --space-xxl: 48px;
+  --space-xxxl: 64px;
+
+  /* Stroke */
+  --stroke-sm: 1px;
+  --stroke-md: 2px;
+  --stroke-lg: 4px;
+
+  @media (min-width: 840px) {
+    --radius-xxl: 40px;
+    --height-header: 88px;
+  }
+
+  @media (min-width: 1280px) {
+    --space-outer: 20px;
+  }
+
+  @media (min-width: 1600px) {
+    --space-outer: 32px;
+  }
+}
