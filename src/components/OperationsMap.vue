@@ -62,6 +62,7 @@ const expanded = ref(false);
   background: var(--color-command-bg);
   color: var(--color-command-text);
   overflow: hidden;
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .ops__bar {

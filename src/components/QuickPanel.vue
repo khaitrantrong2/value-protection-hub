@@ -54,12 +54,24 @@ const lastUpdated = computed(() => {
     </section>
 
     <section class="quick-panel__card quick-panel__card--muted">
-      <p class="quick-panel__label mono">Maintained by</p>
-      <p class="quick-panel__maintainer">{{ config?.maintainer || "Value Protection / Claimback Team" }}</p>
-      <p class="quick-panel__note">
-        Last updated {{ lastUpdated }} ·
-        <span class="quick-panel__source">{{ source === "live" ? "Live data" : "Mock data" }}</span>
-      </p>
+      <p class="quick-panel__label mono">Workspace status</p>
+      <dl class="quick-panel__status">
+        <div>
+          <dt>Data source</dt>
+          <dd>
+            <span class="quick-panel__source-dot" :class="source === 'live' ? 'is-live' : 'is-mock'"></span>
+            {{ source === "live" ? "Live sheet" : "Mock data" }}
+          </dd>
+        </div>
+        <div>
+          <dt>Last updated</dt>
+          <dd class="mono">{{ lastUpdated }}</dd>
+        </div>
+        <div>
+          <dt>Maintained by</dt>
+          <dd>{{ config?.maintainer || "Value Protection / Claimback Team" }}</dd>
+        </div>
+      </dl>
       <div class="quick-panel__actions">
         <a
           v-if="config?.requestLinkUrl"
@@ -96,12 +108,13 @@ const lastUpdated = computed(() => {
   border: 1px solid var(--color-card-border);
   background: var(--color-card-bg);
   padding: var(--space-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 
   &--muted {
     background: var(--color-command-bg);
     color: var(--color-command-text);
     border-color: transparent;
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -184,20 +197,46 @@ const lastUpdated = computed(() => {
   color: var(--color-command-text-muted);
 }
 
-.quick-panel__maintainer {
-  font-size: var(--font-size-md);
-  font-weight: 700;
-  margin-top: 2px;
+.quick-panel__status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+
+  div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  dt {
+    font-size: 11px;
+    color: var(--color-command-text-muted);
+  }
+
+  dd {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: #fff;
+    text-align: right;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
 }
 
-.quick-panel__note {
-  font-size: 11px;
-  color: var(--color-command-text-muted);
-  margin-top: var(--space-xxs);
-}
+.quick-panel__source-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
 
-.quick-panel__source {
-  color: var(--color-cyan-400);
+  &.is-live {
+    background: var(--status-active);
+  }
+  &.is-mock {
+    background: var(--color-cyan-400);
+  }
 }
 
 .quick-panel__actions {

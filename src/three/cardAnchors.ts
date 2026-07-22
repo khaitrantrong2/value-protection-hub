@@ -5,13 +5,31 @@ export interface CardAnchor {
   height: number;
 }
 
-/** Floating data cards arranged in a ring around the 3D command core. */
-export const CARD_LABELS: CardAnchor[] = [
-  { label: "Claimback", angle: 0, radius: 3.4, height: 0.6 },
-  { label: "AR Monitoring", angle: (2 * Math.PI) / 7, radius: 3.4, height: -0.4 },
-  { label: "GL Review", angle: (4 * Math.PI) / 7, radius: 3.6, height: 0.9 },
-  { label: "Templates", angle: (6 * Math.PI) / 7, radius: 3.3, height: -0.2 },
-  { label: "SOPs", angle: (8 * Math.PI) / 7, radius: 3.5, height: 0.5 },
-  { label: "NetSuite", angle: (10 * Math.PI) / 7, radius: 3.4, height: -0.6 },
-  { label: "Projects", angle: (12 * Math.PI) / 7, radius: 3.3, height: 0.2 },
+const RADIUS = 3.3;
+const TWO_PI = Math.PI * 2;
+
+/**
+ * Finance-control network nodes around the central hub. The first five follow the
+ * claimback-to-cash workflow (Claimback → Review → Booking → Invoice → AR) laid out
+ * sequentially around the ring; the last three are the supporting systems/assets.
+ */
+const ORDER = [
+  "Claimback",
+  "Review Cockpit",
+  "Booking",
+  "Invoice / VRA",
+  "AR Monitoring",
+  "NetSuite",
+  "Templates",
+  "SOPs",
 ];
+
+const HEIGHTS = [0.25, -0.15, 0.3, -0.2, 0.2, -0.28, 0.22, -0.12];
+
+export const CARD_LABELS: CardAnchor[] = ORDER.map((label, index) => ({
+  label,
+  // Start near the front-left and sweep so the workflow reads around the ring.
+  angle: Math.PI * 0.85 - (index / ORDER.length) * TWO_PI,
+  radius: RADIUS,
+  height: HEIGHTS[index] ?? 0,
+}));

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import gsap from "gsap";
+import { gsap, VPH_EASE } from "../motion";
 import CommandScene from "./CommandScene.vue";
 import StatTile from "./StatTile.vue";
 import Icon from "./Icon.vue";
@@ -32,10 +32,10 @@ onMounted(() => {
   const targets = heroRef.value.querySelectorAll("[data-reveal]");
   gsap.from(targets, {
     opacity: 0,
-    y: 24,
-    duration: 0.65,
-    ease: "power2.out",
-    stagger: 0.08,
+    y: 20,
+    duration: 0.7,
+    ease: VPH_EASE,
+    stagger: 0.07,
   });
 });
 </script>
@@ -100,18 +100,18 @@ onMounted(() => {
 <style lang="scss" scoped>
 .command-hero {
   position: relative;
-  min-height: 88svh;
+  min-height: 78svh;
   display: flex;
   align-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 72% 38%, #0e2352, transparent 55%),
+    radial-gradient(circle at 72% 40%, #0e2352, transparent 52%),
     linear-gradient(160deg, #071431 0%, #0b1c42 100%);
   color: var(--color-command-text);
-  padding: calc(var(--height-header) + var(--space-lg)) var(--space-outer) var(--space-xl);
+  padding: calc(var(--height-header) + var(--space-md)) var(--space-outer) var(--space-lg);
 
   @include mq(md) {
-    min-height: 76vh;
+    min-height: 62vh;
   }
 }
 

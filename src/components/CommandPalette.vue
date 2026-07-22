@@ -273,8 +273,27 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 .palette-leave-active {
   transition: opacity 0.18s var(--ease-power2-out);
 }
+.palette-enter-active .palette__panel,
+.palette-leave-active .palette__panel {
+  transition: transform 0.22s var(--ease-power2-out);
+}
 .palette-enter-from,
 .palette-leave-to {
   opacity: 0;
+}
+.palette-enter-from .palette__panel,
+.palette-leave-to .palette__panel {
+  transform: translateY(-10px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-enter-active .palette__panel,
+  .palette-leave-active .palette__panel {
+    transition: none;
+  }
+  .palette-enter-from .palette__panel,
+  .palette-leave-to .palette__panel {
+    transform: none;
+  }
 }
 </style>

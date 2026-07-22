@@ -147,7 +147,7 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
   });
 
   // --- Sparse particle dust ---
-  const particleCount = 110;
+  const particleCount = 64;
   const particlePositions = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount; i++) {
     const radius = 3 + Math.random() * 4;
@@ -160,10 +160,10 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
   particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
   const particleTexture = makeSpriteTexture();
   const particleMaterial = new THREE.PointsMaterial({
-    size: 0.04,
+    size: 0.035,
     map: particleTexture,
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.32,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });

@@ -1,10 +1,23 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useLinks } from "../composables/useLinks";
-import type { Scope } from "../types/links";
+import type { CategoryDef, Scope } from "../types/links";
 import Icon from "./Icon.vue";
 
 const { categories, scope, selectScope, baseLinks, criticalLinks, recentCount, categoryCounts } = useLinks();
+
+/** Shorter labels for the narrow nav column; full names stay in the title attribute + workspace heading. */
+const SHORT_LABELS: Partial<Record<string, string>> = {
+  "netsuite-saved-searches": "NetSuite",
+  "templates-upload-files": "Templates",
+  "sop-policy-training": "SOP & Training",
+  "country-working-files": "Country Files",
+  "admin-access": "Admin",
+};
+
+function navLabel(category: CategoryDef): string {
+  return SHORT_LABELS[category.id] ?? category.name;
+}
 
 const specials = computed(() => [
   { id: "all" as Scope, name: "All links", icon: "list", count: baseLinks.value.length },
@@ -37,10 +50,11 @@ function pick(id: Scope) {
           class="cat-nav__item"
           :class="{ 'is-active': scope === category.id }"
           :style="{ '--nav-accent': category.color }"
+          :title="category.name"
           @click="pick(category.id)"
         >
           <span class="cat-nav__swatch" aria-hidden="true"></span>
-          <span class="cat-nav__label">{{ category.name }}</span>
+          <span class="cat-nav__label">{{ navLabel(category) }}</span>
           <span class="cat-nav__count">{{ categoryCounts.get(category.id) ?? 0 }}</span>
         </button>
       </li>
