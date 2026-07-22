@@ -40,9 +40,10 @@ const lastUpdated = computed(() => {
 
 <style lang="scss" scoped>
 .maintenance {
-  padding: var(--space-xxl) var(--space-outer);
+  padding: var(--space-lg) var(--space-outer);
   background: var(--color-command-bg);
   color: var(--color-command-text);
+  border-top: 1px solid var(--color-command-border);
 }
 
 .maintenance__inner {
@@ -63,7 +64,7 @@ const lastUpdated = computed(() => {
 }
 
 .maintenance__maintainer {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 

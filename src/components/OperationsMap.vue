@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import gsap from "gsap";
-import ScrollTrigger from "gsap/ScrollTrigger";
-import { useReducedMotion } from "../composables/useReducedMotion";
-
-gsap.registerPlugin(ScrollTrigger);
+import { ref } from "vue";
+import Icon from "./Icon.vue";
 
 const steps = [
   { label: "Source Data", detail: "POS, contracts & claim submissions" },
@@ -15,159 +11,190 @@ const steps = [
   { label: "Collection / AR Monitoring", detail: "Cash applied & aging cleared" },
 ];
 
-const sectionRef = ref<HTMLElement | null>(null);
-const { prefersReducedMotion } = useReducedMotion();
-
-onMounted(() => {
-  if (!sectionRef.value || prefersReducedMotion.value) return;
-
-  const stepEls = sectionRef.value.querySelectorAll(".operations-map__step");
-  gsap.from(stepEls, {
-    opacity: 0,
-    y: 24,
-    duration: 0.6,
-    ease: "power2.out",
-    stagger: 0.12,
-    scrollTrigger: {
-      trigger: sectionRef.value,
-      start: "top 75%",
-    },
-  });
-});
+const expanded = ref(false);
 </script>
 
 <template>
-  <section ref="sectionRef" class="operations-map" aria-label="Operations map">
-    <div class="operations-map__intro">
-      <h2 class="operations-map__title">Operations Map</h2>
-      <p class="operations-map__subtitle">How the links in this hub connect across the claimback-to-cash process.</p>
-    </div>
+  <section id="operations" class="ops" aria-label="Operations map">
+    <button
+      type="button"
+      class="ops__bar"
+      :aria-expanded="expanded"
+      @click="expanded = !expanded"
+    >
+      <span class="ops__bar-title">
+        <Icon name="sliders" :size="16" />
+        Operations Map
+      </span>
 
-    <div class="operations-map__flow">
-      <template v-for="(step, index) in steps" :key="step.label">
-        <div class="operations-map__step">
-          <span class="operations-map__index mono">{{ String(index + 1).padStart(2, "0") }}</span>
-          <span class="operations-map__label">{{ step.label }}</span>
-          <span class="operations-map__detail">{{ step.detail }}</span>
-        </div>
-        <div v-if="index < steps.length - 1" class="operations-map__connector" aria-hidden="true">
-          <span class="operations-map__dot"></span>
-        </div>
-      </template>
-    </div>
+      <span class="ops__chips" aria-hidden="true">
+        <template v-for="(step, index) in steps" :key="step.label">
+          <span class="ops__chip">{{ step.label }}</span>
+          <span v-if="index < steps.length - 1" class="ops__arrow">→</span>
+        </template>
+      </span>
+
+      <span class="ops__toggle">
+        {{ expanded ? "Hide" : "Details" }}
+        <Icon name="chevronDown" :size="16" :class="{ 'ops__chevron--up': expanded }" />
+      </span>
+    </button>
+
+    <Transition name="ops-expand">
+      <div v-if="expanded" class="ops__detail">
+        <template v-for="(step, index) in steps" :key="step.label">
+          <div class="ops__step">
+            <span class="ops__index mono">{{ String(index + 1).padStart(2, "0") }}</span>
+            <span class="ops__label">{{ step.label }}</span>
+            <span class="ops__step-detail">{{ step.detail }}</span>
+          </div>
+          <div v-if="index < steps.length - 1" class="ops__connector" aria-hidden="true"></div>
+        </template>
+      </div>
+    </Transition>
   </section>
 </template>
 
 <style lang="scss" scoped>
-.operations-map {
-  padding: var(--space-xxl) var(--space-outer);
-  max-width: 1440px;
-  margin: 0 auto;
+.ops {
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-card);
+  background: var(--color-command-bg);
+  color: var(--color-command-text);
+  overflow: hidden;
 }
 
-.operations-map__title {
-  font-size: var(--font-size-title-sm);
-  font-weight: 800;
-}
-
-.operations-map__subtitle {
-  color: var(--color-text-300);
-  margin-top: var(--space-xxs);
-  margin-bottom: var(--space-xl);
-}
-
-.operations-map__flow {
+.ops__bar {
   display: flex;
-  align-items: stretch;
-  gap: var(--space-sm);
-  overflow-x: auto;
-  padding-bottom: var(--space-sm);
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
 
-  @include mq(md) {
-    flex-wrap: wrap;
+.ops__bar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.ops__chips {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  overflow: hidden;
+  min-width: 0;
+
+  @include mq(md, max) {
+    display: none;
   }
 }
 
-.operations-map__step {
-  flex: 1 0 180px;
+.ops__chip {
+  font-size: 11px;
+  color: var(--color-command-text-muted);
+  white-space: nowrap;
+}
+
+.ops__arrow {
+  color: var(--color-orange-400);
+  font-size: 11px;
+}
+
+.ops__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-cyan-400);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.ops__chevron--up {
+  transform: rotate(180deg);
+}
+
+.ops__detail {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: 0 var(--space-md) var(--space-md);
+}
+
+.ops__step {
+  flex: 1 1 150px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xxs);
-  padding: var(--space-md);
-  border-radius: var(--radius-card);
-  background: var(--color-navy-700);
-  color: #fff;
-  min-width: 180px;
+  gap: 2px;
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-command-bg-soft);
+  border: 1px solid var(--color-command-border);
+  min-width: 140px;
 }
 
-.operations-map__index {
+.ops__index {
   color: var(--color-cyan-400);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
 }
 
-.operations-map__label {
+.ops__label {
   font-weight: 700;
-  font-size: var(--font-size-md);
-}
-
-.operations-map__detail {
   font-size: var(--font-size-xs);
-  color: rgba(255, 255, 255, 0.65);
+  color: #fff;
 }
 
-.operations-map__connector {
-  flex: 0 0 32px;
-  position: relative;
+.ops__step-detail {
+  font-size: 11px;
+  color: var(--color-command-text-muted);
+}
+
+.ops__connector {
   align-self: center;
+  width: 14px;
   height: 2px;
-  background: var(--color-card-border-hover);
+  background: var(--color-command-border);
+  position: relative;
 
   &::after {
     content: "";
     position: absolute;
-    right: -4px;
+    right: -3px;
     top: 50%;
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-right: 2px solid var(--color-orange-400);
     border-bottom: 2px solid var(--color-orange-400);
     transform: translateY(-50%) rotate(-45deg);
   }
-}
 
-.operations-map__dot {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-orange-400);
-  transform: translateY(-50%);
-  animation: flow-dot 1.8s linear infinite;
-}
-
-@keyframes flow-dot {
-  0% {
-    left: 0;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    left: 100%;
-    opacity: 0;
+  @include mq(md, max) {
+    display: none;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .operations-map__dot {
-    animation: none;
-    opacity: 0;
-  }
+.ops-expand-enter-active,
+.ops-expand-leave-active {
+  transition:
+    opacity 0.25s var(--ease-power2-out),
+    transform 0.25s var(--ease-power2-out);
+}
+.ops-expand-enter-from,
+.ops-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 </style>

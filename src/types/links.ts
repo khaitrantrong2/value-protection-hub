@@ -96,3 +96,10 @@ export interface LinkFilters {
   status: LinkStatus | "all";
   criticality: Criticality | "all";
 }
+
+export type ViewMode = "compact" | "cards";
+
+/** Special (non-category) selections in the Category Navigator. */
+export type SpecialScope = "all" | "critical" | "recent";
+
+export type Scope = SpecialScope | CategoryId;

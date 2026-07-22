@@ -32,7 +32,7 @@ function makeSpriteTexture(): THREE.Texture {
   const ctx = canvas.getContext("2d")!;
   const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
   gradient.addColorStop(0, "rgba(255,255,255,1)");
-  gradient.addColorStop(0.4, "rgba(160,220,255,0.6)");
+  gradient.addColorStop(0.4, "rgba(160,220,255,0.55)");
   gradient.addColorStop(1, "rgba(160,220,255,0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
@@ -60,32 +60,8 @@ const CORE_FRAGMENT = /* glsl */ `
   varying vec3 vViewDir;
 
   void main() {
-    float fresnel = pow(1.0 - max(dot(normalize(vNormal), normalize(vViewDir)), 0.0), 2.2);
+    float fresnel = pow(1.0 - max(dot(normalize(vNormal), normalize(vViewDir)), 0.0), 2.4);
     gl_FragColor = vec4(uColor, fresnel * uOpacity);
-  }
-`;
-
-const GRID_VERTEX = /* glsl */ `
-  varying vec2 vWorldXZ;
-
-  void main() {
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-    vWorldXZ = worldPosition.xz;
-    gl_Position = projectionMatrix * viewMatrix * worldPosition;
-  }
-`;
-
-const GRID_FRAGMENT = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uFade;
-  varying vec2 vWorldXZ;
-
-  void main() {
-    vec2 cell = abs(fract(vWorldXZ * 0.12) - 0.5);
-    float line = 1.0 - smoothstep(0.0, 0.035, min(cell.x, cell.y));
-    float dist = length(vWorldXZ);
-    float fade = smoothstep(uFade, 0.0, dist);
-    gl_FragColor = vec4(uColor, line * fade * 0.5);
   }
 `;
 
@@ -95,107 +71,110 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  camera.position.set(0, 1.1, 8.5);
-  camera.lookAt(0, 0.2, 0);
+  camera.position.set(0, 1.0, 8.6);
+  camera.lookAt(0, 0.1, 0);
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);
 
-  // --- Core: layered glowing icosahedron ---
-  const coreGroup = new THREE.Group();
+  // Root group — offset to the right so the network never sits under the hero copy/search.
+  const root = new THREE.Group();
+  scene.add(root);
 
-  const coreGeometry = new THREE.IcosahedronGeometry(1.3, 2);
+  // --- Core: glowing control hub ---
+  const coreGroup = new THREE.Group();
+  const coreGeometry = new THREE.IcosahedronGeometry(1.15, 2);
   const coreMaterial = new THREE.ShaderMaterial({
     vertexShader: CORE_VERTEX,
     fragmentShader: CORE_FRAGMENT,
     uniforms: {
       uColor: { value: new THREE.Color(0x34bfff) },
-      uOpacity: { value: 0.9 },
+      uOpacity: { value: 0.85 },
     },
     transparent: true,
     depthWrite: false,
     side: THREE.FrontSide,
   });
-  const core = new THREE.Mesh(coreGeometry, coreMaterial);
-  coreGroup.add(core);
+  coreGroup.add(new THREE.Mesh(coreGeometry, coreMaterial));
 
-  const wireGeometry = new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.34, 1));
-  const wireMaterial = new THREE.LineBasicMaterial({ color: 0xe1f5ff, transparent: true, opacity: 0.35 });
+  const wireGeometry = new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.2, 1));
+  const wireMaterial = new THREE.LineBasicMaterial({ color: 0xe1f5ff, transparent: true, opacity: 0.3 });
   const wireframe = new THREE.LineSegments(wireGeometry, wireMaterial);
   coreGroup.add(wireframe);
+  root.add(coreGroup);
 
-  scene.add(coreGroup);
+  // --- Static orbit ring (the "control network" band) ---
+  const orbitRadius = 3.3;
+  const orbitGeometry = new THREE.RingGeometry(orbitRadius - 0.012, orbitRadius + 0.012, 96);
+  const orbitMaterial = new THREE.MeshBasicMaterial({
+    color: 0x34bfff,
+    transparent: true,
+    opacity: 0.16,
+    side: THREE.DoubleSide,
+  });
+  const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+  orbit.rotation.x = Math.PI / 2.35;
+  root.add(orbit);
 
-  // --- Ring group: invisible anchors + small marker dots + data lines ---
-  const ringGroup = new THREE.Group();
-  scene.add(ringGroup);
+  // --- Nodes: markers + spokes from the core ---
+  const nodeGroup = new THREE.Group();
+  root.add(nodeGroup);
+
+  const markerGeometry = new THREE.SphereGeometry(0.055, 14, 14);
 
   const anchors = CARD_LABELS.map((card) => {
-    const anchor = new THREE.Object3D();
-    anchor.position.set(Math.cos(card.angle) * card.radius, card.height, Math.sin(card.angle) * card.radius);
-    ringGroup.add(anchor);
+    const pos = new THREE.Vector3(
+      Math.cos(card.angle) * card.radius,
+      card.height * 0.7,
+      Math.sin(card.angle) * card.radius,
+    );
 
-    const markerGeometry = new THREE.SphereGeometry(0.05, 12, 12);
+    const anchor = new THREE.Object3D();
+    anchor.position.copy(pos);
+    nodeGroup.add(anchor);
+
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff8400 });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    marker.position.copy(anchor.position);
-    ringGroup.add(marker);
+    marker.position.copy(pos);
+    nodeGroup.add(marker);
 
-    const linePoints = [new THREE.Vector3(0, 0, 0), anchor.position.clone()];
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints(linePoints);
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x34bfff, transparent: true, opacity: 0.25 });
-    const line = new THREE.Line(lineGeometry, lineMaterial);
-    scene.add(line);
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), pos.clone()]);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x34bfff, transparent: true, opacity: 0.2 });
+    nodeGroup.add(new THREE.Line(lineGeometry, lineMaterial));
 
-    return { card, anchor, lineMaterial };
+    return { card, anchor, marker, markerMaterial, lineGeometry, lineMaterial };
   });
 
-  // --- Particle field ---
-  const particleCount = 260;
+  // --- Sparse particle dust ---
+  const particleCount = 110;
   const particlePositions = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount; i++) {
-    const radius = 2.5 + Math.random() * 4;
+    const radius = 3 + Math.random() * 4;
     const theta = Math.random() * Math.PI * 2;
-    const y = (Math.random() - 0.5) * 5;
     particlePositions[i * 3] = Math.cos(theta) * radius;
-    particlePositions[i * 3 + 1] = y;
+    particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 4.5;
     particlePositions[i * 3 + 2] = Math.sin(theta) * radius;
   }
   const particleGeometry = new THREE.BufferGeometry();
   particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+  const particleTexture = makeSpriteTexture();
   const particleMaterial = new THREE.PointsMaterial({
-    size: 0.05,
-    map: makeSpriteTexture(),
+    size: 0.04,
+    map: particleTexture,
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.4,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
   const particles = new THREE.Points(particleGeometry, particleMaterial);
-  scene.add(particles);
+  root.add(particles);
 
-  // --- Grid floor ---
-  const gridGeometry = new THREE.PlaneGeometry(30, 30, 1, 1);
-  const gridMaterial = new THREE.ShaderMaterial({
-    vertexShader: GRID_VERTEX,
-    fragmentShader: GRID_FRAGMENT,
-    uniforms: {
-      uColor: { value: new THREE.Color(0x34bfff) },
-      uFade: { value: 9 },
-    },
-    transparent: true,
-    depthWrite: false,
-  });
-  const grid = new THREE.Mesh(gridGeometry, gridMaterial);
-  grid.rotation.x = -Math.PI / 2;
-  grid.position.y = -1.8;
-  scene.add(grid);
-
-  const ambient = new THREE.AmbientLight(0x8ab6ff, 0.6);
-  scene.add(ambient);
+  scene.add(new THREE.AmbientLight(0x8ab6ff, 0.6));
 
   const projected: ProjectedCard[] = CARD_LABELS.map((c) => ({ label: c.label, x: 0, y: 0, scale: 1, visible: false }));
+
+  let isWide = true;
 
   function updateSize() {
     const width = container.clientWidth;
@@ -204,6 +183,11 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
+
+    isWide = width / height > 1.1;
+    // Push the network toward the right on wide screens; keep it centred on narrow ones.
+    root.position.x = isWide ? 2.4 : 0;
+    root.position.y = isWide ? 0 : 1.1;
   }
 
   const tmpVector = new THREE.Vector3();
@@ -211,16 +195,18 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
   function projectAnchors() {
     const width = container.clientWidth;
     const height = container.clientHeight;
+    const minX = isWide ? width * 0.36 : 0;
 
     anchors.forEach(({ anchor }, index) => {
       anchor.getWorldPosition(tmpVector);
       tmpVector.project(camera);
 
-      const isVisible = tmpVector.z < 1;
-      projected[index].x = (tmpVector.x * 0.5 + 0.5) * width;
-      projected[index].y = (1 - (tmpVector.y * 0.5 + 0.5)) * height;
-      projected[index].scale = THREE.MathUtils.clamp(1.15 - tmpVector.z * 0.3, 0.75, 1.2);
-      projected[index].visible = isVisible;
+      const x = (tmpVector.x * 0.5 + 0.5) * width;
+      const y = (1 - (tmpVector.y * 0.5 + 0.5)) * height;
+      projected[index].x = x;
+      projected[index].y = y;
+      projected[index].scale = THREE.MathUtils.clamp(1.12 - tmpVector.z * 0.3, 0.78, 1.15);
+      projected[index].visible = tmpVector.z < 1 && x >= minX && x <= width * 0.99;
     });
 
     options.onFrame(projected);
@@ -235,13 +221,15 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
 
     if (!reducedMotion) {
       coreGroup.rotation.y = elapsed * 0.12;
-      coreGroup.rotation.x = Math.sin(elapsed * 0.15) * 0.05;
+      coreGroup.rotation.x = Math.sin(elapsed * 0.15) * 0.04;
       wireframe.rotation.y = -elapsed * 0.08;
-      ringGroup.rotation.y = elapsed * 0.06;
-      particles.rotation.y = elapsed * 0.02;
+      nodeGroup.rotation.y = elapsed * 0.05;
+      particles.rotation.y = elapsed * 0.015;
 
-      anchors.forEach(({ lineMaterial }, index) => {
-        lineMaterial.opacity = 0.15 + Math.abs(Math.sin(elapsed * 0.6 + index)) * 0.25;
+      anchors.forEach(({ markerMaterial, lineMaterial }, index) => {
+        const pulse = 0.5 + Math.abs(Math.sin(elapsed * 0.6 + index)) * 0.5;
+        markerMaterial.opacity = 0.55 + pulse * 0.45;
+        lineMaterial.opacity = 0.12 + pulse * 0.22;
       });
     }
 
@@ -273,19 +261,23 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
     coreMaterial.dispose();
     wireGeometry.dispose();
     wireMaterial.dispose();
+    orbitGeometry.dispose();
+    orbitMaterial.dispose();
+    markerGeometry.dispose();
     particleGeometry.dispose();
     particleMaterial.dispose();
-    gridGeometry.dispose();
-    gridMaterial.dispose();
-    anchors.forEach(({ lineMaterial }) => lineMaterial.dispose());
+    particleTexture.dispose();
+    anchors.forEach(({ markerMaterial, lineGeometry, lineMaterial }) => {
+      markerMaterial.dispose();
+      lineGeometry.dispose();
+      lineMaterial.dispose();
+    });
     renderer.dispose();
   }
 
   function setReducedMotion(value: boolean) {
     reducedMotion = value;
-    if (!running) {
-      renderFrame();
-    }
+    if (!running) renderFrame();
   }
 
   return { start, stop, dispose, resize: updateSize, setReducedMotion };

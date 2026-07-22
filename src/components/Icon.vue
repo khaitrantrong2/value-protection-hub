@@ -20,7 +20,16 @@ const paths: Record<string, string> = {
   copy: "M9 9h11v11H9zM5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1",
   close: "M6 6l12 12M18 6L6 18",
   chevronDown: "M6 9l6 6 6-6",
+  chevronRight: "M9 6l6 6-6 6",
   spark: "M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6L12 2z",
+  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+  grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+  command: "M6 4a2 2 0 110 4H4V6a2 2 0 012-2zM18 4a2 2 0 110 4h-2V6a2 2 0 012-2zM6 20a2 2 0 110-4h2v2a2 2 0 01-2 2zM18 20a2 2 0 110-4h2v2a2 2 0 01-2 2zM8 8h8v8H8z",
+  clock: "M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2",
+  star: "M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5L12 3z",
+  arrowRight: "M5 12h14M13 6l6 6-6 6",
+  filter: "M3 5h18l-7 8v6l-4-2v-4z",
+  sliders: "M4 8h10M18 8h2M4 16h2M10 16h10M14 6v4M8 14v4",
 };
 
 const d = computed(() => paths[props.name] ?? paths.folder);

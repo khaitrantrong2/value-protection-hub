@@ -7,21 +7,24 @@ import Icon from "./Icon.vue";
 import { useLinks } from "../composables/useLinks";
 import { useReducedMotion } from "../composables/useReducedMotion";
 
-const { config, stats, filters } = useLinks();
+const { config, stats, filters, selectScope } = useLinks();
 const { prefersReducedMotion } = useReducedMotion();
 
 const heroRef = ref<HTMLElement | null>(null);
 const searchRef = ref<HTMLInputElement | null>(null);
 
-function focusSearch() {
-  filters.categoryId = "all";
-  searchRef.value?.focus();
+function goToWorkspace() {
   document.getElementById("link-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function focusSearch() {
+  selectScope("all");
+  goToWorkspace();
+}
+
 function viewCritical() {
-  filters.criticality = "High";
-  document.getElementById("link-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  selectScope("critical");
+  goToWorkspace();
 }
 
 onMounted(() => {
@@ -29,10 +32,10 @@ onMounted(() => {
   const targets = heroRef.value.querySelectorAll("[data-reveal]");
   gsap.from(targets, {
     opacity: 0,
-    y: 28,
-    duration: 0.7,
+    y: 24,
+    duration: 0.65,
     ease: "power2.out",
-    stagger: 0.09,
+    stagger: 0.08,
   });
 });
 </script>
@@ -44,7 +47,9 @@ onMounted(() => {
     <div class="command-hero__content">
       <p class="command-hero__eyebrow mono" data-reveal>Internal · Finance Control Workspace</p>
       <h1 class="command-hero__title" data-reveal>{{ config?.portalName || "Value Protection Hub" }}</h1>
-      <p class="command-hero__subtitle" data-reveal>{{ config?.subtitle || "Claimback, AR & Finance Control Workspace" }}</p>
+      <p class="command-hero__subtitle" data-reveal>
+        {{ config?.subtitle || "Claimback, AR & Finance Control Workspace" }}
+      </p>
       <p class="command-hero__description" data-reveal>
         Search trackers, dashboards, SOPs, templates, review files and project workspaces in one place.
       </p>
@@ -60,16 +65,14 @@ onMounted(() => {
           aria-label="Search links"
           @keyup.enter="focusSearch"
         />
-        <kbd class="command-hero__kbd mono">↵</kbd>
+        <button type="button" class="command-hero__search-go" @click="focusSearch">
+          <Icon name="arrowRight" :size="16" />
+        </button>
       </div>
 
       <div class="command-hero__actions" data-reveal>
-        <button type="button" class="command-hero__btn command-hero__btn--primary" @click="focusSearch">
-          <Icon name="search" :size="16" />
-          Search links
-        </button>
         <button type="button" class="command-hero__btn command-hero__btn--ghost" @click="viewCritical">
-          <Icon name="spark" :size="16" />
+          <Icon name="spark" :size="15" />
           View critical files
         </button>
         <a
@@ -79,7 +82,7 @@ onMounted(() => {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Icon name="external" :size="16" />
+          <Icon name="external" :size="15" />
           Open source sheet
         </a>
       </div>
@@ -88,7 +91,7 @@ onMounted(() => {
         <StatTile label="Active Links" :value="stats.activeLinks" />
         <StatTile label="Categories" :value="stats.categories" />
         <StatTile label="Critical Files" :value="stats.criticalFiles" />
-        <StatTile label="Restricted Items" :value="stats.restrictedItems" />
+        <StatTile label="Restricted" :value="stats.restrictedItems" />
       </div>
     </div>
   </section>
@@ -97,21 +100,26 @@ onMounted(() => {
 <style lang="scss" scoped>
 .command-hero {
   position: relative;
-  min-height: 100svh;
+  min-height: 88svh;
   display: flex;
   align-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 70% 30%, #0b1c42, transparent 55%),
+    radial-gradient(circle at 72% 38%, #0e2352, transparent 55%),
     linear-gradient(160deg, #071431 0%, #0b1c42 100%);
   color: var(--color-command-text);
-  padding: calc(var(--height-header) + var(--space-xl)) var(--space-outer) var(--space-xxl);
+  padding: calc(var(--height-header) + var(--space-lg)) var(--space-outer) var(--space-xl);
+
+  @include mq(md) {
+    min-height: 76vh;
+  }
 }
 
 .command-hero__content {
   position: relative;
   z-index: var(--z-index-cards);
-  max-width: 640px;
+  max-width: 600px;
+  width: 100%;
 }
 
 .command-hero__eyebrow {
@@ -123,27 +131,28 @@ onMounted(() => {
 }
 
 .command-hero__title {
-  font-size: var(--font-size-title-lg);
+  font-size: var(--font-size-title-md);
   font-weight: 900;
   line-height: var(--line-height-title);
+  letter-spacing: -0.01em;
 
   @include mq(md) {
-    font-size: var(--font-size-title-xl);
+    font-size: var(--font-size-title-lg);
   }
 }
 
 .command-hero__subtitle {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   color: var(--color-cyan-400);
   margin-top: var(--space-xs);
   font-weight: 600;
 }
 
 .command-hero__description {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   color: var(--color-command-text-muted);
-  margin-top: var(--space-sm);
-  max-width: 48ch;
+  margin-top: var(--space-xs);
+  max-width: 46ch;
 }
 
 .command-hero__search {
@@ -151,12 +160,13 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-sm);
   margin-top: var(--space-lg);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
   border: 1px solid var(--color-command-border);
   backdrop-filter: blur(8px);
   transition: border-color 0.2s var(--ease-power2-out);
+  max-width: 480px;
 
   &:focus-within {
     border-color: var(--color-cyan-400);
@@ -170,24 +180,37 @@ onMounted(() => {
 
 .command-hero__search-input {
   flex: 1;
+  min-width: 0;
   background: none;
   border: none;
   outline: none;
   color: #fff;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
 
   &::placeholder {
     color: var(--color-command-text-muted);
   }
 }
 
-.command-hero__kbd {
+.command-hero__search-go {
   flex-shrink: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-command-text-muted);
-  border: 1px solid var(--color-command-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-sm);
-  padding: 2px 6px;
+  border: none;
+  background: var(--color-orange-400);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.2s var(--ease-power2-out);
+
+  @include hover {
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
 }
 
 .command-hero__actions {
@@ -201,34 +224,21 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xxs);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 600;
-  padding: var(--space-sm) var(--space-lg);
+  padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-pill);
   cursor: pointer;
   transition: all 0.2s var(--ease-power2-out);
 
-  &--primary {
-    background: var(--color-orange-400);
-    color: #fff;
-    border: 1px solid transparent;
-
-    @include hover {
-      &:hover {
-        filter: brightness(1.08);
-        transform: translateY(-1px);
-      }
-    }
-  }
-
   &--ghost {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     color: #fff;
     border: 1px solid var(--color-command-border);
 
     @include hover {
       &:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.12);
       }
     }
   }
@@ -237,7 +247,7 @@ onMounted(() => {
 .command-hero__stats {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
-  margin-top: var(--space-xl);
+  gap: var(--space-xs);
+  margin-top: var(--space-lg);
 }
 </style>
