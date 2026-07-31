@@ -87,9 +87,9 @@ const criticalities = ["High", "Medium", "Low"] as const;
   position: sticky;
   top: var(--height-header);
   z-index: var(--z-index-layout);
-  background: rgba(245, 239, 230, 0.86);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--color-card-border);
+  background: rgba(7, 22, 51, 0.78);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-command-border);
 }
 
 .controls__inner {
@@ -118,7 +118,7 @@ const criticalities = ["High", "Medium", "Low"] as const;
   gap: var(--space-xs);
   padding: 8px var(--space-sm);
   border-radius: var(--radius-md);
-  background: var(--color-white-400);
+  background: var(--color-field-bg);
   border: 1px solid var(--color-card-border-hover);
 
   &:focus-within {
@@ -147,7 +147,7 @@ const criticalities = ["High", "Medium", "Low"] as const;
   padding: 8px var(--space-sm);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-card-border-hover);
-  background: var(--color-white-400);
+  background: var(--color-field-bg);
   color: var(--color-text-300);
   cursor: pointer;
   transition: all 0.18s var(--ease-power2-out);
@@ -191,7 +191,7 @@ const criticalities = ["High", "Medium", "Low"] as const;
   padding: 6px var(--space-sm);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-card-border-hover);
-  background: var(--color-white-400);
+  background: var(--color-field-bg);
   font-size: var(--font-size-xs);
   font-family: inherit;
   cursor: pointer;
@@ -204,7 +204,7 @@ const criticalities = ["High", "Medium", "Low"] as const;
   padding: 6px var(--space-sm);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-card-border-hover);
-  background: var(--color-white-400);
+  background: var(--color-field-bg);
   color: var(--color-text-300);
   font-size: var(--font-size-xs);
   font-weight: 600;

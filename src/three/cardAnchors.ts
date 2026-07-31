@@ -16,12 +16,12 @@ const TWO_PI = Math.PI * 2;
 const ORDER = [
   "Claimback",
   "Review Cockpit",
-  "Booking",
-  "Invoice / VRA",
   "AR Monitoring",
   "NetSuite",
   "Templates",
   "SOPs",
+  "Country Files",
+  "Projects",
 ];
 
 const HEIGHTS = [0.25, -0.15, 0.3, -0.2, 0.2, -0.28, 0.22, -0.12];

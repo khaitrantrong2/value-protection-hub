@@ -51,10 +51,8 @@ onMounted(() => {
 <style lang="scss">
 main {
   position: relative;
-  background:
-    radial-gradient(1100px 480px at 82% -8%, rgba(52, 191, 255, 0.06), transparent 60%),
-    radial-gradient(900px 420px at 0% 8%, rgba(255, 132, 0, 0.035), transparent 55%),
-    var(--color-background-400);
+  background: var(--grad-cosmos);
+  background-attachment: fixed;
 }
 
 .shell {

@@ -107,10 +107,9 @@ function pick(id: Scope) {
   }
 
   &.is-active {
-    background: var(--color-white-400);
+    background: rgba(79, 217, 255, 0.1);
     color: var(--color-text-400);
-    border-color: var(--color-card-border-hover);
-    box-shadow: var(--shadow-card);
+    border-color: rgba(79, 217, 255, 0.4);
   }
 }
 
@@ -176,7 +175,7 @@ function pick(id: Scope) {
     width: auto;
     white-space: nowrap;
     border: 1px solid var(--color-card-border);
-    background: var(--color-white-400);
+    background: var(--color-field-bg);
     border-radius: var(--radius-pill);
   }
 

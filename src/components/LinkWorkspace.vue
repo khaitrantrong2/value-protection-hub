@@ -127,7 +127,7 @@ function accent(categoryId: CategoryId) {
     padding: 8px var(--space-lg);
     border-radius: var(--radius-pill);
     border: 1px solid var(--color-card-border-hover);
-    background: var(--color-white-400);
+    background: var(--color-field-bg);
     color: var(--color-text-400);
     font-weight: 600;
     font-size: var(--font-size-xs);

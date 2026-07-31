@@ -45,13 +45,13 @@ onMounted(() => {
     <CommandScene />
 
     <div class="command-hero__content">
-      <p class="command-hero__eyebrow mono" data-reveal>Internal · Finance Control Workspace</p>
+      <p class="command-hero__eyebrow mono" data-reveal>Intrepid · Value Protection Command</p>
       <h1 class="command-hero__title" data-reveal>{{ config?.portalName || "Value Protection Hub" }}</h1>
       <p class="command-hero__subtitle" data-reveal>
         {{ config?.subtitle || "Claimback, AR & Finance Control Workspace" }}
       </p>
       <p class="command-hero__description" data-reveal>
-        Search trackers, dashboards, SOPs, templates, review files and project workspaces in one place.
+        A galactic command center for the tools, trackers, and control assets that protect value across Intrepid.
       </p>
 
       <div class="command-hero__search" data-reveal>
@@ -61,7 +61,7 @@ onMounted(() => {
           v-model="filters.query"
           type="search"
           class="command-hero__search-input"
-          placeholder="Search links, owners, tags, countries…"
+          placeholder="Scan the universe for trackers, SOPs, templates, dashboards…"
           aria-label="Search links"
           @keyup.enter="focusSearch"
         />
@@ -73,7 +73,7 @@ onMounted(() => {
       <div class="command-hero__actions" data-reveal>
         <button type="button" class="command-hero__btn command-hero__btn--ghost" @click="viewCritical">
           <Icon name="spark" :size="15" />
-          View critical files
+          Scan critical vaults
         </button>
         <a
           v-if="config?.adminSheetUrl"
@@ -201,8 +201,8 @@ onMounted(() => {
   height: 34px;
   border-radius: var(--radius-sm);
   border: none;
-  background: var(--color-orange-400);
-  color: #fff;
+  background: var(--grad-cta);
+  color: #04122b;
   cursor: pointer;
   transition: filter 0.2s var(--ease-power2-out);
 

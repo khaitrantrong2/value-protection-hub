@@ -211,8 +211,8 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   text-align: left;
 
   &.is-active {
-    background: var(--color-white-400);
-    box-shadow: var(--shadow-card);
+    background: rgba(79, 217, 255, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(79, 217, 255, 0.25);
   }
 }
 

@@ -1,70 +1,93 @@
 :root {
-  /* Cream / paper surface */
-  --color-background-400: #f5efe6;
-  --color-beige-700: rgb(223, 209, 188);
-  --color-beige-600: rgb(233, 222, 208);
-  --color-beige-500: rgb(241, 229, 213);
-  --color-beige-400: #f5efe6;
+  /* ============================================================
+     INTREPID — Galactic command-center theme (dark cosmic).
+     Values taken from the Claude Design handoff for Value Protection Hub.
+     Semantic token names kept stable so components reskin centrally.
+     ============================================================ */
 
-  /* Text */
-  --color-text-400: #21252b;
-  --color-text-300: #4d5560;
-  --color-text-200: #7a828c;
+  /* ---------- Deep space canvas ---------- */
+  --space-abyss: #04071a;
+  --space-deep: #050b22;
+  --space-navy: #071633;
+  --space-midnight: #0b1d4a;
 
-  /* Navy — command / control surfaces */
-  --color-navy-700: #071431;
-  --color-navy-600: #0b1c42;
-  --color-navy-500: #122a5c;
-  --color-navy-400: #1c3d7a;
+  --color-background-400: #071633;
+  /* legacy "beige" surfaces → translucent cosmic fills */
+  --color-beige-700: rgba(146, 163, 199, 0.14);
+  --color-beige-600: rgba(146, 163, 199, 0.1);
+  --color-beige-500: rgba(146, 163, 199, 0.08);
+  --color-beige-400: #0b1d4a;
 
-  /* Cyan — data accent */
-  --color-cyan-500: #0086bb;
-  --color-cyan-400: #34bfff;
-  --color-text-cyan-400: #e1f5ff;
-  --color-text-cyan-300: #81bdd8;
+  /* ---------- Text (soft white → muted blue-gray) ---------- */
+  --color-text-400: #f4f7ff;
+  --color-text-300: #dbe4f7;
+  --color-text-200: #92a3c7;
 
-  /* Orange — CTA / active state */
-  --color-orange-400: #ff8400;
-  --color-orange-muted: rgba(255, 132, 0, 0.12);
-
+  --color-black-400: #04071a;
   --color-white-400: #ffffff;
-  --color-black-400: #14181d;
 
-  /* Category accents */
-  --accent-cyan: #0086bb;
-  --accent-navy: #234ba2;
-  --accent-orange: #ff8400;
-  --accent-teal: #0a9b8a;
-  --accent-purple: #6d4fd6;
-  --accent-amber: #c98a12;
-  --accent-slate: #56626f;
-  --accent-magenta: #c23b83;
-  --accent-indigo: #4a3f9e;
-  --accent-gray: #6b7280;
+  /* ---------- Navy / command surfaces ---------- */
+  --color-navy-700: #2c3a6b;
+  --color-navy-600: #212c55;
+  --color-navy-500: #12244f;
+  --color-navy-400: #34508f;
+
+  /* ---------- Electric cyan (data / scanner accent) ---------- */
+  --color-cyan-500: #1f9cd5;
+  --color-cyan-400: #4fd9ff;
+  --color-text-cyan-400: #e1f5ff;
+  --color-text-cyan-300: #bfe6f5;
+
+  /* ---------- Intrepid orange (CTA / active highlight) ---------- */
+  --color-orange-400: #ff9d1e;
+  --color-orange-muted: rgba(255, 157, 30, 0.14);
+
+  /* ---------- Signature gradients ---------- */
+  --grad-cta: linear-gradient(135deg, #4fd9ff, #1f9cd5);
+  --grad-warm: linear-gradient(135deg, #febc10 0%, #f9882e 42%, #f25a51 72%, #ed2c70 100%);
+  --grad-cosmos: radial-gradient(1100px 640px at 80% -12%, rgba(31, 156, 213, 0.13), transparent 60%),
+    radial-gradient(820px 560px at 8% 112%, rgba(255, 157, 30, 0.08), transparent 55%),
+    linear-gradient(180deg, #071633 0%, #050b22 55%, #04071a 100%);
+
+  /* Category accents (kept vivid — they pop on the dark canvas) */
+  --accent-cyan: #4fd9ff;
+  --accent-navy: #6f9be8;
+  --accent-orange: #ff9d1e;
+  --accent-teal: #5fb0c4;
+  --accent-purple: #a98bff;
+  --accent-amber: #febc10;
+  --accent-slate: #92a3c7;
+  --accent-magenta: #ed2c70;
+  --accent-indigo: #7d8bff;
+  --accent-gray: #92a3c7;
 
   /* Status */
-  --status-active: #0a9b5c;
-  --status-review: #c98a12;
-  --status-blocked: #d1453b;
-  --status-archived: #8a8f98;
+  --status-active: #37d39a;
+  --status-review: #febc10;
+  --status-blocked: #f25a51;
+  --status-archived: #92a3c7;
 
   /* Criticality */
-  --criticality-high: #d1453b;
-  --criticality-medium: #c98a12;
-  --criticality-low: #56626f;
+  --criticality-high: #ff7a6d;
+  --criticality-medium: #febc10;
+  --criticality-low: #92a3c7;
 
-  /* Premium card surfaces */
-  --color-card-bg: rgba(255, 255, 255, 0.66);
-  --color-card-bg-hover: rgba(255, 255, 255, 0.9);
-  --color-card-border: rgba(7, 20, 49, 0.08);
-  --color-card-border-hover: rgba(7, 20, 49, 0.16);
-  --shadow-card: 0 1px 3px rgba(7, 20, 49, 0.06), 0 4px 16px rgba(7, 20, 49, 0.05);
-  --shadow-card-hover: 0 2px 10px rgba(7, 20, 49, 0.09), 0 12px 36px rgba(7, 20, 49, 0.08);
+  /* ---------- Premium card surfaces (translucent holo panels) ---------- */
+  --color-card-bg: rgba(11, 29, 74, 0.34);
+  --color-card-bg-hover: rgba(11, 29, 74, 0.55);
+  --color-card-border: rgba(146, 163, 199, 0.18);
+  --color-card-border-hover: rgba(79, 217, 255, 0.35);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 30px -18px rgba(0, 0, 0, 0.8);
+  --shadow-card-hover: 0 0 0 1px rgba(79, 217, 255, 0.08), 0 22px 50px -22px rgba(0, 0, 0, 0.85);
 
-  /* Dark command sections (hero, operations map) */
-  --color-command-bg: #071431;
-  --color-command-bg-soft: #0b1c42;
-  --color-command-border: rgba(255, 255, 255, 0.1);
-  --color-command-text: rgba(255, 255, 255, 0.92);
-  --color-command-text-muted: rgba(225, 234, 255, 0.6);
+  /* Fields (inputs / selects / palette) */
+  --color-field-bg: rgba(7, 22, 51, 0.5);
+  --color-field-border: rgba(146, 163, 199, 0.22);
+
+  /* Dark command sections (hero, ops map, footer) */
+  --color-command-bg: #0b1d4a;
+  --color-command-bg-soft: #12244f;
+  --color-command-border: rgba(146, 163, 199, 0.16);
+  --color-command-text: #f4f7ff;
+  --color-command-text-muted: #92a3c7;
 }
