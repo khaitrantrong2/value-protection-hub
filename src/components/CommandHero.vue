@@ -6,17 +6,23 @@ import Icon from "./Icon.vue";
 import { useLinks } from "../composables/useLinks";
 import { useReducedMotion } from "../composables/useReducedMotion";
 
-const { config, paletteOpen } = useLinks();
+const { config, openSector, openCrew } = useLinks();
 const { prefersReducedMotion } = useReducedMotion();
 
 const heroRef = ref<HTMLElement | null>(null);
+const driveQuery = ref("");
 
-function openPalette() {
-  paletteOpen.value = true;
+function searchDrive() {
+  const q = driveQuery.value.trim();
+  const url = q
+    ? `https://drive.google.com/drive/search?q=${encodeURIComponent(q)}`
+    : "https://drive.google.com/drive/my-drive";
+  window.open(url, "_blank", "noopener");
 }
 
-function viewMission() {
-  document.getElementById("mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
+function scanVaults() {
+  // "The vaults" = the Claimback control assets.
+  openSector("claimback-trackers");
 }
 
 onMounted(() => {
@@ -40,22 +46,31 @@ onMounted(() => {
         {{ config?.subtitle || "Claimback, AR & Finance Control Workspace" }}
       </p>
       <p class="hero__desc" data-reveal>
-        A galactic command center for the tools, trackers, and control assets that protect value across Intrepid.
+        A galactic command center for the trackers, dashboards, SOPs, and control assets that protect value across
+        Intrepid.
       </p>
 
-      <button type="button" class="hero__scan" data-reveal @click="openPalette">
+      <form class="hero__scan" data-reveal @submit.prevent="searchDrive">
         <span class="hero__scan-sweep"></span>
         <Icon name="search" :size="18" class="hero__scan-icon" />
-        <span class="hero__scan-text">Scan the universe for trackers, SOPs, templates, dashboards…</span>
-        <kbd class="mono">Ctrl K</kbd>
-      </button>
+        <input
+          v-model="driveQuery"
+          type="search"
+          class="hero__scan-input"
+          placeholder="Search Google Drive — files, folders, shared docs…"
+          aria-label="Search Google Drive"
+        />
+        <button type="submit" class="hero__scan-go" aria-label="Search Google Drive">
+          <Icon name="arrowRight" :size="16" />
+        </button>
+      </form>
 
       <div class="hero__actions" data-reveal>
-        <button type="button" class="hero__cta hero__cta--primary" @click="openPalette">
+        <button type="button" class="hero__cta hero__cta--primary" @click="scanVaults">
           Scan the vaults
           <Icon name="arrowRight" :size="16" />
         </button>
-        <button type="button" class="hero__cta hero__cta--ghost" @click="viewMission">View mission map</button>
+        <button type="button" class="hero__cta hero__cta--ghost" @click="openCrew">Meet the crew</button>
       </div>
     </div>
 
@@ -107,8 +122,8 @@ onMounted(() => {
   gap: 9px;
   padding: 7px 14px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(79, 217, 255, 0.28);
-  background: rgba(79, 217, 255, 0.06);
+  border: 1px solid rgba(168, 132, 246, 0.28);
+  background: rgba(168, 132, 246, 0.06);
   margin-bottom: 24px;
 }
 
@@ -116,14 +131,14 @@ onMounted(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4fd9ff;
-  box-shadow: 0 0 10px #4fd9ff;
+  background: #b794f6;
+  box-shadow: 0 0 10px #b794f6;
 }
 
 .hero__status-text {
   font-size: 11px;
   letter-spacing: 0.24em;
-  color: #bfe6f5;
+  color: #d4c2f5;
 }
 
 .hero__title {
@@ -136,7 +151,7 @@ onMounted(() => {
 
 .hero__subtitle {
   font-size: clamp(16px, 1.4vw, 19px);
-  color: #c6d3ee;
+  color: #d8cdf0;
   font-weight: 500;
   margin: 0 0 6px;
 }
@@ -157,49 +172,69 @@ onMounted(() => {
   max-width: 460px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  cursor: text;
-  text-align: left;
-  padding: 15px 18px;
+  gap: 12px;
+  padding: 7px 8px 7px 18px;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(79, 217, 255, 0.3);
-  background: linear-gradient(180deg, rgba(11, 29, 74, 0.55), rgba(7, 22, 51, 0.35));
+  border: 1px solid rgba(168, 132, 246, 0.3);
+  background: linear-gradient(180deg, rgba(30, 16, 66, 0.55), rgba(21, 10, 48, 0.35));
   box-shadow:
-    0 0 0 1px rgba(79, 217, 255, 0.05),
+    0 0 0 1px rgba(168, 132, 246, 0.05),
     0 20px 50px -22px rgba(0, 0, 0, 0.8);
-  color: inherit;
+
+  &:focus-within {
+    border-color: rgba(183, 148, 246, 0.6);
+  }
 }
 
 .hero__scan-sweep {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 0;
   width: 34%;
-  background: linear-gradient(90deg, transparent, rgba(79, 217, 255, 0.14), transparent);
+  background: linear-gradient(90deg, transparent, rgba(168, 132, 246, 0.14), transparent);
   animation: hero-scan 4.2s var(--ease-power2-in) infinite;
+  pointer-events: none;
 }
 
 .hero__scan-icon {
-  color: #4fd9ff;
+  color: #b794f6;
   flex: none;
 }
 
-.hero__scan-text {
+.hero__scan-input {
   flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
   font-size: 14px;
-  color: #8ea3c9;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--color-text-400);
+
+  &::placeholder {
+    color: #9d92c0;
+  }
 }
 
-.hero__scan kbd {
+.hero__scan-go {
   flex: none;
-  font-size: 10.5px;
-  color: var(--color-text-200);
-  border: 1px solid var(--color-command-border);
-  border-radius: 7px;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  background: var(--grad-cta);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.2s var(--ease-power2-out);
+
+  @include hover {
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
 }
 
 .hero__actions {
@@ -225,8 +260,8 @@ onMounted(() => {
   &--primary {
     border: none;
     background: var(--grad-cta);
-    color: #04122b;
-    box-shadow: 0 12px 30px -12px rgba(79, 217, 255, 0.7);
+    color: #fff;
+    box-shadow: 0 12px 30px -12px rgba(155, 109, 255, 0.7);
 
     @include hover {
       &:hover {
@@ -237,13 +272,13 @@ onMounted(() => {
   }
 
   &--ghost {
-    border: 1px solid rgba(146, 163, 199, 0.3);
+    border: 1px solid rgba(176, 160, 210, 0.3);
     background: transparent;
-    color: #dbe4f7;
+    color: #e8e0ff;
 
     @include hover {
       &:hover {
-        border-color: rgba(79, 217, 255, 0.5);
+        border-color: rgba(183, 148, 246, 0.5);
       }
     }
   }

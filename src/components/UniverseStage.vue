@@ -116,15 +116,16 @@ onBeforeUnmount(() => {
     <!-- glowing wireframe planet -->
     <div class="stage__planet">
       <div class="stage__planet-core"></div>
+      <img class="stage__planet-mark" src="/brand/intrepid-mark.png" alt="" aria-hidden="true" />
       <svg class="stage__globe" viewBox="0 0 200 200">
         <defs>
           <radialGradient id="planetFill" cx="42%" cy="38%" r="70%">
-            <stop offset="0%" stop-color="#7fe8ff" stop-opacity="0.55" />
-            <stop offset="45%" stop-color="#1f9cd5" stop-opacity="0.18" />
-            <stop offset="100%" stop-color="#0b1d4a" stop-opacity="0.05" />
+            <stop offset="0%" stop-color="#e6d9ff" stop-opacity="0.6" />
+            <stop offset="45%" stop-color="#7c3aed" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#1c0f45" stop-opacity="0.05" />
           </radialGradient>
         </defs>
-        <circle cx="100" cy="100" r="82" fill="url(#planetFill)" stroke="rgba(79,217,255,.55)" stroke-width="1" />
+        <circle cx="100" cy="100" r="82" fill="url(#planetFill)" stroke="rgba(183,148,246,.6)" stroke-width="1" />
         <g class="stage__wire">
           <ellipse cx="100" cy="100" rx="82" ry="26" />
           <ellipse cx="100" cy="100" rx="82" ry="52" />
@@ -212,7 +213,7 @@ onBeforeUnmount(() => {
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 217, 255, 0.16), rgba(31, 156, 213, 0.04) 46%, transparent 66%);
+  background: radial-gradient(circle, rgba(168, 132, 246, 0.16), rgba(124, 58, 237, 0.04) 46%, transparent 66%);
   animation: stage-pulse 7s var(--ease-power2-in) infinite;
   pointer-events: none;
 }
@@ -224,12 +225,13 @@ onBeforeUnmount(() => {
   height: 100%;
   pointer-events: none;
   z-index: 4;
+  filter: drop-shadow(0 0 4px rgba(183, 148, 246, 0.45));
 }
 
 .stage__orbit {
   fill: none;
-  stroke: rgba(146, 163, 199, 0.16);
-  stroke-width: 0.15;
+  stroke: rgba(183, 148, 246, 0.32);
+  stroke-width: 0.28;
   vector-effect: non-scaling-stroke;
 }
 
@@ -252,9 +254,22 @@ onBeforeUnmount(() => {
   height: 46%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle, #cdf3ff 0%, #4fd9ff 30%, rgba(31, 156, 213, 0.2) 62%, transparent 72%);
-  filter: blur(2px);
+  background: radial-gradient(circle, #ffffff 0%, #d9c2ff 24%, #9b6dff 46%, rgba(124, 58, 237, 0.25) 66%, transparent 74%);
+  filter: blur(3px);
   animation: stage-pulse 5s var(--ease-power2-in) infinite;
+}
+
+.stage__planet-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(183, 148, 246, 0.7));
+  pointer-events: none;
 }
 
 .stage__globe {
@@ -266,7 +281,7 @@ onBeforeUnmount(() => {
 
 .stage__wire ellipse {
   fill: none;
-  stroke: rgba(79, 217, 255, 0.28);
+  stroke: rgba(168, 132, 246, 0.28);
   stroke-width: 0.7;
 }
 
@@ -312,10 +327,10 @@ onBeforeUnmount(() => {
   font-family: ui-monospace, "JetBrains Mono", monospace;
   font-size: 10.5px;
   letter-spacing: 0.08em;
-  color: #e2ecff;
+  color: #efe8ff;
   white-space: nowrap;
   text-shadow:
-    0 1px 6px #04071a,
+    0 1px 6px #070311,
     0 0 10px rgba(4, 7, 26, 0.9);
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -329,8 +344,8 @@ onBeforeUnmount(() => {
   width: 244px;
   pointer-events: none;
   border-radius: 16px;
-  border: 1px solid rgba(79, 217, 255, 0.35);
-  background: linear-gradient(180deg, rgba(9, 24, 58, 0.97), rgba(6, 16, 40, 0.97));
+  border: 1px solid rgba(168, 132, 246, 0.35);
+  background: linear-gradient(180deg, rgba(24, 12, 54, 0.97), rgba(16, 8, 36, 0.97));
   backdrop-filter: blur(8px);
   box-shadow: 0 24px 60px -24px #000;
   padding: 14px 16px;
@@ -365,7 +380,7 @@ onBeforeUnmount(() => {
 .stage__tip-body {
   font-size: 12.5px;
   line-height: 1.5;
-  color: #a9b8d8;
+  color: #b8acd8;
   margin: 0 0 11px;
 }
 
@@ -394,9 +409,9 @@ onBeforeUnmount(() => {
 }
 
 .stage__commander-model {
-  width: 200px;
-  height: 236px;
-  margin-bottom: -14px;
+  width: 148px;
+  height: 176px;
+  margin-bottom: -10px;
   pointer-events: none;
 }
 
@@ -414,14 +429,14 @@ onBeforeUnmount(() => {
   width: 150px;
   height: 22px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(79, 217, 255, 0.32), rgba(79, 217, 255, 0.05) 70%, transparent);
-  border: 1px solid rgba(79, 217, 255, 0.4);
+  background: radial-gradient(closest-side, rgba(168, 132, 246, 0.32), rgba(168, 132, 246, 0.05) 70%, transparent);
+  border: 1px solid rgba(168, 132, 246, 0.4);
 
   &--gold {
     top: 12px;
     height: 18px;
     background: none;
-    border-color: rgba(255, 200, 87, 0.26);
+    border-color: rgba(245, 197, 66, 0.26);
   }
 }
 
@@ -433,7 +448,7 @@ onBeforeUnmount(() => {
   width: 92px;
   height: 12px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(79, 217, 255, 0.5), transparent);
+  background: radial-gradient(closest-side, rgba(168, 132, 246, 0.5), transparent);
   filter: blur(1px);
 }
 

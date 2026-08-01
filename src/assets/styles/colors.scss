@@ -1,93 +1,94 @@
 :root {
   /* ============================================================
-     INTREPID — Galactic command-center theme (dark cosmic).
-     Values taken from the Claude Design handoff for Value Protection Hub.
+     INTREPID — Galactic command center · "Amethyst Nebula" theme.
+     Deep violet space + amethyst glow + gold accent (Thanos-leaning).
      Semantic token names kept stable so components reskin centrally.
      ============================================================ */
 
-  /* ---------- Deep space canvas ---------- */
-  --space-abyss: #04071a;
-  --space-deep: #050b22;
-  --space-navy: #071633;
-  --space-midnight: #0b1d4a;
+  /* ---------- Deep space canvas (violet) ---------- */
+  --space-abyss: #070311;
+  --space-deep: #0d0620;
+  --space-navy: #150a30;
+  --space-midnight: #1c0f45;
 
-  --color-background-400: #071633;
+  --color-background-400: #150a30;
   /* legacy "beige" surfaces → translucent cosmic fills */
-  --color-beige-700: rgba(146, 163, 199, 0.14);
-  --color-beige-600: rgba(146, 163, 199, 0.1);
-  --color-beige-500: rgba(146, 163, 199, 0.08);
-  --color-beige-400: #0b1d4a;
+  --color-beige-700: rgba(176, 160, 210, 0.14);
+  --color-beige-600: rgba(176, 160, 210, 0.1);
+  --color-beige-500: rgba(176, 160, 210, 0.08);
+  --color-beige-400: #1c0f45;
 
-  /* ---------- Text (soft white → muted blue-gray) ---------- */
-  --color-text-400: #f4f7ff;
-  --color-text-300: #dbe4f7;
-  --color-text-200: #92a3c7;
+  /* ---------- Text (soft white → muted lavender) ---------- */
+  --color-text-400: #f5f1ff;
+  --color-text-300: #d8cdf0;
+  --color-text-200: #9d92c0;
 
-  --color-black-400: #04071a;
+  --color-black-400: #070311;
   --color-white-400: #ffffff;
 
-  /* ---------- Navy / command surfaces ---------- */
-  --color-navy-700: #2c3a6b;
-  --color-navy-600: #212c55;
-  --color-navy-500: #12244f;
-  --color-navy-400: #34508f;
+  /* ---------- Violet command surfaces ---------- */
+  --color-navy-700: #3a2b6b;
+  --color-navy-600: #2a1c55;
+  --color-navy-500: #221248;
+  --color-navy-400: #4a3a8f;
 
-  /* ---------- Electric cyan (data / scanner accent) ---------- */
-  --color-cyan-500: #1f9cd5;
-  --color-cyan-400: #4fd9ff;
-  --color-text-cyan-400: #e1f5ff;
-  --color-text-cyan-300: #bfe6f5;
+  /* ---------- Amethyst (primary glow / data accent) ---------- */
+  --color-cyan-500: #7c3aed;
+  --color-cyan-400: #b794f6;
+  --color-text-cyan-400: #efe6ff;
+  --color-text-cyan-300: #d4c2f5;
 
-  /* ---------- Intrepid orange (CTA / active highlight) ---------- */
-  --color-orange-400: #ff9d1e;
-  --color-orange-muted: rgba(255, 157, 30, 0.14);
+  /* ---------- Gold (warm CTA / critical highlight — the single warm accent) ---------- */
+  --color-orange-400: #f5b342;
+  --color-orange-muted: rgba(245, 179, 66, 0.14);
 
   /* ---------- Signature gradients ---------- */
-  --grad-cta: linear-gradient(135deg, #4fd9ff, #1f9cd5);
-  --grad-warm: linear-gradient(135deg, #febc10 0%, #f9882e 42%, #f25a51 72%, #ed2c70 100%);
-  --grad-cosmos: radial-gradient(1100px 640px at 80% -12%, rgba(31, 156, 213, 0.13), transparent 60%),
-    radial-gradient(820px 560px at 8% 112%, rgba(255, 157, 30, 0.08), transparent 55%),
-    linear-gradient(180deg, #071633 0%, #050b22 55%, #04071a 100%);
+  --grad-cta: linear-gradient(135deg, #9b6dff, #6d28d9);
+  --grad-warm: linear-gradient(135deg, #f5b342 0%, #f2792e 55%, #e2489f 100%);
+  --grad-cosmos: radial-gradient(1200px 720px at 78% -10%, rgba(167, 111, 246, 0.2), transparent 60%),
+    radial-gradient(900px 620px at 6% 18%, rgba(226, 72, 192, 0.1), transparent 55%),
+    radial-gradient(760px 560px at 20% 110%, rgba(124, 58, 237, 0.12), transparent 58%),
+    linear-gradient(180deg, #150a30 0%, #0d0620 55%, #070311 100%);
 
-  /* Category accents (kept vivid — they pop on the dark canvas) */
-  --accent-cyan: #4fd9ff;
-  --accent-navy: #6f9be8;
-  --accent-orange: #ff9d1e;
-  --accent-teal: #5fb0c4;
-  --accent-purple: #a98bff;
-  --accent-amber: #febc10;
-  --accent-slate: #92a3c7;
-  --accent-magenta: #ed2c70;
-  --accent-indigo: #7d8bff;
-  --accent-gray: #92a3c7;
+  /* Category accents (vivid on the violet canvas) */
+  --accent-cyan: #b794f6;
+  --accent-navy: #7c8bff;
+  --accent-orange: #f5b342;
+  --accent-teal: #5fd0c4;
+  --accent-purple: #c07bff;
+  --accent-amber: #f5c542;
+  --accent-slate: #9d92c0;
+  --accent-magenta: #e248c0;
+  --accent-indigo: #8b7dff;
+  --accent-gray: #9d92c0;
 
   /* Status */
-  --status-active: #37d39a;
-  --status-review: #febc10;
-  --status-blocked: #f25a51;
-  --status-archived: #92a3c7;
+  --status-active: #45d6a0;
+  --status-review: #f5c542;
+  --status-blocked: #f2617e;
+  --status-archived: #9d92c0;
 
   /* Criticality */
-  --criticality-high: #ff7a6d;
-  --criticality-medium: #febc10;
-  --criticality-low: #92a3c7;
+  --criticality-high: #ff7ac0;
+  --criticality-medium: #f5c542;
+  --criticality-low: #9d92c0;
 
   /* ---------- Premium card surfaces (translucent holo panels) ---------- */
-  --color-card-bg: rgba(11, 29, 74, 0.34);
-  --color-card-bg-hover: rgba(11, 29, 74, 0.55);
-  --color-card-border: rgba(146, 163, 199, 0.18);
-  --color-card-border-hover: rgba(79, 217, 255, 0.35);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 30px -18px rgba(0, 0, 0, 0.8);
-  --shadow-card-hover: 0 0 0 1px rgba(79, 217, 255, 0.08), 0 22px 50px -22px rgba(0, 0, 0, 0.85);
+  --color-card-bg: rgba(42, 24, 92, 0.34);
+  --color-card-bg-hover: rgba(42, 24, 92, 0.55);
+  --color-card-border: rgba(176, 160, 210, 0.18);
+  --color-card-border-hover: rgba(183, 148, 246, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px -18px rgba(0, 0, 0, 0.85);
+  --shadow-card-hover: 0 0 0 1px rgba(183, 148, 246, 0.1), 0 24px 54px -22px rgba(0, 0, 0, 0.9);
 
   /* Fields (inputs / selects / palette) */
-  --color-field-bg: rgba(7, 22, 51, 0.5);
-  --color-field-border: rgba(146, 163, 199, 0.22);
+  --color-field-bg: rgba(21, 10, 48, 0.55);
+  --color-field-border: rgba(176, 160, 210, 0.22);
 
-  /* Dark command sections (hero, ops map, footer) */
-  --color-command-bg: #0b1d4a;
-  --color-command-bg-soft: #12244f;
-  --color-command-border: rgba(146, 163, 199, 0.16);
-  --color-command-text: #f4f7ff;
-  --color-command-text-muted: #92a3c7;
+  /* Dark command sections */
+  --color-command-bg: #1c0f45;
+  --color-command-bg-soft: #241456;
+  --color-command-border: rgba(176, 160, 210, 0.16);
+  --color-command-text: #f5f1ff;
+  --color-command-text-muted: #9d92c0;
 }

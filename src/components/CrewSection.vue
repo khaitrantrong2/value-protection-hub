@@ -45,7 +45,7 @@ import { crew } from "../data/crew";
 .crew__rule {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(146, 163, 199, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(176, 160, 210, 0.4), transparent);
 }
 
 .crew__eyebrow {
@@ -83,7 +83,7 @@ import { crew } from "../data/crew";
   padding: 20px 12px 16px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-card-border);
-  background: linear-gradient(180deg, rgba(11, 29, 74, 0.34), rgba(7, 22, 51, 0.14));
+  background: linear-gradient(180deg, rgba(30, 16, 66, 0.34), rgba(21, 10, 48, 0.14));
   transition:
     transform 0.22s var(--ease-power2-out),
     border-color 0.22s var(--ease-power2-out);
@@ -105,7 +105,7 @@ import { crew } from "../data/crew";
   border-radius: 50%;
   margin-bottom: 10px;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--accent) 30%, transparent), rgba(7, 22, 51, 0.6) 70%);
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--accent) 30%, transparent), rgba(21, 10, 48, 0.6) 70%);
 }
 
 .crew__avatar-glow {
@@ -131,7 +131,7 @@ import { crew } from "../data/crew";
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #071633;
+  border: 2px solid #150a30;
   background: var(--accent);
 
   &--commander {

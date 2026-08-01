@@ -219,14 +219,14 @@ async function copyLink() {
 
   &--open {
     background: var(--grad-cta);
-    color: #04122b;
+    color: #ffffff;
     border-color: transparent;
     font-weight: 700;
 
     @include hover {
       &:hover {
         filter: brightness(1.08);
-        color: #04122b;
+        color: #ffffff;
       }
     }
   }

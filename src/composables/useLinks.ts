@@ -21,7 +21,7 @@ const scope = ref<Scope>("all");
 const viewMode = ref<ViewMode>("compact");
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
-const view = ref<"home" | "sector">("home");
+const view = ref<"home" | "sector" | "crew">("home");
 
 const RECENT_WINDOW_DAYS = 30;
 
@@ -139,10 +139,16 @@ export function useLinks() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openCrew() {
+    view.value = "crew";
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
   return {
     view,
     openSector,
     goHome,
+    openCrew,
     links,
     categories,
     config,

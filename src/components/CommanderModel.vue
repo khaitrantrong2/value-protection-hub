@@ -36,7 +36,7 @@ async function init() {
     const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(2, 4, 3);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x4fd9ff, 1.2);
+    const rim = new THREE.DirectionalLight(0xb794f6, 1.2);
     rim.position.set(-3, 2, -2);
     scene.add(rim);
 

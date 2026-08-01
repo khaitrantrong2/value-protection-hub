@@ -107,9 +107,9 @@ function pick(id: Scope) {
   }
 
   &.is-active {
-    background: rgba(79, 217, 255, 0.1);
+    background: rgba(168, 132, 246, 0.1);
     color: var(--color-text-400);
-    border-color: rgba(79, 217, 255, 0.4);
+    border-color: rgba(168, 132, 246, 0.4);
   }
 }
 

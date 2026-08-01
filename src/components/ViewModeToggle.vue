@@ -64,9 +64,9 @@ const emit = defineEmits<{ "update:modelValue": [value: ViewMode] }>();
   }
 
   &.is-active {
-    background: rgba(79, 217, 255, 0.14);
+    background: rgba(168, 132, 246, 0.14);
     color: var(--color-text-400);
-    box-shadow: inset 0 0 0 1px rgba(79, 217, 255, 0.3);
+    box-shadow: inset 0 0 0 1px rgba(168, 132, 246, 0.3);
   }
 }
 </style>

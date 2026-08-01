@@ -89,7 +89,7 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
     vertexShader: CORE_VERTEX,
     fragmentShader: CORE_FRAGMENT,
     uniforms: {
-      uColor: { value: new THREE.Color(0x4fd9ff) },
+      uColor: { value: new THREE.Color(0xb794f6) },
       uOpacity: { value: 0.85 },
     },
     transparent: true,
@@ -108,7 +108,7 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
   const orbitRadius = 3.3;
   const orbitGeometry = new THREE.RingGeometry(orbitRadius - 0.012, orbitRadius + 0.012, 96);
   const orbitMaterial = new THREE.MeshBasicMaterial({
-    color: 0x4fd9ff,
+    color: 0xb794f6,
     transparent: true,
     opacity: 0.16,
     side: THREE.DoubleSide,
@@ -134,13 +134,13 @@ export function createCommandScene(options: CommandSceneOptions): CommandSceneHa
     anchor.position.copy(pos);
     nodeGroup.add(anchor);
 
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff9d1e });
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xf5b342 });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
     marker.position.copy(pos);
     nodeGroup.add(marker);
 
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), pos.clone()]);
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x4fd9ff, transparent: true, opacity: 0.2 });
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xb794f6, transparent: true, opacity: 0.2 });
     nodeGroup.add(new THREE.Line(lineGeometry, lineMaterial));
 
     return { card, anchor, marker, markerMaterial, lineGeometry, lineMaterial };

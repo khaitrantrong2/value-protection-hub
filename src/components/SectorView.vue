@@ -39,21 +39,21 @@ const title = computed(() => {
 const intro = computed(() => activeSector.value?.tip ?? "Every protected asset across the value-protection universe.");
 const code = computed(() => activeSector.value?.code ?? "ALL");
 const archLabel = computed(() => activeSector.value?.archLabel ?? "FULL ARCHIVE");
-const accent = computed(() => activeSector.value?.accent ?? "#4FD9FF");
+const accent = computed(() => activeSector.value?.accent ?? "#B794F6");
 
 const criticalCount = computed(() => workspaceLinks.value.filter((l) => l.criticality === "High").length);
 
 const statuses: (LinkStatus | "all")[] = ["all", "Active", "Review", "Blocked", "Archived"];
 
 const dock = computed(() => [
-  { scope: "all" as const, label: "All Vaults", accent: "#4FD9FF" },
+  { scope: "all" as const, label: "All Vaults", accent: "#B794F6" },
   ...sectors.map((s) => ({ scope: s.categoryId, label: s.name, accent: s.accent })),
 ]);
 </script>
 
 <template>
   <section class="sector">
-    <div class="sector__scroll">
+    <div class="sector__top">
       <nav class="sector__crumb mono">
         <button type="button" @click="goHome">Intrepid</button>
         <span>›</span>
@@ -108,7 +108,9 @@ const dock = computed(() => [
           </button>
         </div>
       </div>
+    </div>
 
+    <div class="sector__scroll vph-scroll">
       <div v-if="isLoading" class="sector__grid">
         <SkeletonCard v-for="n in 6" :key="n" />
       </div>
@@ -149,17 +151,28 @@ const dock = computed(() => [
 .sector {
   position: relative;
   z-index: 1;
-  min-height: calc(100svh - var(--height-header));
+  height: calc(100svh - var(--height-header));
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.sector__top {
+  flex: none;
+  width: 100%;
+  max-width: 1420px;
+  margin: 0 auto;
+  padding: clamp(16px, 2.5vh, 24px) clamp(20px, 4vw, 52px) 0;
 }
 
 .sector__scroll {
   flex: 1;
-  max-width: 1420px;
+  min-height: 0;
+  overflow-y: auto;
   width: 100%;
+  max-width: 1420px;
   margin: 0 auto;
-  padding: clamp(16px, 2.5vh, 30px) clamp(20px, 4vw, 52px) 40px;
+  padding: 4px clamp(20px, 4vw, 52px) 28px;
 }
 
 .sector__crumb {
@@ -198,8 +211,8 @@ const dock = computed(() => [
   gap: 24px;
   padding: clamp(18px, 2.2vw, 26px) clamp(20px, 2.6vw, 32px);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(79, 217, 255, 0.18);
-  background: linear-gradient(135deg, rgba(11, 29, 74, 0.55), rgba(7, 22, 51, 0.3));
+  border: 1px solid rgba(168, 132, 246, 0.18);
+  background: linear-gradient(135deg, rgba(30, 16, 66, 0.55), rgba(21, 10, 48, 0.3));
   margin-bottom: 22px;
 }
 
@@ -226,7 +239,7 @@ const dock = computed(() => [
   gap: 8px;
   font-size: 10px;
   letter-spacing: 0.2em;
-  color: #c6d3ee;
+  color: #d8cdf0;
   margin-bottom: 10px;
 }
 
@@ -264,7 +277,7 @@ const dock = computed(() => [
   padding: 12px 18px;
   border-radius: 14px;
   border: 1px solid var(--color-command-border);
-  background: rgba(7, 22, 51, 0.4);
+  background: rgba(21, 10, 48, 0.4);
 }
 
 .sector__stat-num {
@@ -302,7 +315,7 @@ const dock = computed(() => [
   padding: 11px 16px;
   border-radius: 12px;
   border: 1px solid var(--color-command-border);
-  background: rgba(7, 22, 51, 0.5);
+  background: rgba(21, 10, 48, 0.5);
   color: var(--color-text-200);
 
   input {
@@ -328,14 +341,14 @@ const dock = computed(() => [
   font-size: 11px;
   letter-spacing: 0.06em;
   border: 1px solid var(--color-command-border);
-  background: rgba(7, 22, 51, 0.4);
+  background: rgba(21, 10, 48, 0.4);
   color: var(--color-text-300);
   cursor: pointer;
   transition: all 0.16s var(--ease-power2-out);
 
   &.is-on {
-    border-color: rgba(79, 217, 255, 0.5);
-    background: rgba(79, 217, 255, 0.12);
+    border-color: rgba(168, 132, 246, 0.5);
+    background: rgba(168, 132, 246, 0.12);
     color: #fff;
   }
 
@@ -347,7 +360,7 @@ const dock = computed(() => [
     &.is-on {
       border-color: transparent;
       background: var(--color-orange-400);
-      color: #04122b;
+      color: #ffffff;
     }
   }
 }
@@ -369,15 +382,14 @@ const dock = computed(() => [
 }
 
 .sector__dock {
-  position: sticky;
-  bottom: 0;
+  flex: none;
   z-index: 40;
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding: 11px clamp(16px, 4vw, 52px);
   border-top: 1px solid var(--color-command-border);
-  background: rgba(6, 15, 38, 0.88);
+  background: rgba(16, 8, 34, 0.88);
   backdrop-filter: blur(12px);
 }
 
@@ -392,7 +404,7 @@ const dock = computed(() => [
   font-weight: 600;
   white-space: nowrap;
   border: 1px solid var(--color-command-border);
-  background: rgba(7, 22, 51, 0.5);
+  background: rgba(21, 10, 48, 0.5);
   color: var(--color-text-300);
   cursor: pointer;
   transition: all 0.16s var(--ease-power2-out);
@@ -400,7 +412,7 @@ const dock = computed(() => [
   &.is-on {
     border-color: var(--accent);
     color: #fff;
-    background: rgba(79, 217, 255, 0.1);
+    background: rgba(168, 132, 246, 0.1);
   }
 }
 

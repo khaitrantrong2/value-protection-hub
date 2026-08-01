@@ -87,7 +87,7 @@ const criticalities = ["High", "Medium", "Low"] as const;
   position: sticky;
   top: var(--height-header);
   z-index: var(--z-index-layout);
-  background: rgba(7, 22, 51, 0.78);
+  background: rgba(21, 10, 48, 0.78);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-command-border);
 }

@@ -4,13 +4,13 @@ const missions = [
     code: "01 · CORE",
     title: "Protect the core",
     desc: "Planet Intrepid holds the critical assets, systems, and control knowledge worth securing.",
-    accent: "#4FD9FF",
+    accent: "#B794F6",
   },
   {
     code: "02 · FLEET",
     title: "Navigate the fleet",
     desc: "Eight guardian starfighters orbit the core — each a work domain you can navigate into.",
-    accent: "#FF9D1E",
+    accent: "#F5B342",
   },
   {
     code: "03 · SCAN",
@@ -25,7 +25,7 @@ const missions = [
   <section id="mission" class="mission">
     <div class="mission__head">
       <span class="mission__rule"></span>
-      <span class="mission__eyebrow mono">MISSION BRIEF</span>
+      <span class="mission__eyebrow mono">MISSION MAP</span>
       <span class="mission__rule"></span>
     </div>
     <div class="mission__grid">
@@ -58,7 +58,7 @@ const missions = [
 .mission__rule {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(79, 217, 255, 0.28), transparent);
+  background: linear-gradient(90deg, transparent, rgba(168, 132, 246, 0.28), transparent);
 }
 
 .mission__eyebrow {
@@ -83,7 +83,7 @@ const missions = [
   padding: 20px 22px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-card-border);
-  background: linear-gradient(180deg, rgba(11, 29, 74, 0.34), rgba(7, 22, 51, 0.16));
+  background: linear-gradient(180deg, rgba(30, 16, 66, 0.34), rgba(21, 10, 48, 0.16));
 }
 
 .mission__bar {

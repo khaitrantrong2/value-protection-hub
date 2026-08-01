@@ -4,7 +4,7 @@ import Starfield from "./components/Starfield.vue";
 import AppHeader from "./components/AppHeader.vue";
 import CommandHero from "./components/CommandHero.vue";
 import MissionStrip from "./components/MissionStrip.vue";
-import CrewSection from "./components/CrewSection.vue";
+import CrewView from "./components/CrewView.vue";
 import SectorView from "./components/SectorView.vue";
 import CommandPalette from "./components/CommandPalette.vue";
 import { useLinks } from "./composables/useLinks";
@@ -26,8 +26,8 @@ onMounted(() => document.body.classList.remove("is-loading"));
     <template v-if="view === 'home'">
       <CommandHero />
       <MissionStrip />
-      <CrewSection />
     </template>
+    <CrewView v-else-if="view === 'crew'" />
     <SectorView v-else />
   </main>
 

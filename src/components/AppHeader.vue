@@ -2,7 +2,7 @@
 import { useLinks } from "../composables/useLinks";
 import Icon from "./Icon.vue";
 
-const { config, paletteOpen, goHome, openSector } = useLinks();
+const { config, paletteOpen, goHome, openSector, openCrew } = useLinks();
 </script>
 
 <template>
@@ -21,6 +21,7 @@ const { config, paletteOpen, goHome, openSector } = useLinks();
     <nav class="hdr__nav">
       <a class="hdr__link" href="#" @click.prevent="goHome">Universe</a>
       <a class="hdr__link" href="#" @click.prevent="openSector('all')">Directory</a>
+      <a class="hdr__link" href="#" @click.prevent="openCrew">Crew</a>
 
       <a
         v-if="config?.adminSheetUrl"
@@ -52,9 +53,9 @@ const { config, paletteOpen, goHome, openSector } = useLinks();
   gap: 24px;
   height: var(--height-header);
   padding: 0 clamp(20px, 4vw, 52px);
-  background: linear-gradient(180deg, rgba(7, 22, 51, 0.82), rgba(7, 22, 51, 0.42));
+  background: linear-gradient(180deg, rgba(21, 10, 48, 0.82), rgba(21, 10, 48, 0.42));
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(146, 163, 199, 0.1);
+  border-bottom: 1px solid rgba(176, 160, 210, 0.1);
 }
 
 .hdr__brand {
@@ -77,7 +78,7 @@ const { config, paletteOpen, goHome, openSector } = useLinks();
   position: absolute;
   inset: -6px -3px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 217, 255, 0.28), transparent 70%);
+  background: radial-gradient(circle, rgba(168, 132, 246, 0.28), transparent 70%);
 }
 
 .hdr__mark img {
@@ -152,15 +153,15 @@ const { config, paletteOpen, goHome, openSector } = useLinks();
   cursor: pointer;
   padding: 9px 14px;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(79, 217, 255, 0.3);
-  background: rgba(79, 217, 255, 0.07);
-  color: #cfe9f7;
+  border: 1px solid rgba(168, 132, 246, 0.3);
+  background: rgba(168, 132, 246, 0.07);
+  color: #e4d7ff;
   font-size: 13.5px;
   transition: background 0.2s var(--ease-power2-out);
 
   @include hover {
     &:hover {
-      background: rgba(79, 217, 255, 0.13);
+      background: rgba(168, 132, 246, 0.13);
     }
   }
 

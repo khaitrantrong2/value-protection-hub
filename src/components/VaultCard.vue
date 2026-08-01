@@ -68,8 +68,8 @@ async function copyLink() {
   gap: 12px;
   padding: 20px;
   border-radius: 18px;
-  border: 1px solid rgba(146, 163, 199, 0.18);
-  background: linear-gradient(180deg, rgba(11, 29, 74, 0.42), rgba(7, 22, 51, 0.24));
+  border: 1px solid rgba(176, 160, 210, 0.18);
+  background: linear-gradient(180deg, rgba(30, 16, 66, 0.42), rgba(21, 10, 48, 0.24));
   transition:
     transform 0.22s var(--ease-power2-out),
     border-color 0.22s var(--ease-power2-out),
@@ -78,7 +78,7 @@ async function copyLink() {
   @include hover {
     &:hover {
       transform: translateY(-3px);
-      border-color: rgba(79, 217, 255, 0.4);
+      border-color: rgba(168, 132, 246, 0.4);
       box-shadow: 0 22px 50px -24px rgba(0, 0, 0, 0.85);
     }
   }
@@ -107,7 +107,7 @@ async function copyLink() {
   flex: none;
   border-radius: 11px;
   border: 1px solid var(--color-command-border);
-  background: rgba(79, 217, 255, 0.06);
+  background: rgba(168, 132, 246, 0.06);
   color: var(--accent);
 }
 
@@ -162,7 +162,7 @@ async function copyLink() {
 .vault__desc {
   font-size: 13px;
   line-height: 1.5;
-  color: #a9b8d8;
+  color: #b8acd8;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -178,10 +178,10 @@ async function copyLink() {
   li {
     font-size: 10px;
     letter-spacing: 0.04em;
-    color: #9fb0d3;
+    color: #b0a4cc;
     padding: 3px 9px;
     border-radius: 6px;
-    background: rgba(146, 163, 199, 0.1);
+    background: rgba(176, 160, 210, 0.1);
   }
 }
 
@@ -208,7 +208,7 @@ async function copyLink() {
 }
 
 .vault__v {
-  color: #dbe4f7;
+  color: #e8e0ff;
   font-weight: 600;
 }
 
@@ -256,7 +256,7 @@ async function copyLink() {
   flex: 1;
   border: none;
   background: var(--grad-cta);
-  color: #04122b;
+  color: #ffffff;
 
   @include hover {
     &:hover {
@@ -268,11 +268,11 @@ async function copyLink() {
 .vault__copy {
   border: 1px solid var(--color-command-border);
   background: transparent;
-  color: #cdd8f0;
+  color: #dcd2f0;
 
   @include hover {
     &:hover {
-      border-color: rgba(79, 217, 255, 0.4);
+      border-color: rgba(168, 132, 246, 0.4);
       color: #fff;
     }
   }
