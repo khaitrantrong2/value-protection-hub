@@ -1,0 +1,466 @@
+Please redesign the front-end of my current project into a much stronger and more cohesive concept.
+
+Target repository:
+https://github.com/khaitrantrong2/value-protection-hub.git
+
+Important:
+Do not rebuild the data layer yet.
+Focus first on front-end design, information architecture, scene concept, layout, component structure, and interaction design.
+We will enhance the core logic later.
+
+Use my related design resources as guidance:
+- khai-portfolio (for 3D / motion / presentation quality)
+- taste-skillkhai
+- GSAPkhai
+
+Use these Taste Skill principles:
+- redesign-existing-projects
+- design-taste-frontend
+- high-end-visual-design
+- minimalist-ui
+
+Use these design dials:
+DESIGN_VARIANCE: 7
+MOTION_INTENSITY: 6
+VISUAL_DENSITY: 5
+
+Use these GSAPkhai elements:
+- CustomEase
+- SplitText
+- DrawSVGPlugin
+- ScrambleTextPlugin very lightly for system labels only
+
+Do NOT use:
+- ScrollSmoother
+- excessive glitch effects
+- noisy hacker aesthetics
+- generic dashboard styling
+- a second theme that breaks the main visual concept
+
+---
+
+# Main redesign decision
+
+The current version is not strong enough because:
+1. The landing page and the workspace/list page feel like two different products.
+2. The theme is inconsistent.
+3. It does not express the spirit of “Value Protection”.
+4. The current orbiting labels are not meaningful enough.
+5. The second page becomes too generic and loses the wow factor.
+
+I want a new cohesive concept.
+
+---
+
+# New concept
+
+Create a unified “galactic guardian” / “space-opera command center” aesthetic.
+
+Important:
+Do NOT copy or reproduce official copyrighted Guardians of the Galaxy characters, ships, logos, posters, or IP-specific assets.
+Instead, create an original visual language inspired by:
+- galactic guardians
+- orbital defense
+- treasure vaults
+- space-fleet navigation
+- command-center exploration
+
+The core metaphor should be:
+
+- Planet Intrepid = the protected core
+- Orbiting guardian starfighters = the working domains
+- Sector pages = separate universes / vaults
+- Trackers and links = the treasure assets of Planet Intrepid
+- Search = a scanner that helps users find tools across the universe
+
+This product should feel like:
+A premium galactic command center for protecting and navigating value-related tools.
+
+---
+
+# Product story
+
+Value Protection Hub is not just a list of links.
+It is a command center that protects, organizes, and navigates the critical assets, systems, templates, trackers, dashboards, and SOPs used by the Claimback / AR / Finance Control team.
+
+Tone:
+- premium
+- cinematic
+- futuristic
+- protective
+- mission-oriented
+- slightly playful in concept, but professional in execution
+
+---
+
+# Required experience
+
+## Home page (/)
+
+The home page should become the main wow moment.
+
+This page should:
+- introduce the hub
+- explain its purpose briefly
+- provide a primary search bar
+- display a strong 3D core illustration
+- let users explore the universe by clicking orbiting starfighters
+
+Do NOT create a long generic list page immediately under the hero.
+
+The first page should be visually focused and memorable.
+
+### Home page content
+
+Top navigation:
+- small logo / brand mark
+- Value Protection Hub
+- Universe
+- Mission
+- search button / command palette trigger
+
+Hero copy:
+Title:
+Value Protection Hub
+
+Subtitle:
+Claimback, AR & Finance Control Workspace
+
+Supporting text:
+A galactic command center for the tools, trackers, and control assets that protect value across Intrepid.
+
+Primary search placeholder:
+Scan the universe for trackers, SOPs, templates, dashboards, and systems...
+
+Primary CTA ideas:
+- Explore the universe
+- Scan the vaults
+- Launch command search
+
+Secondary CTA ideas:
+- View mission map
+- Learn how the hub works
+
+### Main hero scene
+
+The visual centerpiece should be:
+A 3D Planet Intrepid
+
+Planet Intrepid should feel like:
+- protected
+- important
+- glowing from within
+- networked
+- defended
+- central to the system
+
+Around Planet Intrepid, create orbiting guardian starfighters.
+These should NOT be plain floating pills anymore.
+They should feel like real small fleet units / spacecraft / guardian modules.
+
+Each starfighter represents one work domain:
+- SOPs
+- NetSuite
+- Templates
+- Review Cockpit
+- AR Monitoring
+- Country Files
+- Project Workspace
+- Admin / Access
+
+Behavior:
+- starfighters orbit the planet along visible or subtly glowing orbital lanes
+- each has a clear label
+- each can be hovered
+- on hover, show a mini info panel or tooltip
+- on click, navigate to its own universe / sector page
+
+Example hover panel content:
+Templates
+Upload templates, invoice support files, and standardized working papers.
+2 active assets
+
+### Motion direction
+
+Home page motion should feel premium and cinematic:
+- slow orbital movement
+- subtle starfield / cosmic dust
+- ring glow around the planet
+- light sweeps
+- hover slowdown on starfighters
+- subtle light trails
+- elegant transition into sector pages
+
+Avoid:
+- chaotic particles
+- arcade-game energy
+- excessive wobble
+- too much screen noise
+- generic sci-fi randomness
+
+---
+
+# Sector page concept
+
+Each starfighter should open a dedicated universe / sector page, for example:
+- /sector/sops
+- /sector/netsuite
+- /sector/templates
+- /sector/review-cockpit
+
+The sector page must remain inside the same universe theme.
+
+Do NOT switch to a beige admin-like dashboard that feels disconnected.
+
+The sector page should still feel like part of the same cosmic system.
+
+## Sector page layout
+
+Suggested layout:
+
+1. Persistent top nav with same universe identity
+2. Sector header with breadcrumb:
+   Intrepid > Templates Sector
+3. Short intro:
+   The vault of reusable formats and upload assets used across the value-protection mission.
+4. Search/filter bar
+5. Treasure vault / asset cards
+6. Small contextual side panel (optional)
+
+## Visual metaphor for sector page
+
+This page should feel like:
+- a vault
+- a hangar
+- a protected archive
+- a cosmic treasure bay
+
+Trackers/links should be styled as:
+- vault cards
+- mission crates
+- holo modules
+- protected asset units
+
+Each card still needs practical metadata:
+- title
+- short description
+- owner
+- country
+- criticality
+- status
+- tags
+- Open button
+- Copy button
+
+But visually, it should fit the space-universe theme.
+
+---
+
+# Information architecture
+
+For now, redesign the front-end to support this structure:
+
+/                      -> Home page / main universe
+/sector/:slug          -> Sector page for each domain
+
+Do not focus on final live data integration yet.
+Use mock data and clean architecture.
+
+Create or refactor routing if needed.
+
+---
+
+# Home page layout requirements
+
+The home page should be largely a one-screen or near-one-screen experience.
+
+Recommended structure:
+1. Top nav
+2. Hero copy
+3. Primary search
+4. Main 3D universe illustration
+5. Minimal bottom explanation strip or tiny mission summary
+6. Maybe one small “How it works” strip if needed, but avoid long scrolling sections
+
+Avoid:
+- a long second section with generic list layout directly after the hero
+- too much vertical content
+- two contrasting page themes
+
+---
+
+# Visual style
+
+Use a unified dark cosmic theme.
+
+Suggested palette:
+- Deep Space Navy: #071633
+- Midnight Blue: #0B1D4A
+- Electric Cyan: #4FD9FF
+- Intrepid Orange: #FF9D1E
+- Soft White: #F4F7FF
+- Muted Gray Blue: #92A3C7
+
+Typography:
+- use one strong modern sans font for headings/body
+- use a mono font only for tiny technical labels / system text
+
+Recommended:
+- Geist / Satoshi / Manrope / Plus Jakarta Sans
+- IBM Plex Mono or JetBrains Mono for labels
+
+Shape language:
+- orbital arcs
+- rounded capsules
+- shield rings
+- cockpit panels
+- holographic borders
+- vault-shell cards
+
+---
+
+# UX requirements
+
+## Search
+There should be a primary search bar on the home page.
+The search experience should feel like a “scanner”.
+
+Optional:
+- command palette on Ctrl+K / Cmd+K
+- results overlay
+- pressing Enter jumps to the most relevant sector or result
+
+## Sector navigation
+Clicking a starfighter should feel like launching into that sector.
+
+## Responsiveness
+Desktop:
+- strong cinematic hero scene
+- clear search + orbit interaction
+
+Tablet:
+- keep orbit / planet readable
+- reduce complexity cleanly
+
+Mobile:
+- simplify orbit density
+- preserve central theme
+- prioritize search and clean tapping
+
+---
+
+# Design language of “Value Protection”
+
+This is critical.
+
+The interface should communicate:
+- defense
+- protection
+- value
+- access to critical assets
+- structured navigation
+- a sense of guarding the organization’s tools and knowledge
+
+This should NOT feel like:
+- a random space dashboard
+- a gaming site
+- a generic admin panel
+- a public portfolio
+
+Instead, it should feel like:
+A guarded universe of mission-critical assets.
+
+Use copy and microcopy that support this idea:
+- Explore the universe
+- Scan the vaults
+- Access protected assets
+- Deploy to sector
+- Navigate the fleet
+- Enter the vault
+- Mission-ready tools
+
+---
+
+# Technical direction
+
+Preserve:
+- Vue / Vite
+- Three.js where useful
+- GSAP motion
+- current repo foundation where useful
+
+Refactor freely if needed.
+
+Likely component direction:
+- AppShell
+- UniverseHero
+- PlanetIntrepidScene
+- OrbitingFleet
+- StarfighterNode
+- CommandSearch
+- SectorPage
+- SectorVaultGrid
+- VaultCard
+- MissionStrip / HowItWorksStrip
+
+Do not spend time on final Google Sheet integration in this pass.
+Use mock data and architecture clean enough to wire later.
+
+---
+
+# What to remove or change from the current version
+
+Please remove or redesign:
+- the current second-page beige workspace layout directly under the hero
+- the generic category + list page feeling
+- the sense that page 1 and page 2 are separate products
+- pill-only floating labels
+- generic dashboard composition
+
+Replace them with:
+- unified universe concept
+- starfighter-based sector navigation
+- sector pages with vault-like asset presentation
+- stronger thematic storytelling
+- more cinematic but still professional motion
+
+---
+
+# Deliverables
+
+1. A redesigned front-end concept inside the current repo
+2. A coherent home page with:
+   - Planet Intrepid
+   - orbiting starfighters
+   - search
+   - intro copy
+3. Sector page templates with cohesive styling
+4. A refined component structure
+5. Clean mock data structure for sectors and assets
+6. Responsive behavior
+7. Updated README notes if necessary
+
+---
+
+# Acceptance criteria
+
+The redesign is complete when:
+- the product feels like one cohesive universe
+- the home page is visually memorable and wow-worthy
+- the theme clearly supports the “Value Protection” story
+- Planet Intrepid feels like the protected core
+- orbiting starfighters feel meaningful and clickable
+- clicking a starfighter opens a themed sector page
+- sector pages still feel inside the same universe
+- the second-page generic dashboard feeling is gone
+- the front-end looks premium, original, and polished
+- motion is smooth and controlled
+- no copyrighted IP is directly copied
+- npm run build passes
+
+Commit message:
+Redesign hub into galactic guardian universe
+
+I want the redesign to feel emotionally stronger and more iconic.
+Please prioritize concept strength, visual storytelling, and cohesion over generic utility UI.
+The first impression should feel like entering a protected galactic system, not just opening a list of links.

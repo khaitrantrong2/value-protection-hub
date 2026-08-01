@@ -1,0 +1,249 @@
+Continue from the current implementation. Do not redesign the universe concept or page architecture again.
+
+The current direction is approved:
+- unified galactic theme
+- Planet Intrepid home
+- clickable fleet sectors
+- coherent sector vault pages
+- Crew page
+- command palette
+
+This pass is a production-polish and scalability pass.
+
+## 1. Verify the Intrepid symbol
+
+The current header icon has changed, but verify whether it is the exact approved Intrepid asset.
+
+Report:
+- file path
+- original source
+- whether it is an approved existing company asset
+
+Do not use an AI-invented approximation of the Intrepid logo.
+If the approved asset is unavailable, keep a clearly labelled placeholder and report the required file.
+
+## 2. Reposition and enlarge Commander Khải
+
+The current Commander is too small and can be covered by ship hover cards.
+
+Requirements:
+- increase Commander visual size by approximately 1.5–1.8x
+- place him on a dedicated command platform
+- preserve clear separation from the hero copy, search bar, planet, and ship tooltips
+- create a Commander safe zone that tooltips cannot overlap
+
+Label:
+Commander Khải
+Value Protection Team Lead
+
+Interactions:
+- idle breathing and weight shift
+- subtle pointer-follow head movement
+- hover acknowledgement
+- click salute or point toward Planet Intrepid
+- command-search activation triggers a control gesture and planet pulse
+
+No weapons and no aggressive combat behavior.
+
+## 3. Improve starfighter depth and interaction
+
+The current ships are better than triangle markers but still feel small and relatively flat.
+
+Improve:
+- thicker, more readable silhouettes
+- visible engine glow
+- subtle engine trails
+- rim lighting
+- banking/tilting along orbit movement
+- responsive scale based on viewport
+- 1.08–1.12 scale on hover/focus
+- smooth slowdown on hover
+- selected orbit lane brightens
+- other ships dim slightly
+
+Do not keep all labels equally visible all the time.
+Default:
+- minimal label or no label
+
+Hover/focus:
+- show clear sector name
+- short description
+- asset count
+- Navigate action
+
+Implement tooltip collision avoidance:
+- never cover Commander
+- never cover hero copy/search
+- never leave the viewport
+- choose tooltip direction based on ship position
+
+Keep equivalent keyboard-accessible DOM controls for every ship.
+
+## 4. Improve Crew avatar differentiation
+
+The Crew page structure and grouping are approved, but the ten astronauts currently look too similar.
+
+Keep one shared rig and shared animations, but create visible variants through:
+- hairstyles
+- helmet shapes
+- suit accents
+- body proportions
+- role insignia
+- small accessories
+- idle animation variation
+
+Crew members:
+
+Khải — Male — Team Lead / Commander — Regional
+Huệ — Female — VN
+Hùng — Male — VN
+Ice — Female — TH
+Kla — Male — TH
+Nguyên — Male — SG
+Ngân — Female — MY
+Thành — Male — PH & ID
+Lan — Female — R2R of Value Protector
+Phương — Female — Intern / Cadet
+
+Special distinctions:
+- Khải: command insignia
+- Lan: R2R control emblem
+- Phương: cadet suit
+- female and male silhouettes should be visibly differentiated without exaggeration
+
+Do not create realistic face likenesses.
+Keep a premium stylized astronaut direction.
+
+## 5. Make venture cards feel celestial
+
+The current Crew page still resembles a card grid.
+
+Keep the practical layout, but give each assignment area a stronger celestial identity:
+
+- VN Planet
+- TH Planet
+- SG Moon
+- MY Moon
+- PH & ID Twin Sector
+- R2R Control Station
+- Cadet / Learning Pod
+
+Add:
+- subtle mini planet/moon background
+- venture-specific orbit lines
+- soft atmospheric glow
+- consistent sector colors
+
+Do not reduce readability.
+
+## 6. Improve Crew profile drawer
+
+Each crew profile drawer should support:
+
+- Name
+- Role
+- Venture / Assignment
+- Primary scope
+- Systems / Tools
+- Current mission
+- optional internal contact URL when configured
+
+Use mock text for now.
+Do not hardcode confidential information.
+
+## 7. Expand command search
+
+The current command palette is good, but it must search more than sectors.
+
+Support result types:
+- SECTOR
+- ASSET
+- CREW
+
+Search fields:
+- sector name
+- asset title
+- asset description
+- tags
+- owner
+- country
+- crew name
+- assignment
+
+Keyboard behavior:
+- Up/Down changes selection
+- Enter opens selected result
+- Esc closes
+- Ctrl/Cmd+K opens
+- focus returns to the trigger after close
+
+Show a clear type badge on each result.
+
+## 8. Prove sector scalability
+
+Create a development-only test sector containing at least 24 mock assets.
+
+Verify:
+- desktop document does not scroll
+- fixed header remains visible
+- sector intro and filters remain visible
+- only the asset vault scrolls
+- Jump to Sector dock remains visible
+- the dock does not cover the final asset row
+- vault scroll resets when changing sector
+- cards support 3 columns on wide screens
+- 2 columns on tablet
+- 1 column on mobile
+
+Add a temporary development flag or fixture; do not mix the 24 test assets into production mock content.
+
+## 9. Polish route transitions
+
+Add a restrained launch transition when selecting a ship:
+
+Duration:
+500–700ms
+
+Sequence:
+- selected craft banks toward the camera
+- orbit lane pulses
+- scene fades or zooms slightly
+- sector page appears
+
+Do not make users wait through a long cinematic transition.
+Respect reduced-motion settings.
+
+## 10. Performance and cleanup
+
+- lazy-load Crew route assets
+- reuse geometries and materials
+- cap renderer pixel ratio appropriately
+- pause offscreen avatar animations
+- dispose Three.js scenes, geometries, materials, textures, and listeners on route change
+- avoid duplicate render loops
+- confirm returning to Home does not create a second scene
+- handle WebGL context loss gracefully
+
+## 11. Acceptance checks
+
+Test:
+- Home to Sector to Home repeatedly
+- Home to Crew to Home repeatedly
+- pointer and keyboard ship navigation
+- command palette sectors/assets/crew
+- Crew profile drawer
+- 24-asset sector fixture
+- 16:9
+- 16:10
+- ultrawide
+- tablet
+- mobile
+- prefers-reduced-motion
+
+Run:
+npm run build
+
+Fix all TypeScript and build errors.
+
+Commit message:
+Polish fleet, commander, crew and vault scalability

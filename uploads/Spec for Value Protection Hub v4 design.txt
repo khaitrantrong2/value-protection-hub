@@ -1,0 +1,371 @@
+Please continue polishing the current galactic redesign in:
+
+https://github.com/khaitrantrong2/value-protection-hub.git
+
+Do not rebuild the concept again. The new unified cosmic theme is correct. Focus on brand accuracy, 3D asset quality, interaction, the Crew page, and the full-screen app-shell behavior.
+
+## Design assessment
+
+The current version is substantially better:
+- Home and sector pages now belong to the same universe.
+- Planet Intrepid, orbit navigation, sector vaults, and mission map form a coherent story.
+- Typography and dark cosmic styling are aligned.
+
+The next pass must solve:
+1. Incorrect Intrepid brand icon.
+2. Cheap-looking and partially clipped gold orbital ring.
+3. Triangle markers that do not look like real starfighters.
+4. Missing interactive Commander Khải astronaut.
+5. Missing Value Protection Crew page for the 10-person team.
+6. Sector pages must support many assets without document scrolling.
+7. Better 3D performance and accessibility.
+
+Use:
+- redesign-existing-projects
+- design-taste-frontend
+- high-end-visual-design
+- GSAP CustomEase
+- DrawSVGPlugin only where genuinely useful
+
+Do not use ScrollSmoother because Lenis is already present.
+Do not copy official Guardians of the Galaxy IP, characters, ships, logos, or artwork.
+All spacecraft and astronaut designs must be original.
+
+## 1. Correct Intrepid branding
+
+Replace the current circular placeholder icon beside “Value Protection Hub”.
+
+Search the existing project, related local repositories, and approved brand assets for the exact Intrepid symbol that is already available.
+
+Use the actual approved Intrepid symbol.
+Do not invent or redraw a fake Intrepid logo.
+
+Change the small sub-label from:
+
+INTREPID · COMMAND CENTER
+
+to:
+
+VALUE PROTECTION · COMMAND CENTER
+
+If the approved Intrepid symbol cannot be found, keep a clearly named placeholder component and report exactly which asset path is required. Do not fabricate the logo.
+
+## 2. Redesign Planet Intrepid
+
+Keep Planet Intrepid as the protected core, but make it feel more intentional and branded.
+
+The planet should contain three visual layers:
+
+1. Inner Core
+Represents Intrepid’s critical value and assets.
+
+2. Surface Network
+Represents finance systems, data connections, trackers, and control workflows.
+
+3. Outer Shield
+Represents Value Protection controls and governance.
+
+Add a subtle approved Intrepid symbol as a holographic mark or shield projection if the asset is available.
+
+Reduce the overly bright cyan bloom so the surface retains detail.
+
+## 3. Remove or redesign the gold ring
+
+The current thick gold ring feels cheap and appears partially clipped while rotating.
+
+Replace it with:
+- two or three thin cyan/blue orbital lanes
+- one very thin orange accent lane
+- a translucent shield halo close to the planet
+- subtle moving pulses or light sweeps
+
+Do not use a thick gold torus.
+
+Technical requirements:
+- orbit radius must be responsive to viewport and camera aspect ratio
+- no fixed pixel orbit radius
+- update camera aspect and projection matrix on resize
+- ensure the scene bounds do not crop orbit geometry
+- use transparent materials with depthWrite disabled where appropriate
+- keep orbit geometry within a safe viewport radius
+- test 16:9, 16:10, ultrawide, tablet, and mobile
+
+## 4. Replace triangle markers with original 3D starfighters
+
+Replace the current glowing triangle markers with actual stylized low-poly spacecraft.
+
+Do not download or copy the linked reference models directly. Use them only as silhouette and art-direction references.
+
+Create four reusable original spacecraft archetypes:
+
+1. Scout Craft
+Used by SOPs and Templates.
+
+2. Data Interceptor
+Used by NetSuite and Review Cockpit.
+
+3. Guardian Cruiser
+Used by AR Monitoring and Country Files.
+
+4. Command Shuttle
+Used by Project Workspace and Admin / Access.
+
+Each sector craft must have:
+- a clear spacecraft silhouette
+- shared visual DNA
+- sector-specific accent color
+- engine glow
+- subtle trail
+- visible orbit lane
+- clear DOM label
+- reusable optimized geometry/materials
+
+Interaction:
+- hover slows the selected craft
+- selected orbit lane brightens
+- other crafts reduce opacity slightly
+- tooltip shows sector name, description, and asset count
+- click performs a short 500–700ms launch transition and navigates to `/sector/:slug`
+
+Accessibility:
+- every 3D craft must have an equivalent keyboard-focusable DOM button
+- Enter/Space activates the sector
+- focus state must be visible
+- do not rely only on Three.js raycasting
+
+Performance:
+- reuse geometries and materials
+- use shared textures
+- use InstancedMesh or GLTF clones where suitable
+- Draco/KTX2 optimization if external GLB assets are introduced
+- dynamically reduce pixel ratio on lower-powered devices
+
+## 5. Add interactive Commander Khải astronaut to the home page
+
+Add an original stylized 3D astronaut representing Khải, the Value Protection Team Lead.
+
+Placement:
+- near the hero copy or on a small command platform between the hero content and Planet Intrepid
+- approximately 180–240px visual height on desktop
+- must not block the search bar or planet
+
+Visual:
+- professional stylized astronaut
+- navy suit
+- cyan lighting
+- orange command insignia
+- energetic, confident, command-ready
+- no weapons
+
+Label:
+Commander Khải
+Value Protection Team Lead
+
+Animations:
+- idle breathing / subtle weight shift
+- head and torso follow pointer slightly
+- hover acknowledges the cursor
+- click performs salute or points toward Planet Intrepid
+- activating search triggers a control-pad animation and a pulse from the planet
+- sector navigation triggers a launch-command gesture
+
+Sound must be muted by default if any audio is added.
+
+## 6. Replace Mission navigation with Crew
+
+Change top navigation to:
+
+Universe | Crew | Scan
+
+The Mission Map already exists on the home page, so a separate Mission navigation item is unnecessary.
+
+Create:
+
+/crew
+
+Page title:
+Value Protection Crew
+
+Subtitle:
+Guardians of the Intrepid Universe
+
+## 7. Build the 10-person Crew page
+
+Create a unified venture constellation / command-deck experience rather than a generic staff card grid.
+
+Team data:
+
+1. Khải
+Gender: Male
+Role: Team Lead / Commander
+Assignment: Regional command
+
+2. Lan
+Gender: Female
+Role: R2R of Value Protector
+Assignment: R2R Control Station
+
+3. Huệ
+Gender: Female
+Assignment: VN
+
+4. Hùng
+Gender: Male
+Assignment: VN
+
+5. Ice
+Gender: Female
+Assignment: TH
+
+6. Kla
+Gender: Male
+Assignment: TH
+
+7. Nguyên
+Gender: Male
+Assignment: SG
+
+8. Ngân
+Gender: Female
+Assignment: MY
+
+9. Thành
+Gender: Male
+Assignment: PH & ID
+
+
+10. Phương
+Gender: Female
+Role: Intern
+Assignment: Cadet / Learning Pod
+
+Crew universe structure:
+
+- Commander Khải at the central Command Station
+- R2R Control Station with Lan
+- VN Planet with Huệ and Hùng
+- TH Planet with Ice and Kla
+- SG Moon with Nguyên
+- MY Moon with Ngân
+- PH & ID Twin Sector with Thành
+- Cadet / Learning Pod with Phương
+
+Each member should have:
+- a stylized 3D astronaut avatar
+- name
+- role
+- assignment / venture
+- sector accent color
+- idle animation
+- hover response
+- clickable profile drawer
+
+Do not create ten unrelated heavy high-poly models.
+
+Recommended implementation:
+- one shared rigged astronaut base
+- shared animation clips: idle, wave, salute, point
+- variant hairstyles, suit colors, accessories, and body proportions
+- shared texture atlas
+- SkeletonUtils.clone or equivalent
+- load crew assets only on the Crew route
+- pause or reduce animation for offscreen avatars
+- respect prefers-reduced-motion
+
+Do not attempt realistic facial likeness without approved photos and consent. Use stylized identifiable role variants first.
+
+## 8. Sector page must not use document scrolling on desktop
+
+Actual sectors will have more than three assets.
+
+Keep fixed:
+- app header
+- breadcrumb
+- sector introduction
+- asset count / critical count
+- search and status filters
+- Jump to Sector dock
+
+Only the asset vault/grid should scroll.
+
+Desktop app-shell requirement:
+
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+
+Sector layout should use:
+- height: 100dvh
+- CSS Grid
+- grid-template-rows: auto auto minmax(0, 1fr) auto
+- min-height: 0 on the scrollable child
+- overflow-y: auto on the asset vault
+- overscroll-behavior: contain
+- scrollbar-gutter: stable
+
+The grid must support any number of assets:
+- 3 columns on wide desktop
+- 2 columns on tablet
+- 1 column on mobile
+
+Do not limit a sector to three assets.
+
+On mobile, use one clear scroll container and avoid problematic nested scrolling.
+
+Deployment will not automatically remove scrolling. Explicitly implement and test the viewport app shell.
+
+## 9. Jump to Sector
+
+Keep Jump to Sector, but convert it into a sticky bottom sector dock.
+
+Requirements:
+- always accessible while browsing assets
+- same universe styling
+- small ship/sector indicators
+- active sector clearly highlighted
+- horizontal scroll only inside the dock on narrow screens
+- does not cover asset card actions
+
+## 10. Additional polish
+
+Home:
+- reduce starfield visual density
+- reduce excessive bloom
+- improve label readability
+- increase clickable hit areas without making ships visually oversized
+- add subtle planet grounding/shadow
+
+Sector:
+- keep card design coherent
+- normalize button alignment
+- keep Open primary and Copy secondary
+- avoid excessive empty width when only two assets exist
+- show responsive grid rather than fixed three-card assumptions
+
+Copy tone:
+Use “protect”, “navigate”, “monitor”, “retrieve”, “control”, and “secure”.
+Avoid excessive war/combat language.
+
+## 11. Technical verification
+
+After implementation:
+- test all routes
+- test pointer and keyboard ship navigation
+- test Ctrl/Cmd+K scan
+- test scene cleanup when changing routes
+- dispose Three.js geometry/materials/listeners correctly
+- test reduced motion
+- test desktop 16:9 and 16:10
+- test ultrawide
+- test tablet
+- test mobile
+- confirm no document scrollbar on desktop sector pages
+- confirm only the asset vault scrolls
+- run npm run build
+- fix all build and TypeScript errors
+
+Commit message:
+Enhance galactic fleet, commander and crew experience

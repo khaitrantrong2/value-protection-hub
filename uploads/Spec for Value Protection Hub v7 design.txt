@@ -1,0 +1,241 @@
+The current crew character redesign is rejected.
+
+The result is a flat SVG/CSS mascot system, not the premium chibi astronaut art direction requested. Do not continue refining the current geometric characters. Replace the visual character approach.
+
+Use the three attached astronaut images strictly as visual-quality and art-direction references. Do not copy their exact characters, logos, clothing details, poses, or copyrighted source assets.
+
+The target qualities are:
+- premium chibi astronaut rendering
+- expressive anime-inspired face
+- approximately 2.5–3 heads tall
+- rounded, appealing proportions
+- glossy transparent helmet visor
+- soft matte spacesuit fabric
+- detailed backpack and small gadgets
+- cinematic rim lighting
+- polished gradients, shadows, reflections, and material depth
+- cute and charming, but not childish
+- visually strong enough to match the existing galactic environment
+
+Explicitly prohibited:
+- flat SVG astronauts
+- CSS-only geometric mascots
+- emoji-like faces
+- identical bodies with only recolored suits
+- simple circular helmets and rectangular limbs
+- generic educational-app illustration
+- placeholder-quality icons presented as final art
+
+## Asset strategy
+
+Do not pretend that CSS or primitive Three.js geometry can reproduce premium character art.
+
+For this iteration, use one of these approaches in order of preference:
+
+### Preferred implementation for current UI pass
+
+Use high-quality transparent character renders in WebP or PNG format.
+
+Requirements:
+- one consistent art direction for all ten people
+- transparent background
+- full-body pose
+- consistent camera angle and lighting
+- consistent canvas dimensions
+- optimized WebP versions
+- subtle GSAP idle movement, floating, tilt, blink simulation, and hover parallax
+- preserve accessibility with DOM buttons and labels
+
+This is acceptable even though the characters are not yet true real-time 3D.
+
+### Future 3D upgrade
+
+Document a future asset pipeline:
+- one rigged chibi astronaut GLB base
+- shared skeleton and animation clips
+- material, hairstyle, helmet, accessory, and body-scale variants
+- SkeletonUtils.clone or equivalent
+- optimized textures and shared geometries
+
+Do not attempt to procedurally model ten production-quality characters from primitive Three.js geometry.
+
+## Character quality acceptance test
+
+Before implementing all ten people, create only two visual prototypes:
+
+1. Khải — Commander
+2. Lan — R2R Lead
+
+Present the two prototypes first.
+
+Do not proceed with the remaining eight characters until both prototypes meet the approved visual-quality bar.
+
+### Khải prototype
+
+Colors:
+- electric cyan #35D6FF
+- deep navy #0B2A5B
+- command gold #FFC857
+
+Visual identity:
+- strongest silhouette
+- broader command shoulder structure
+- confident stance
+- high-quality commander insignia
+- wrist command console
+- subtle holographic navigation device
+- polished and energetic, not baby-like
+
+### Lan prototype
+
+Colors:
+- royal violet #B388FF
+- indigo navy #1B1F5E
+- aqua mint #5EEAD4
+
+Visual identity:
+- elegant, structured silhouette
+- composed stance
+- R2R control insignia
+- finance/data tablet or orbiting ledger interface
+- visually equal to leadership, but slightly less dominant than Khải
+
+Lan must not be represented as merely a purple recolor of Khải.
+
+## Crew composition redesign
+
+Reject the current symmetrical grid and center dividing line.
+
+Build an asymmetrical orbital fleet formation with staggered depth.
+
+Hierarchy:
+
+Leadership:
+- Khải at the visual apex
+- Lan to Khải’s right, 8–12% lower vertically and approximately 92–94% of Khải’s visual scale
+
+Sector prominence:
+1. TH
+2. VN
+3. SG
+4. MY
+5. PH
+6. ID
+
+Since Thành handles both PH and ID, represent him as one dual-sector guardian with two orbit markers.
+
+Composition:
+
+- Khải occupies the primary command platform.
+- Lan occupies a secondary leadership platform beside and slightly below Khải.
+- Ice and Kla form the largest TH orbital cluster.
+- Huệ and Hùng form the second-largest VN orbital cluster.
+- Nguyên represents SG on the next orbit.
+- Ngân represents MY on the following orbit.
+- Thành appears at the middle of Nguyen & Ngân with PH and ID twin-sector nodes.
+- Phương appears at the base as a smaller cadet / learning-pod character.
+
+Avoid:
+- equal rectangular slots
+- straight four-person rows
+- a rigid organization chart
+- a vertical line splitting Khải and Lan
+- identical character scales
+
+Use:
+- staggered vertical positions
+- varied depth and scale
+- soft orbital arcs
+- venture-specific atmospheric glow
+- subtle constellation connections
+- overlapping layers without covering faces or labels
+
+## Remaining character art direction
+
+After Khải and Lan are approved, create:
+
+Huệ — VN
+- jade, deep teal, pale mint
+- compact, agile silhouette
+- checklist drone and audit scanner
+
+Hùng — VN
+- emerald, slate teal, cyan
+- sturdier practical silhouette
+- reconciliation toolkit
+
+Ice — TH
+- amber, warm brown, pale gold
+- sleek and sharp silhouette
+- precision visor and sensor beacon
+
+Kla — TH
+- orange, chestnut, cyan
+- protective silhouette
+- dispute shield or control monitor
+
+Nguyên — SG
+- sky blue, royal blue, ice blue
+- precise refined silhouette
+- communication relay
+
+Ngân — MY
+- orchid, rich purple, mint
+- elegant analytical silhouette
+- reporting prism or scanner ring
+
+Thành — PH & ID
+- azure, violet, orange
+- explorer silhouette
+- dual-pod backpack and PH/ID twin badges
+
+Phương — Cadet
+- blush pink, soft purple, sky blue
+- smallest silhouette
+- learning drone and cadet patch
+
+Male and female characters should have clearly differentiated hairstyles and silhouettes, but remain tasteful and consistent.
+
+## Interaction
+
+Each rendered character should support:
+- subtle idle floating
+- tiny breathing scale
+- pointer-based tilt within a safe range
+- soft glow on hover
+- clear focus ring
+- click opens the crew profile panel
+
+Do not animate the full character with exaggerated bouncing.
+
+## Responsive composition
+
+Maintain the crew formation within a bounded stage:
+- max-width composition frame
+- clamp character scale
+- clamp offsets
+- use container queries or responsive breakpoints
+- do not spread characters infinitely on ultrawide monitors
+
+Desktop:
+- full staggered orbital formation
+
+Tablet:
+- leadership row, followed by compact venture clusters
+
+Mobile:
+- horizontal leadership carousel followed by venture clusters
+- do not shrink all ten characters until unreadable
+
+## Definition of done
+
+This redesign passes only if:
+- Khải and Lan look like premium chibi astronaut renders
+- the visual quality is recognizably close to the attached references
+- the characters are not flat SVG/CSS mascots
+- Khải and Lan are genuinely distinct
+- Lan is visually on the leadership tier, slightly below Khải
+- the team layout feels like an orbital formation, not a grid
+- the character system feels cohesive with the galactic environment
+
+First produce only the Khải and Lan prototypes and show them for review before implementing all ten crew members.

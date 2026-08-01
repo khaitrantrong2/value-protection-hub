@@ -1,0 +1,81 @@
+Stop generating character geometry.
+
+The current Khải and Lan prototypes are rejected. They are still procedural primitive characters and do not meet the approved premium chibi astronaut quality bar.
+
+This is now an external asset pipeline.
+
+Do not:
+- improve the current sphere/capsule models
+- create another procedural Three.js character
+- create SVG/CSS replacements
+- generate the remaining eight crew members
+- claim placeholder geometry is final art
+
+Remove or isolate the current prototype models from production UI.
+
+Prepare the application only for importing approved GLB assets at:
+
+public/models/crew/khai.glb
+public/models/crew/lan.glb
+
+Your responsibility is now integration, not character modelling.
+
+## Create an asset contract
+
+Document the required GLB specification:
+
+- Y-up orientation
+- origin/pivot at the feet
+- consistent real-world scale
+- rigged humanoid skeleton
+- preferably one shared skeleton between Khải and Lan
+- PBR materials
+- separate visor, suit, hair, skin, emissive and accessory materials where possible
+- animations:
+  Idle
+  Wave
+  Salute
+  Point
+- optimized for web
+- approximately 15k–30k triangles per character
+- texture size no higher than 2048px unless justified
+
+## Prepare CharacterLab for imported assets
+
+Keep the /character-lab route, but refactor it as a professional GLB review environment.
+
+It must load the approved files using GLTFLoader.
+
+Provide:
+- Khải / Lan tabs
+- orbit controls
+- front, three-quarter, side and back camera presets
+- animation selector
+- wireframe toggle
+- skeleton helper toggle
+- material inspection
+- triangle count
+- texture dimensions
+- animation list
+- download size
+- loading and error states
+
+Do not display procedural fallback characters.
+If a GLB file is missing, show:
+
+“Approved character asset not supplied yet.”
+
+## Production integration
+
+Do not integrate the characters into Home or Crew until I approve them in /character-lab.
+
+After the files are supplied:
+- load them lazily
+- use AnimationMixer
+- clean up mixers and assets on unmount
+- cap pixel ratio
+- provide reduced-motion fallback
+- prevent duplicate render loops
+- preserve keyboard-accessible DOM controls
+
+First complete only the asset-import pipeline and report the required files.
