@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useLinks } from "../composables/useLinks";
-import { portfolioFor } from "../data/memberPortfolios";
 
-const { selectedMember, openCrew } = useLinks();
+const { selectedMember, openCrew, memberScope } = useLinks();
 
 const member = computed(() => selectedMember.value);
-const scope = computed(() => (member.value ? portfolioFor(member.value) : []));
+const scope = computed(() => (member.value ? memberScope(member.value) : []));
 
 const stats = computed(() => {
   const rows = scope.value;
@@ -14,7 +13,7 @@ const stats = computed(() => {
   rows.forEach((r) => r.platforms.forEach((p) => platforms.add(p)));
   return {
     brands: rows.length,
-    exceptional: rows.filter((r) => /exceptional/i.test(r.stream)).length,
+    exceptional: rows.filter((r) => /exceptional/i.test(r.complexity)).length,
     platforms: platforms.size,
   };
 });
@@ -66,7 +65,7 @@ const stats = computed(() => {
                 <th>Country</th>
                 <th>Brand</th>
                 <th>Class</th>
-                <th>Stream</th>
+                <th>Complexity</th>
                 <th>In-Scope Platforms</th>
               </tr>
             </thead>
@@ -76,7 +75,7 @@ const stats = computed(() => {
                 <td class="member__td-brand">{{ row.brand }}</td>
                 <td>{{ row.class }}</td>
                 <td>
-                  <span class="member__stream" :class="/exceptional/i.test(row.stream) ? 'is-exc' : 'is-std'">{{ row.stream }}</span>
+                  <span class="member__stream" :class="/exceptional/i.test(row.complexity) ? 'is-exc' : 'is-std'">{{ row.complexity }}</span>
                 </td>
                 <td>
                   <span class="member__plats">

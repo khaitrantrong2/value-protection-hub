@@ -12,6 +12,8 @@
  *   Links       (required)  — columns listed in LINK_COLUMNS below
  *   Categories  (optional)  — Category, Description, Color, Icon, SortOrder
  *   Config      (optional)  — Key, Value
+ *   Portfolio   (optional)  — Member, Country, Brand, Class, Complexity, Platforms
+ *                             (Platforms = comma-separated, e.g. "Lazada, Shopee, Tiktok")
  */
 
 var LINK_COLUMNS = [
@@ -36,6 +38,7 @@ function doGet(e) {
     links: getLinks(),
     categories: getCategories(),
     config: getConfig(),
+    portfolio: getPortfolio(),
   };
   return jsonResponse(payload);
 }
@@ -61,6 +64,27 @@ function getLinks() {
 /** Reads the optional "Categories" tab. Returns [] if the tab is missing. */
 function getCategories() {
   return readSheet("Categories");
+}
+
+/** Reads the optional "Portfolio" tab (per-member claimback scope). Returns [] if missing. */
+function getPortfolio() {
+  var rows = readSheet("Portfolio");
+  if (!rows.length) return [];
+
+  return rows
+    .filter(function (row) {
+      return row.Member;
+    })
+    .map(function (row) {
+      return {
+        Member: String(row.Member).trim(),
+        Country: row.Country !== undefined ? String(row.Country).trim() : "",
+        Brand: row.Brand !== undefined ? String(row.Brand).trim() : "",
+        Class: row.Class !== undefined ? String(row.Class).trim() : "",
+        Complexity: row.Complexity !== undefined ? String(row.Complexity).trim() : "",
+        Platforms: row.Platforms !== undefined ? String(row.Platforms).trim() : "",
+      };
+    });
 }
 
 /**

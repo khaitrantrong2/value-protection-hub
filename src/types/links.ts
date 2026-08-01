@@ -83,10 +83,21 @@ export interface ConfigRow {
   Value: string;
 }
 
+/** Raw row from the optional "Portfolio" tab (per-member claimback scope). */
+export interface PortfolioRowRaw {
+  Member: string;
+  Country: string;
+  Brand: string;
+  Class: string;
+  Complexity: string;
+  Platforms: string;
+}
+
 export interface LinksApiResponse {
   links: LinkRow[];
   categories?: CategoryRow[];
   config?: ConfigRow[];
+  portfolio?: PortfolioRowRaw[];
 }
 
 export interface LinkFilters {

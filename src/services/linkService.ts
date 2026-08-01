@@ -11,7 +11,9 @@ import type {
   LinkStatus,
   LinksApiResponse,
   PortalConfig,
+  PortfolioRowRaw,
 } from "../types/links";
+import type { PortfolioRow } from "../data/memberPortfolios";
 import { mockCategories } from "../data/mockCategories";
 import { mockLinks } from "../data/mockLinks";
 
@@ -145,10 +147,25 @@ function withFallbackCategories(links: LinkItem[], categories: CategoryDef[]): C
   return [...categories, ...fallbacks].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function parsePortfolioRow(row: PortfolioRowRaw): PortfolioRow {
+  return {
+    member: String(row.Member ?? "").trim(),
+    country: String(row.Country ?? "").trim(),
+    brand: String(row.Brand ?? "").trim(),
+    class: String(row.Class ?? "").trim(),
+    complexity: String(row.Complexity ?? "").trim(),
+    platforms: String(row.Platforms ?? "")
+      .split(/[,|]/)
+      .map((p) => p.trim())
+      .filter(Boolean),
+  };
+}
+
 export interface LoadLinksResult {
   links: LinkItem[];
   categories: CategoryDef[];
   config: PortalConfig;
+  portfolio: PortfolioRow[];
   source: "live" | "mock";
   error?: string;
 }
@@ -158,6 +175,7 @@ function loadMock(error?: string): LoadLinksResult {
     links: mockLinks.filter((l) => l.isActive),
     categories: [...mockCategories].sort((a, b) => a.sortOrder - b.sortOrder),
     config: DEFAULT_CONFIG,
+    portfolio: [],
     source: "mock",
     error,
   };
@@ -181,8 +199,9 @@ export async function loadLinks(): Promise<LoadLinksResult> {
         : [...mockCategories],
     );
     const config = parseConfigRows(data.config);
+    const portfolio = (data.portfolio ?? []).map(parsePortfolioRow).filter((p) => p.member);
 
-    return { links, categories, config, source: "live" };
+    return { links, categories, config, portfolio, source: "live" };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ...loadMock(message), error: "Unable to load live links. Showing local mock data." };

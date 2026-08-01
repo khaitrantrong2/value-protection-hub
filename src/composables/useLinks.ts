@@ -1,6 +1,7 @@
 import { computed, reactive, ref } from "vue";
 import type { CategoryId, CountryCode, Criticality, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
 import type { CrewMember } from "../data/crew";
+import { mockPortfolioFor, type PortfolioRow } from "../data/memberPortfolios";
 import { computeStats, filterLinks, loadLinks, sortLinks } from "../services/linkService";
 
 const links = ref<LinkItem[]>([]);
@@ -9,6 +10,7 @@ const config = ref<Awaited<ReturnType<typeof loadLinks>>["config"] | null>(null)
 const source = ref<"live" | "mock" | null>(null);
 const error = ref<string | undefined>(undefined);
 const isLoading = ref(true);
+const portfolioRows = ref<PortfolioRow[]>([]);
 
 const filters = reactive({
   query: "",
@@ -37,7 +39,14 @@ async function fetchLinks() {
   config.value = result.config;
   source.value = result.source;
   error.value = result.error;
+  portfolioRows.value = result.portfolio;
   isLoading.value = false;
+}
+
+/** Live per-member claimback scope from the Sheet, falling back to mock until it's wired. */
+function memberScope(member: CrewMember): PortfolioRow[] {
+  const rows = portfolioRows.value.filter((r) => r.member.toLowerCase() === member.name.toLowerCase());
+  return rows.length ? rows : mockPortfolioFor(member);
 }
 
 function parseDate(value: string): number {
@@ -159,6 +168,7 @@ export function useLinks() {
     goHome,
     openCrew,
     openMember,
+    memberScope,
     links,
     categories,
     config,

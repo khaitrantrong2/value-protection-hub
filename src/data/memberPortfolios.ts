@@ -1,39 +1,42 @@
 import type { CrewMember } from "./crew";
 
 /**
- * A row of a Value Protector's claimback scope — mirrors the Google Sheet columns
- * (Country · Brand · Class · Stream · In-Scope Platforms).
+ * A row of a Value Protector's claimback scope — mirrors the Google Sheet
+ * "Portfolio" tab columns: Member · Country · Brand · Class · Complexity · Platforms.
  *
- * MOCK DATA for layout only. Real per-member scope will be loaded from the private
- * Google Sheet (one tab, or a `Member` column) via the Apps Script API — see
- * apps-script/README.md. Do NOT commit real brand/scope data here.
+ * Live data loads from the private Google Sheet via the Apps Script API (see
+ * apps-script/README.md). The sample below is MOCK for layout only — never commit
+ * real brand/scope data here.
  */
 export interface PortfolioRow {
+  member: string;
   country: string;
   brand: string;
-  class: string; // Consignment | Hybrid retail
-  stream: string; // Exceptional | Standard
-  platforms: string[]; // Lazada | Shopee | Tiktok
+  class: string;
+  complexity: string;
+  platforms: string[];
 }
 
-const SAMPLE_SCOPE: PortfolioRow[] = [
-  { country: "VN", brand: "Sample Brand A", class: "Consignment", stream: "Exceptional", platforms: ["Lazada", "Shopee", "Tiktok"] },
-  { country: "VN", brand: "Sample Brand B", class: "Consignment", stream: "Exceptional", platforms: ["Lazada", "Shopee", "Tiktok"] },
-  { country: "VN", brand: "Sample Brand C", class: "Hybrid retail", stream: "Exceptional", platforms: ["Shopee", "Tiktok"] },
-  { country: "VN", brand: "Sample Brand D", class: "Hybrid retail", stream: "Standard", platforms: ["Lazada", "Shopee", "Tiktok"] },
-  { country: "VN", brand: "Sample Brand E", class: "Consignment", stream: "Exceptional", platforms: ["Lazada", "Shopee"] },
-  { country: "VN", brand: "Sample Brand F", class: "Hybrid retail", stream: "Standard", platforms: ["Lazada", "Tiktok"] },
-  { country: "VN", brand: "Sample Brand G", class: "Consignment", stream: "Exceptional", platforms: ["Tiktok"] },
-  { country: "VN", brand: "Sample Brand H", class: "Hybrid retail", stream: "Standard", platforms: ["Lazada", "Shopee", "Tiktok"] },
+const SAMPLE: Pick<PortfolioRow, "class" | "complexity" | "platforms">[] = [
+  { class: "Consignment", complexity: "Exceptional", platforms: ["Lazada", "Shopee", "Tiktok"] },
+  { class: "Consignment", complexity: "Exceptional", platforms: ["Lazada", "Shopee", "Tiktok"] },
+  { class: "Hybrid retail", complexity: "Exceptional", platforms: ["Shopee", "Tiktok"] },
+  { class: "Hybrid retail", complexity: "Standard", platforms: ["Lazada", "Shopee", "Tiktok"] },
+  { class: "Consignment", complexity: "Exceptional", platforms: ["Lazada", "Shopee"] },
+  { class: "Hybrid retail", complexity: "Standard", platforms: ["Lazada", "Tiktok"] },
+  { class: "Consignment", complexity: "Exceptional", platforms: ["Tiktok"] },
+  { class: "Hybrid retail", complexity: "Standard", platforms: ["Lazada", "Shopee", "Tiktok"] },
 ];
 
 /** Placeholder generator so every member profile renders until the Sheet is wired. */
-export function portfolioFor(member: CrewMember): PortfolioRow[] {
+export function mockPortfolioFor(member: CrewMember): PortfolioRow[] {
   const country = /vietnam|vn/i.test(member.market) ? "VN" : member.market.slice(0, 2).toUpperCase() || "VN";
-  // Clone the sample and stamp the member's market so the mock reads coherently.
-  return SAMPLE_SCOPE.map((row, i) => ({
-    ...row,
+  return SAMPLE.map((r, i) => ({
+    member: member.name,
     country,
     brand: `${member.name} · Brand ${String.fromCharCode(65 + i)}`,
+    class: r.class,
+    complexity: r.complexity,
+    platforms: r.platforms,
   }));
 }
