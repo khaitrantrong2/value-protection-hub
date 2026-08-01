@@ -1,189 +1,190 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
 import { useLinks } from "../composables/useLinks";
 import Icon from "./Icon.vue";
 
 const { config, paletteOpen } = useLinks();
-const scrolled = ref(false);
 
-function handleScroll() {
-  scrolled.value = window.scrollY > 40;
+function scrollTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-onMounted(() => window.addEventListener("scroll", handleScroll, { passive: true }));
-onUnmounted(() => window.removeEventListener("scroll", handleScroll));
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 </script>
 
 <template>
-  <header class="app-header" :class="{ 'app-header--scrolled': scrolled }">
-    <div class="app-header__inner">
-      <div class="app-header__brand">
-        <span class="app-header__mark" aria-hidden="true"></span>
-        <span class="app-header__name">{{ config?.portalName || "Value Protection Hub" }}</span>
-      </div>
+  <header class="hdr">
+    <a class="hdr__brand" href="#" @click.prevent="scrollTop">
+      <span class="hdr__mark">
+        <span class="hdr__mark-glow"></span>
+        <img src="/brand/intrepid-mark.png" alt="Intrepid" />
+      </span>
+      <span class="hdr__brand-text">
+        <span class="hdr__name">{{ config?.portalName || "Value Protection Hub" }}</span>
+        <span class="hdr__sub mono">VALUE PROTECTION · COMMAND CENTER</span>
+      </span>
+    </a>
 
-      <nav class="app-header__nav">
-        <a href="#link-directory">Directory</a>
-        <a href="#operations">Operations</a>
-      </nav>
+    <nav class="hdr__nav">
+      <a class="hdr__link" href="#" @click.prevent="scrollTop">Universe</a>
+      <a class="hdr__link" href="#link-directory" @click.prevent="scrollTo('link-directory')">Directory</a>
+      <a class="hdr__link" href="#operations" @click.prevent="scrollTo('operations')">Operations</a>
 
-      <div class="app-header__actions">
-        <a
-          v-if="config?.adminSheetUrl"
-          class="app-header__source"
-          :href="config.adminSheetUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Icon name="external" :size="14" />
-          Source Sheet
-        </a>
-        <button type="button" class="app-header__cmd" @click="paletteOpen = true">
-          <Icon name="search" :size="14" />
-          <span>Search</span>
-          <kbd class="mono">Ctrl K</kbd>
-        </button>
-      </div>
-    </div>
+      <a
+        v-if="config?.adminSheetUrl"
+        class="hdr__link hdr__link--source"
+        :href="config.adminSheetUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Icon name="external" :size="14" /> Source
+      </a>
+
+      <button type="button" class="hdr__scan" @click="paletteOpen = true">
+        <Icon name="search" :size="15" />
+        <span class="hdr__scan-label">Scan</span>
+        <kbd class="mono">Ctrl K</kbd>
+      </button>
+    </nav>
   </header>
 </template>
 
 <style lang="scss" scoped>
-.app-header {
-  position: fixed;
+.hdr {
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: var(--z-index-header);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
   height: var(--height-header);
+  padding: 0 clamp(20px, 4vw, 52px);
+  background: linear-gradient(180deg, rgba(7, 22, 51, 0.82), rgba(7, 22, 51, 0.42));
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(146, 163, 199, 0.1);
+}
+
+.hdr__brand {
   display: flex;
   align-items: center;
-  transition:
-    background 0.3s var(--ease-power2-out),
-    backdrop-filter 0.3s var(--ease-power2-out),
-    border-color 0.3s var(--ease-power2-out);
-  border-bottom: 1px solid transparent;
-
-  &--scrolled {
-    background: rgba(7, 20, 49, 0.82);
-    backdrop-filter: blur(12px);
-    border-bottom-color: var(--color-command-border);
-  }
+  gap: 12px;
+  color: var(--color-text-400);
 }
 
-.app-header__inner {
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 var(--space-outer);
+.hdr__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 34px;
+  flex: none;
+}
+
+.hdr__mark-glow {
+  position: absolute;
+  inset: -6px -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 217, 255, 0.28), transparent 70%);
+}
+
+.hdr__mark img {
+  position: relative;
+  width: 40px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.hdr__brand-text {
   display: flex;
-  align-items: center;
-  gap: var(--space-lg);
+  flex-direction: column;
+  line-height: 1;
 }
 
-.app-header__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  color: #fff;
-  font-weight: 700;
-}
-
-.app-header__mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--color-cyan-400), var(--color-orange-400));
-}
-
-.app-header__name {
-  font-size: var(--font-size-sm);
-}
-
-.app-header__nav {
-  display: none;
-  gap: var(--space-lg);
-
-  a {
-    font-size: var(--font-size-xs);
-    color: rgba(255, 255, 255, 0.75);
-    transition: color 0.2s;
-
-    @include hover {
-      &:hover {
-        color: #fff;
-      }
-    }
-  }
-
-  @include mq(md) {
-    display: flex;
-  }
-}
-
-.app-header__actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.app-header__source {
-  display: none;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--font-size-xs);
+.hdr__name {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 6px var(--space-sm);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-command-border);
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.hdr__sub {
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: var(--color-text-200);
+  margin-top: 5px;
+
+  @include mq(sm, max) {
+    display: none;
+  }
+}
+
+.hdr__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hdr__link {
+  font-size: 14px;
+  color: rgba(219, 228, 247, 0.82);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  transition: color 0.2s;
 
   @include hover {
     &:hover {
       color: #fff;
-      background: rgba(255, 255, 255, 0.08);
     }
   }
 
-  @include mq(md) {
-    display: inline-flex;
+  @include mq(md, max) {
+    display: none;
   }
 }
 
-.app-header__cmd {
+.hdr__link--source {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  padding: 6px var(--space-sm);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-command-border);
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  transition: all 0.2s var(--ease-power2-out);
+  gap: 5px;
 
-  span {
-    @include mq(sm, max) {
-      display: none;
+  @include mq(lg, max) {
+    display: none;
+  }
+}
+
+.hdr__scan {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 9px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(79, 217, 255, 0.3);
+  background: rgba(79, 217, 255, 0.07);
+  color: #cfe9f7;
+  font-size: 13.5px;
+  transition: background 0.2s var(--ease-power2-out);
+
+  @include hover {
+    &:hover {
+      background: rgba(79, 217, 255, 0.13);
     }
   }
 
   kbd {
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-200);
     border: 1px solid var(--color-command-border);
-    border-radius: var(--radius-sm);
-    padding: 1px 5px;
+    border-radius: 6px;
+    padding: 2px 6px;
   }
+}
 
-  @include hover {
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
+.hdr__scan-label {
+  @include mq(sm, max) {
+    display: none;
   }
 }
 </style>
