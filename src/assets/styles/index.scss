@@ -4,6 +4,12 @@
 @use "./fonts.scss";
 @use "./lenis.scss";
 
+html,
+body,
+#app {
+  height: 100%;
+}
+
 html {
   background: var(--space-abyss);
   color: var(--color-text-400);
@@ -14,11 +20,36 @@ html {
     system-ui,
     sans-serif;
   letter-spacing: 0.005em;
-  overflow-y: scroll !important;
+  overflow: hidden;
 }
 
 body {
   line-height: var(--line-height-copy);
+  background: var(--grad-cosmos);
+  background-attachment: fixed;
+}
+
+/* Themed scrollbars (amethyst) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(183, 148, 246, 0.4) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(183, 148, 246, 0.32);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(183, 148, 246, 0.55);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .is-loading {

@@ -225,6 +225,7 @@ onBeforeUnmount(() => {
   height: 100%;
   pointer-events: none;
   z-index: 4;
+  overflow: visible;
   filter: drop-shadow(0 0 4px rgba(183, 148, 246, 0.45));
 }
 

@@ -95,7 +95,7 @@ async function copyLink() {
 
 .vault__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -114,12 +114,15 @@ async function copyLink() {
 .vault__title {
   flex: 1;
   min-width: 0;
+  padding-top: 8px;
   font-size: 15.5px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .vault__status {

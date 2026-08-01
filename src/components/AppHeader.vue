@@ -44,9 +44,9 @@ const { config, paletteOpen, goHome, openSector, openCrew } = useLinks();
 
 <style lang="scss" scoped>
 .hdr {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: var(--z-index-header);
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;

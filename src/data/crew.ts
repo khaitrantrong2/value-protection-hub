@@ -38,7 +38,7 @@ export const crew: CrewMember[] = [
       "Steers record-to-report control from the R2R station — securing reconciliations and keeping the value-protection ledger accurate.",
   },
   {
-    name: "AR Lead",
+    name: "My",
     roleShort: "AR LEAD",
     role: "AR Lead / Value Protector",
     station: "AR Control Station",

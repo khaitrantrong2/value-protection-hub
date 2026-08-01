@@ -8,38 +8,50 @@ import CrewView from "./components/CrewView.vue";
 import SectorView from "./components/SectorView.vue";
 import CommandPalette from "./components/CommandPalette.vue";
 import { useLinks } from "./composables/useLinks";
-import { useReducedMotion } from "./composables/useReducedMotion";
-import { useLenisScroll } from "./composables/useLenisScroll";
 
 const { view } = useLinks();
-const { prefersReducedMotion } = useReducedMotion();
-useLenisScroll(() => prefersReducedMotion.value);
 
 onMounted(() => document.body.classList.remove("is-loading"));
 </script>
 
 <template>
   <Starfield />
-  <AppHeader />
 
-  <main>
-    <template v-if="view === 'home'">
-      <CommandHero />
-      <MissionStrip />
-    </template>
-    <CrewView v-else-if="view === 'crew'" />
-    <SectorView v-else />
-  </main>
+  <div class="app-shell">
+    <AppHeader />
+
+    <main class="app-main">
+      <div v-if="view === 'home'" class="app-view vph-scroll">
+        <CommandHero />
+        <MissionStrip />
+      </div>
+      <CrewView v-else-if="view === 'crew'" />
+      <SectorView v-else />
+    </main>
+  </div>
 
   <CommandPalette />
 </template>
 
 <style lang="scss">
-main {
+.app-shell {
   position: relative;
   z-index: 1;
-  background: var(--grad-cosmos);
-  background-attachment: fixed;
-  min-height: 100svh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.app-view {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 </style>

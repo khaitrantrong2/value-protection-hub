@@ -151,7 +151,7 @@ const dock = computed(() => [
 .sector {
   position: relative;
   z-index: 1;
-  height: calc(100svh - var(--height-header));
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;

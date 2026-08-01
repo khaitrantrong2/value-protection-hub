@@ -127,9 +127,9 @@ const RAW: Omit<Sector, "archLabel">[] = [
 
 export const sectors: Sector[] = RAW.map((s) => ({ ...s, archLabel: ARCH_LABEL[s.arch] }));
 
-/** Ellipse radii per orbital ring, as a fraction of the stage half-size. */
+/** Ellipse radii per orbital ring, as a fraction of the stage size (kept ≤0.5 so the fleet never overflows). */
 export const RING_GEOMETRY = [
-  { rx: 0.4, ry: 0.16 },
-  { rx: 0.52, ry: 0.21 },
-  { rx: 0.64, ry: 0.26 },
+  { rx: 0.3, ry: 0.13 },
+  { rx: 0.4, ry: 0.17 },
+  { rx: 0.5, ry: 0.21 },
 ];

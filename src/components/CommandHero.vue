@@ -92,7 +92,7 @@ onMounted(() => {
   margin: 0 auto;
   width: 100%;
   padding: clamp(14px, 2.4vh, 30px) var(--space-outer) 0;
-  min-height: calc(100svh - var(--height-header));
+  min-height: 100%;
 
   @media (max-width: 920px) {
     grid-template-columns: 1fr;
