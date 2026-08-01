@@ -5,7 +5,14 @@ import { useLinks } from "../composables/useLinks";
 const { selectedMember, openCrew, memberScope } = useLinks();
 
 const member = computed(() => selectedMember.value);
-const scope = computed(() => (member.value ? memberScope(member.value) : []));
+
+// Only market staff (guardians / cadets) carry a brand portfolio — command & leads oversee, not own scope.
+const hasPortfolio = computed(() => {
+  const r = member.value?.rank;
+  return r === "guardian" || r === "cadet";
+});
+
+const scope = computed(() => (member.value && hasPortfolio.value ? memberScope(member.value) : []));
 
 const stats = computed(() => {
   const rows = scope.value;
@@ -45,20 +52,29 @@ const stats = computed(() => {
               <span>{{ member.market }}</span>
             </div>
           </div>
-          <div class="member__stats">
+          <div v-if="hasPortfolio" class="member__stats">
             <div class="member__stat"><div class="member__stat-num mono">{{ stats.brands }}</div><div class="member__stat-label mono">BRANDS</div></div>
             <div class="member__stat"><div class="member__stat-num member__stat-num--exc mono">{{ stats.exceptional }}</div><div class="member__stat-label mono">EXCEPTIONAL</div></div>
             <div class="member__stat"><div class="member__stat-num mono">{{ stats.platforms }}</div><div class="member__stat-label mono">PLATFORMS</div></div>
           </div>
         </header>
 
-        <div class="member__section-head">
-          <span class="member__rule"></span>
-          <span class="member__section-label mono">ASSIGNED SCOPE · CLAIMBACK PORTFOLIO</span>
-          <span class="member__rule"></span>
+        <div v-if="!hasPortfolio" class="member__leadnote">
+          <span class="member__leadnote-eyebrow mono">LEADERSHIP ROLE</span>
+          <p>
+            {{ member.name }} oversees value protection across all markets and does not carry an individual brand
+            portfolio — the market guardians hold the assigned claimback scope.
+          </p>
         </div>
 
-        <div class="member__table-wrap">
+        <template v-else>
+          <div class="member__section-head">
+            <span class="member__rule"></span>
+            <span class="member__section-label mono">ASSIGNED SCOPE · CLAIMBACK PORTFOLIO</span>
+            <span class="member__rule"></span>
+          </div>
+
+          <div class="member__table-wrap">
           <table class="member__table">
             <thead>
               <tr>
@@ -87,9 +103,10 @@ const stats = computed(() => {
           </table>
         </div>
 
-        <p class="member__note mono">
-          Sample scope shown — live per-member data loads from the private Google Sheet once configured.
-        </p>
+          <p class="member__note mono">
+            Sample scope shown — live per-member data loads from the private Google Sheet once configured.
+          </p>
+        </template>
       </template>
 
       <p v-else class="member__empty">No protector selected. Return to the crew formation.</p>
@@ -287,6 +304,27 @@ const stats = computed(() => {
   letter-spacing: 0.14em;
   color: var(--color-text-200);
   margin-top: 6px;
+}
+
+.member__leadnote {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-card-border);
+  background: linear-gradient(180deg, rgba(42, 24, 92, 0.3), rgba(21, 10, 48, 0.14));
+  padding: 22px 24px;
+
+  p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-text-200);
+    margin-top: 8px;
+    max-width: 70ch;
+  }
+}
+
+.member__leadnote-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-cyan-400);
 }
 
 .member__section-head {

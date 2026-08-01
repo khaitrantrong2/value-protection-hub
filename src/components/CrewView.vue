@@ -235,47 +235,37 @@ function open(m: CrewMember) {
 
 /* Command formation — commander apex, leads a third lower on each flank */
 .formation {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: start;
-  gap: clamp(12px, 2vw, 30px);
-  max-width: 1000px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(16px, 3vw, 48px);
+  max-width: 1160px;
   margin: 0 auto;
 }
 
 .formation__commander {
-  grid-column: 2;
-  grid-row: 1;
+  order: 2;
+  flex: none;
 }
 
 .formation__lead {
-  grid-row: 1;
+  order: 1;
+  flex: none;
   margin-top: clamp(36px, 5vw, 84px);
-  align-self: start;
-}
-
-.formation__lead--l {
-  grid-column: 1;
-  justify-self: end;
 }
 
 .formation__lead--r {
-  grid-column: 3;
-  justify-self: start;
+  order: 3;
 }
 
 @media (max-width: 820px) {
   .formation {
-    grid-template-columns: 1fr;
-    justify-items: center;
+    flex-direction: column;
+    align-items: center;
     gap: 18px;
   }
-  .formation__commander,
   .formation__lead {
-    grid-column: 1;
-    grid-row: auto;
-  }
-  .formation__lead {
+    order: 0;
     margin-top: 0;
   }
 }
