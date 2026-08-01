@@ -68,18 +68,40 @@ async function copyLink() {
   gap: 12px;
   padding: 20px;
   border-radius: 18px;
-  border: 1px solid rgba(176, 160, 210, 0.18);
-  background: linear-gradient(180deg, rgba(30, 16, 66, 0.42), rgba(21, 10, 48, 0.24));
+  border: 1px solid rgba(183, 148, 246, 0.2);
+  background:
+    radial-gradient(140% 100% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
+    linear-gradient(180deg, rgba(48, 27, 104, 0.55), rgba(16, 8, 38, 0.42));
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 rgba(183, 148, 246, 0.14);
   transition:
     transform 0.22s var(--ease-power2-out),
     border-color 0.22s var(--ease-power2-out),
     box-shadow 0.22s var(--ease-power2-out);
 
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(1.2px 1.2px at 22% 28%, rgba(255, 255, 255, 0.5), transparent),
+      radial-gradient(1.2px 1.2px at 70% 16%, rgba(183, 148, 246, 0.6), transparent),
+      radial-gradient(1.2px 1.2px at 86% 60%, rgba(255, 255, 255, 0.35), transparent),
+      radial-gradient(1.2px 1.2px at 38% 80%, rgba(183, 148, 246, 0.45), transparent);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   @include hover {
     &:hover {
       transform: translateY(-3px);
-      border-color: rgba(168, 132, 246, 0.4);
-      box-shadow: 0 22px 50px -24px rgba(0, 0, 0, 0.85);
+      border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+      box-shadow:
+        0 24px 54px -24px rgba(0, 0, 0, 0.9),
+        0 0 28px -8px color-mix(in srgb, var(--accent) 50%, transparent),
+        inset 0 1px 0 rgba(183, 148, 246, 0.2);
     }
   }
 }

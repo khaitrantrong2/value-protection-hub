@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { crew } from "../data/crew";
+import { crew, type CrewMember } from "../data/crew";
+import { useLinks } from "../composables/useLinks";
+
+const { openMember } = useLinks();
 
 const commander = computed(() => crew.find((m) => m.rank === "commander") ?? null);
 const leads = computed(() => crew.filter((m) => m.rank === "lead"));
 const guardians = computed(() => crew.filter((m) => m.rank === "guardian"));
 const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
+
+function open(m: CrewMember) {
+  openMember(m);
+}
 </script>
 
 <template>
@@ -13,36 +20,46 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
     <div class="crewpage__scroll vph-scroll">
       <header class="crewpage__header">
         <p class="crewpage__eyebrow mono">INTREPID UNIVERSE</p>
-        <h1 class="crewpage__title">The Guardian Formation</h1>
+        <h1 class="crewpage__title">Value Protection Crew</h1>
         <p class="crewpage__lead">
           The crew protecting value across the Intrepid galaxy — one commander, the control leads, and the market
-          guardians holding every sector line.
+          guardians holding every sector line. Select a protector to open their portfolio.
         </p>
       </header>
 
       <div class="crewpage__spine">
-        <!-- Commander (apex) -->
-        <div class="tier tier--apex">
-          <span class="tier__label mono">COMMAND</span>
-          <article v-if="commander" class="hero-card" :style="{ '--accent': commander.accent }">
-            <div class="hero-card__avatar">
-              <span class="hero-card__halo"></span>
-              <span class="hero-card__ring"></span>
-              <span class="hero-card__body"><span class="hero-card__visor">{{ commander.name.charAt(0) }}</span></span>
-              <span class="hero-card__star">★</span>
-            </div>
-            <div class="hero-card__name">{{ commander.name }}</div>
-            <div class="hero-card__role mono">{{ commander.roleShort }} · {{ commander.clearance }}</div>
-            <p class="hero-card__blurb">{{ commander.blurb }}</p>
-            <div class="hero-card__station mono">{{ commander.station }}</div>
-          </article>
-        </div>
-
-        <!-- Control leads -->
+        <!-- Command formation: commander apex + two leads a third lower -->
         <div class="tier">
-          <span class="tier__label mono">CONTROL LEADS</span>
-          <div class="tier__row tier__row--leads">
-            <article v-for="m in leads" :key="m.name" class="crew-card crew-card--lead" :style="{ '--accent': m.accent }">
+          <span class="tier__label mono">COMMAND</span>
+          <div class="formation">
+            <button
+              v-if="commander"
+              type="button"
+              class="hero-card formation__commander"
+              :style="{ '--accent': commander.accent }"
+              @click="open(commander)"
+            >
+              <div class="hero-card__avatar">
+                <span class="hero-card__halo"></span>
+                <span class="hero-card__ring"></span>
+                <span class="hero-card__body"><span class="hero-card__visor">{{ commander.name.charAt(0) }}</span></span>
+                <span class="hero-card__star">★</span>
+              </div>
+              <div class="hero-card__name">{{ commander.name }}</div>
+              <div class="hero-card__role mono">{{ commander.roleShort }} · {{ commander.clearance }}</div>
+              <p class="hero-card__blurb">{{ commander.blurb }}</p>
+              <div class="hero-card__station mono">{{ commander.station }}</div>
+            </button>
+
+            <button
+              v-for="(m, i) in leads.slice(0, 2)"
+              :key="m.name"
+              type="button"
+              class="crew-card crew-card--lead formation__lead"
+              :class="i === 0 ? 'formation__lead--l' : 'formation__lead--r'"
+              :style="{ '--accent': m.accent }"
+              @click="open(m)"
+            >
               <div class="crew-card__avatar">
                 <span class="crew-card__halo"></span>
                 <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
@@ -52,7 +69,7 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
               <div class="crew-card__role mono">{{ m.roleShort }}</div>
               <p class="crew-card__blurb">{{ m.blurb }}</p>
               <div class="crew-card__meta mono"><span>{{ m.station }}</span><span>{{ m.clearance }}</span></div>
-            </article>
+            </button>
           </div>
         </div>
 
@@ -60,7 +77,14 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
         <div class="tier">
           <span class="tier__label mono">MARKET GUARDIANS</span>
           <div class="tier__grid">
-            <article v-for="m in guardians" :key="m.name" class="crew-card" :style="{ '--accent': m.accent }">
+            <button
+              v-for="m in guardians"
+              :key="m.name"
+              type="button"
+              class="crew-card"
+              :style="{ '--accent': m.accent }"
+              @click="open(m)"
+            >
               <div class="crew-card__avatar">
                 <span class="crew-card__halo"></span>
                 <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
@@ -69,7 +93,7 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
               <div class="crew-card__name">{{ m.name }}</div>
               <div class="crew-card__role mono">{{ m.roleShort }}</div>
               <div class="crew-card__meta mono"><span>{{ m.market }}</span><span>{{ m.clearance }}</span></div>
-            </article>
+            </button>
           </div>
         </div>
 
@@ -77,7 +101,14 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
         <div v-if="cadets.length" class="tier tier--cadet">
           <span class="tier__label mono">CADET CORPS</span>
           <div class="tier__row">
-            <article v-for="m in cadets" :key="m.name" class="crew-card crew-card--cadet" :style="{ '--accent': m.accent }">
+            <button
+              v-for="m in cadets"
+              :key="m.name"
+              type="button"
+              class="crew-card crew-card--cadet"
+              :style="{ '--accent': m.accent }"
+              @click="open(m)"
+            >
               <div class="crew-card__avatar">
                 <span class="crew-card__halo"></span>
                 <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
@@ -86,7 +117,7 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
               <div class="crew-card__name">{{ m.name }}</div>
               <div class="crew-card__role mono">{{ m.roleShort }}</div>
               <p class="crew-card__blurb">{{ m.blurb }}</p>
-            </article>
+            </button>
           </div>
         </div>
       </div>
@@ -129,12 +160,11 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
 .crewpage__lead {
   font-size: 15px;
   color: var(--color-text-200);
-  max-width: 62ch;
+  max-width: 64ch;
   margin: 0 auto;
   text-wrap: pretty;
 }
 
-/* Command spine — a glowing vertical line the formation hangs from */
 .crewpage__spine {
   position: relative;
   max-width: 1160px;
@@ -190,10 +220,6 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
   flex-wrap: wrap;
 }
 
-.tier__row--leads {
-  gap: 24px;
-}
-
 .tier__grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -207,18 +233,84 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
   }
 }
 
-/* ---- Featured commander card ---- */
+/* Command formation — commander apex, leads a third lower on each flank */
+.formation {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: clamp(12px, 2vw, 30px);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.formation__commander {
+  grid-column: 2;
+}
+
+.formation__lead {
+  margin-top: clamp(70px, 11vw, 150px);
+}
+
+.formation__lead--l {
+  grid-column: 1;
+  justify-self: end;
+}
+
+.formation__lead--r {
+  grid-column: 3;
+  justify-self: start;
+}
+
+@media (max-width: 820px) {
+  .formation {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 18px;
+  }
+  .formation__commander,
+  .formation__lead {
+    grid-column: 1;
+  }
+  .formation__lead {
+    margin-top: 0;
+  }
+}
+
+/* ---- Cards (buttons) ---- */
+.hero-card,
+.crew-card {
+  border: 1px solid var(--color-card-border);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+}
+
 .hero-card {
   width: min(420px, 92vw);
-  margin: 0 auto;
-  text-align: center;
   padding: 30px 26px 24px;
   border-radius: var(--radius-xl);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
   background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%),
-    linear-gradient(180deg, rgba(42, 24, 92, 0.5), rgba(21, 10, 48, 0.3));
-  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.85);
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 62%),
+    linear-gradient(180deg, rgba(46, 26, 100, 0.6), rgba(18, 9, 42, 0.4));
+  box-shadow:
+    0 30px 70px -30px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(183, 148, 246, 0.14);
+  transition:
+    transform 0.24s var(--ease-power2-out),
+    border-color 0.24s var(--ease-power2-out),
+    box-shadow 0.24s var(--ease-power2-out);
+
+  @include hover {
+    &:hover {
+      transform: translateY(-5px);
+      border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+      box-shadow:
+        0 36px 80px -30px rgba(0, 0, 0, 0.95),
+        0 0 30px -6px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+  }
 }
 
 .hero-card__avatar {
@@ -306,25 +398,25 @@ const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
   color: var(--color-text-300);
 }
 
-/* ---- Standard crew card ---- */
 .crew-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
   gap: 4px;
   padding: 24px 16px 18px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-card-border);
-  background: linear-gradient(180deg, rgba(42, 24, 92, 0.32), rgba(21, 10, 48, 0.14));
+  background: linear-gradient(180deg, rgba(46, 26, 100, 0.4), rgba(18, 9, 42, 0.2));
+  box-shadow: inset 0 1px 0 rgba(183, 148, 246, 0.1);
   transition:
     transform 0.22s var(--ease-power2-out),
-    border-color 0.22s var(--ease-power2-out);
+    border-color 0.22s var(--ease-power2-out),
+    box-shadow 0.22s var(--ease-power2-out);
 
   @include hover {
     &:hover {
       transform: translateY(-4px);
-      border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+      box-shadow: 0 0 26px -8px color-mix(in srgb, var(--accent) 55%, transparent);
     }
   }
 }

@@ -1,5 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import type { CategoryId, CountryCode, Criticality, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
+import type { CrewMember } from "../data/crew";
 import { computeStats, filterLinks, loadLinks, sortLinks } from "../services/linkService";
 
 const links = ref<LinkItem[]>([]);
@@ -21,7 +22,8 @@ const scope = ref<Scope>("all");
 const viewMode = ref<ViewMode>("compact");
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
-const view = ref<"home" | "sector" | "crew">("home");
+const view = ref<"home" | "sector" | "crew" | "member">("home");
+const selectedMember = ref<CrewMember | null>(null);
 
 const RECENT_WINDOW_DAYS = 30;
 
@@ -144,11 +146,19 @@ export function useLinks() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }
 
+  function openMember(member: CrewMember) {
+    selectedMember.value = member;
+    view.value = "member";
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
   return {
     view,
+    selectedMember,
     openSector,
     goHome,
     openCrew,
+    openMember,
     links,
     categories,
     config,

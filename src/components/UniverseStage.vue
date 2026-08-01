@@ -73,9 +73,25 @@ function launch(s: Sector) {
   openSector(s.categoryId);
 }
 
+function onKeydown(e: KeyboardEvent) {
+  const t = e.target as HTMLElement | null;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  const n = sectors.length;
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    e.preventDefault();
+    hoveredIndex.value = hoveredIndex.value === null ? 0 : (hoveredIndex.value + 1) % n;
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    e.preventDefault();
+    hoveredIndex.value = hoveredIndex.value === null ? n - 1 : (hoveredIndex.value - 1 + n) % n;
+  } else if (e.key === "Enter" && hoveredIndex.value !== null) {
+    launch(sectors[hoveredIndex.value]);
+  }
+}
+
 onMounted(() => {
   measure();
   positionShips();
+  window.addEventListener("keydown", onKeydown);
   resizeObserver = new ResizeObserver(() => {
     measure();
     positionShips();
@@ -92,6 +108,7 @@ onBeforeUnmount(() => {
   running = false;
   cancelAnimationFrame(frameId);
   resizeObserver?.disconnect();
+  window.removeEventListener("keydown", onKeydown);
 });
 </script>
 
