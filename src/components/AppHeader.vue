@@ -2,20 +2,12 @@
 import { useLinks } from "../composables/useLinks";
 import Icon from "./Icon.vue";
 
-const { config, paletteOpen } = useLinks();
-
-function scrollTop() {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function scrollTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
+const { config, paletteOpen, goHome, openSector } = useLinks();
 </script>
 
 <template>
   <header class="hdr">
-    <a class="hdr__brand" href="#" @click.prevent="scrollTop">
+    <a class="hdr__brand" href="#" @click.prevent="goHome">
       <span class="hdr__mark">
         <span class="hdr__mark-glow"></span>
         <img src="/brand/intrepid-mark.png" alt="Intrepid" />
@@ -27,9 +19,8 @@ function scrollTo(id: string) {
     </a>
 
     <nav class="hdr__nav">
-      <a class="hdr__link" href="#" @click.prevent="scrollTop">Universe</a>
-      <a class="hdr__link" href="#link-directory" @click.prevent="scrollTo('link-directory')">Directory</a>
-      <a class="hdr__link" href="#operations" @click.prevent="scrollTo('operations')">Operations</a>
+      <a class="hdr__link" href="#" @click.prevent="goHome">Universe</a>
+      <a class="hdr__link" href="#" @click.prevent="openSector('all')">Directory</a>
 
       <a
         v-if="config?.adminSheetUrl"

@@ -4,7 +4,7 @@ import { useLinks } from "../composables/useLinks";
 import type { Scope } from "../types/links";
 import Icon from "./Icon.vue";
 
-const { links, categories, paletteOpen, selectScope } = useLinks();
+const { links, categories, paletteOpen, openSector } = useLinks();
 
 const query = ref("");
 const activeIndex = ref(0);
@@ -75,9 +75,8 @@ function scrollActiveIntoView() {
 }
 
 function jumpToCategory(id: Scope) {
-  selectScope(id);
+  openSector(id);
   close();
-  document.getElementById("link-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 watch(paletteOpen, (isOpen) => {

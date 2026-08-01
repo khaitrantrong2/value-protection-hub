@@ -21,6 +21,7 @@ const scope = ref<Scope>("all");
 const viewMode = ref<ViewMode>("compact");
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
+const view = ref<"home" | "sector">("home");
 
 const RECENT_WINDOW_DAYS = 30;
 
@@ -125,7 +126,23 @@ export function useLinks() {
     scope.value = next;
   }
 
+  function openSector(next: Scope) {
+    scope.value = next;
+    criticalOnly.value = false;
+    filters.query = "";
+    view.value = "sector";
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function goHome() {
+    view.value = "home";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return {
+    view,
+    openSector,
+    goHome,
     links,
     categories,
     config,

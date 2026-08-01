@@ -4,8 +4,9 @@ import { RING_GEOMETRY, sectors, type Sector } from "../data/sectors";
 import { useLinks } from "../composables/useLinks";
 import { useReducedMotion } from "../composables/useReducedMotion";
 import StarfighterIcon from "./StarfighterIcon.vue";
+import CommanderModel from "./CommanderModel.vue";
 
-const { selectScope } = useLinks();
+const { openSector } = useLinks();
 const { prefersReducedMotion } = useReducedMotion();
 
 const stageRef = ref<HTMLElement | null>(null);
@@ -69,8 +70,7 @@ function tick() {
 }
 
 function launch(s: Sector) {
-  selectScope(s.categoryId);
-  document.getElementById("link-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  openSector(s.categoryId);
 }
 
 onMounted(() => {
@@ -182,6 +182,9 @@ onBeforeUnmount(() => {
 
     <!-- commander -->
     <div class="stage__commander">
+      <div class="stage__commander-model">
+        <CommanderModel />
+      </div>
       <div class="stage__platform">
         <span class="stage__platform-ring"></span>
         <span class="stage__platform-ring stage__platform-ring--gold"></span>
@@ -387,6 +390,13 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  pointer-events: none;
+}
+
+.stage__commander-model {
+  width: 200px;
+  height: 236px;
+  margin-bottom: -14px;
   pointer-events: none;
 }
 

@@ -16,7 +16,7 @@ function openPalette() {
 }
 
 function viewMission() {
-  document.getElementById("link-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById("mission")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 onMounted(() => {
