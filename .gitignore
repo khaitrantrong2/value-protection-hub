@@ -29,3 +29,15 @@ dist-ssr
 # Local design handoff (not shipped)
 _design/
 *.zip
+
+# Claude Design handoff dump (kept local only, never in the app repo)
+/design_handoff_value_protection_hub/
+/uploads/
+/_ds/
+/character-lab.*
+/support.js
+/Astronaut.dc.html
+/*.dc.html
+/.thumbnail
+/ASSET_CONTRACT.md
+Meshy_AI_*.glb
