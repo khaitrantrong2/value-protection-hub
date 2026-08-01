@@ -245,10 +245,13 @@ function open(m: CrewMember) {
 
 .formation__commander {
   grid-column: 2;
+  grid-row: 1;
 }
 
 .formation__lead {
-  margin-top: clamp(70px, 11vw, 150px);
+  grid-row: 1;
+  margin-top: clamp(36px, 5vw, 84px);
+  align-self: start;
 }
 
 .formation__lead--l {
@@ -270,6 +273,7 @@ function open(m: CrewMember) {
   .formation__commander,
   .formation__lead {
     grid-column: 1;
+    grid-row: auto;
   }
   .formation__lead {
     margin-top: 0;
