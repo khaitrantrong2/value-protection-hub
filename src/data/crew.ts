@@ -140,7 +140,8 @@ export const crew: CrewMember[] = [
     blurb: "Guards the Philippines market — monitoring exposure and retrieving value with local precision.",
   },
   {
-    name: "ID Guardian",
+    name: "Adriani",
+    aliases: ["Andriani Nursasrila Pasaribu"],
     roleShort: "ID GUARDIAN",
     role: "Value Protector",
     station: "ID Planet",
