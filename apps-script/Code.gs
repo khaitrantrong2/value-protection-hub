@@ -79,25 +79,67 @@ function getCategories() {
   return readSheet("Categories");
 }
 
-/** Reads the optional "Portfolio" tab (per-member claimback scope). Returns [] if missing. */
+/**
+ * Reads the per-member claimback scope. Flexible about tab name (any sheet whose
+ * name contains "portfolio") and column names (matches by normalized header, so
+ * "Member/Owner/Protector", "Complexity/Stream", "In Scope Platforms/Platforms" all work).
+ */
 function getPortfolio() {
-  var rows = readSheet("Portfolio");
-  if (!rows.length) return [];
+  var sheet = findSheetLike_("portfolio");
+  if (!sheet) return [];
 
-  return rows
-    .filter(function (row) {
-      return row.Member;
-    })
-    .map(function (row) {
-      return {
-        Member: String(row.Member).trim(),
-        Country: row.Country !== undefined ? String(row.Country).trim() : "",
-        Brand: row.Brand !== undefined ? String(row.Brand).trim() : "",
-        Class: row.Class !== undefined ? String(row.Class).trim() : "",
-        Complexity: row.Complexity !== undefined ? String(row.Complexity).trim() : "",
-        Platforms: row.Platforms !== undefined ? String(row.Platforms).trim() : "",
-      };
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+
+  var headers = values[0].map(normalizeHeader_);
+  var iMember = colIndex_(headers, ["member", "owner", "protector", "name", "staff", "person"]);
+  var iCountry = colIndex_(headers, ["country", "market"]);
+  var iBrand = colIndex_(headers, ["brand"]);
+  var iClass = colIndex_(headers, ["class"]);
+  var iComplexity = colIndex_(headers, ["complexity", "stream"]);
+  var iPlatforms = colIndex_(headers, ["platforms", "inscopeplatforms", "platform"]);
+
+  var out = [];
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    var member = iMember >= 0 ? normalizeCell(row[iMember]) : "";
+    member = member === null || member === undefined ? "" : String(member).trim();
+    if (!member) continue;
+    out.push({
+      Member: member,
+      Country: iCountry >= 0 ? String(normalizeCell(row[iCountry]) || "").trim() : "",
+      Brand: iBrand >= 0 ? String(normalizeCell(row[iBrand]) || "").trim() : "",
+      Class: iClass >= 0 ? String(normalizeCell(row[iClass]) || "").trim() : "",
+      Complexity: iComplexity >= 0 ? String(normalizeCell(row[iComplexity]) || "").trim() : "",
+      Platforms: iPlatforms >= 0 ? String(normalizeCell(row[iPlatforms]) || "").trim() : "",
     });
+  }
+  return out;
+}
+
+function normalizeHeader_(h) {
+  return String(h)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function colIndex_(headers, aliases) {
+  for (var i = 0; i < headers.length; i++) {
+    if (aliases.indexOf(headers[i]) >= 0) return i;
+  }
+  return -1;
+}
+
+/** Finds a sheet named exactly, else the first whose name contains the keyword (case-insensitive). */
+function findSheetLike_(keyword) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var exact = ss.getSheetByName("Portfolio");
+  if (exact) return exact;
+  var all = ss.getSheets();
+  for (var i = 0; i < all.length; i++) {
+    if (String(all[i].getName()).toLowerCase().indexOf(keyword) >= 0) return all[i];
+  }
+  return null;
 }
 
 /**

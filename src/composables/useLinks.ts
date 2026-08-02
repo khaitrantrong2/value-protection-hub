@@ -61,9 +61,19 @@ async function fetchLinks() {
   isLoading.value = false;
 }
 
+/** Diacritic-insensitive normalization so "Hue"/"Huệ", "Khai"/"Khải" still match. */
+function normName(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
 /** Live per-member claimback scope from the Sheet, falling back to mock until it's wired. */
 function memberScope(member: CrewMember): PortfolioRow[] {
-  const rows = portfolioRows.value.filter((r) => r.member.toLowerCase() === member.name.toLowerCase());
+  const target = normName(member.name);
+  const rows = portfolioRows.value.filter((r) => normName(r.member) === target);
   return rows.length ? rows : mockPortfolioFor(member);
 }
 
