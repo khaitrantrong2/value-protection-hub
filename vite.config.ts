@@ -23,7 +23,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ["three"],
           gsap: ["gsap", "gsap/ScrollTrigger"],
         },
       },

@@ -4,7 +4,7 @@ import { RING_GEOMETRY, sectors, type Sector } from "../data/sectors";
 import { useLinks } from "../composables/useLinks";
 import { useReducedMotion } from "../composables/useReducedMotion";
 import StarfighterIcon from "./StarfighterIcon.vue";
-import CommanderModel from "./CommanderModel.vue";
+// CommanderModel (three.js GLB) temporarily disabled to keep the home page light — platform + label stay.
 
 const { openSector } = useLinks();
 const { prefersReducedMotion } = useReducedMotion();
@@ -198,11 +198,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- commander -->
+    <!-- commander (3D model temporarily hidden — platform + label only) -->
     <div class="stage__commander">
-      <div class="stage__commander-model">
-        <CommanderModel />
-      </div>
       <div class="stage__platform">
         <span class="stage__platform-ring"></span>
         <span class="stage__platform-ring stage__platform-ring--gold"></span>
