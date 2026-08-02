@@ -34,13 +34,26 @@ var LINK_COLUMNS = [
 ];
 
 function doGet(e) {
+  // Serve a 60-second server cache so repeat hits skip re-reading the sheet (faster response).
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get("vph_payload_v1");
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
   var payload = {
     links: getLinks(),
     categories: getCategories(),
     config: getConfig(),
     portfolio: getPortfolio(),
   };
-  return jsonResponse(payload);
+  var json = JSON.stringify(payload);
+  try {
+    cache.put("vph_payload_v1", json, 60); // edits show within ~1 minute
+  } catch (err) {
+    // payload > 100KB — skip caching, still return fresh
+  }
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
 /** Reads the "Links" tab and returns active rows as objects. */

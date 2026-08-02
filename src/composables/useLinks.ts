@@ -2,7 +2,14 @@ import { computed, reactive, ref } from "vue";
 import type { CategoryId, CountryCode, Criticality, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
 import type { CrewMember } from "../data/crew";
 import { mockPortfolioFor, type PortfolioRow } from "../data/memberPortfolios";
-import { computeStats, filterLinks, loadLinks, sortLinks } from "../services/linkService";
+import {
+  computeStats,
+  filterLinks,
+  loadLinks,
+  readCachedLinks,
+  sortLinks,
+  type LoadLinksResult,
+} from "../services/linkService";
 
 const links = ref<LinkItem[]>([]);
 const categories = ref<Awaited<ReturnType<typeof loadLinks>>["categories"]>([]);
@@ -31,15 +38,26 @@ const RECENT_WINDOW_DAYS = 30;
 
 let hasLoaded = false;
 
-async function fetchLinks() {
-  isLoading.value = true;
-  const result = await loadLinks();
+function applyResult(result: LoadLinksResult) {
   links.value = sortLinks(result.links);
   categories.value = result.categories;
   config.value = result.config;
   source.value = result.source;
   error.value = result.error;
   portfolioRows.value = result.portfolio;
+}
+
+async function fetchLinks() {
+  // Stale-while-revalidate: paint cached data instantly, then refresh in the background.
+  const cached = readCachedLinks();
+  if (cached) {
+    applyResult(cached);
+    isLoading.value = false;
+  } else {
+    isLoading.value = true;
+  }
+  const result = await loadLinks();
+  applyResult(result);
   isLoading.value = false;
 }
 

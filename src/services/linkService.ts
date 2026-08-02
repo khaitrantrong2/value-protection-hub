@@ -170,6 +170,45 @@ export interface LoadLinksResult {
   error?: string;
 }
 
+const CACHE_KEY = "vph:data:v1";
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+/** Returns the last successful live payload from localStorage for instant first paint (stale-while-revalidate). */
+export function readCachedLinks(): LoadLinksResult | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw) as {
+      ts: number;
+      links: LinkItem[];
+      categories: CategoryDef[];
+      config: PortalConfig;
+      portfolio?: PortfolioRow[];
+    };
+    if (!c.ts || Date.now() - c.ts > CACHE_TTL) return null;
+    return { links: c.links, categories: c.categories, config: c.config, portfolio: c.portfolio ?? [], source: "live" };
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(result: LoadLinksResult): void {
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        ts: Date.now(),
+        links: result.links,
+        categories: result.categories,
+        config: result.config,
+        portfolio: result.portfolio,
+      }),
+    );
+  } catch {
+    /* storage unavailable / quota exceeded */
+  }
+}
+
 function loadMock(error?: string): LoadLinksResult {
   return {
     links: mockLinks.filter((l) => l.isActive),
@@ -201,7 +240,9 @@ export async function loadLinks(): Promise<LoadLinksResult> {
     const config = parseConfigRows(data.config);
     const portfolio = (data.portfolio ?? []).map(parsePortfolioRow).filter((p) => p.member);
 
-    return { links, categories, config, portfolio, source: "live" };
+    const result: LoadLinksResult = { links, categories, config, portfolio, source: "live" };
+    writeCache(result);
+    return result;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ...loadMock(message), error: "Unable to load live links. Showing local mock data." };

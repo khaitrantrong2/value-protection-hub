@@ -28,6 +28,18 @@ const ARCH_LABEL: Record<ShipArch, string> = {
 
 const RAW: Omit<Sector, "archLabel">[] = [
   {
+    slug: "claimback-trackers",
+    name: "Claimback",
+    code: "A0",
+    accent: "#C4A7FF",
+    ring: 0,
+    ang: 5.9,
+    spd: 0.006,
+    arch: "cruiser",
+    tip: "Monthly claimback working files, regional trackers, and country-level templates.",
+    categoryId: "claimback-trackers",
+  },
+  {
     slug: "sops",
     name: "SOPs",
     code: "A1",
@@ -122,6 +134,18 @@ const RAW: Omit<Sector, "archLabel">[] = [
     arch: "shuttle",
     tip: "Active projects, initiatives, and mission workspaces.",
     categoryId: "project-workspace",
+  },
+  {
+    slug: "monthly-closing",
+    name: "Monthly Closing",
+    code: "C3",
+    accent: "#F5B342",
+    ring: 2,
+    ang: 5.2,
+    spd: 0.0032,
+    arch: "shuttle",
+    tip: "Closing calendars, accrual review files, JE upload templates, and period-end checklists.",
+    categoryId: "monthly-closing",
   },
 ];
 
