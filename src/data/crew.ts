@@ -17,6 +17,7 @@ export interface CrewMember {
 export const crew: CrewMember[] = [
   {
     name: "Khải",
+    aliases: ["Khai Tran Trong"],
     roleShort: "COMMANDER",
     role: "Team Lead / Commander",
     station: "Command Station",
@@ -29,6 +30,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Lan",
+    aliases: ["Lan Nguyen Thi Ngoc"],
     roleShort: "R2R LEAD",
     role: "R2R of Value Protector",
     station: "R2R Control Station",
@@ -41,6 +43,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "My",
+    aliases: ["My Le Thi Tuyet"],
     roleShort: "AR LEAD",
     role: "AR Lead / Value Protector",
     station: "AR Control Station",
@@ -53,6 +56,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Ice",
+    aliases: ["Ruchinan Narongphongphan"],
     roleShort: "TH GUARDIAN",
     role: "Value Protector",
     station: "TH Planet",
@@ -64,6 +68,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Kla",
+    aliases: ["Apiwat Sennoy"],
     roleShort: "TH GUARDIAN",
     role: "Value Protector",
     station: "TH Planet",
@@ -88,7 +93,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Hùng",
-    aliases: ["Tran Vu Hung"],
+    aliases: ["Hung Tran Vu"],
     roleShort: "VN GUARDIAN",
     role: "Value Protector",
     station: "VN Planet",
@@ -100,6 +105,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Nguyên",
+    aliases: ["Nguyen Lam Hoang"],
     roleShort: "SG GUARDIAN",
     role: "Value Protector",
     station: "SG Moon",
@@ -111,6 +117,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Ngân",
+    aliases: ["Ngan Pham Thuy"],
     roleShort: "MY GUARDIAN",
     role: "Value Protector",
     station: "MY Moon",
@@ -122,6 +129,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Thành",
+    aliases: ["Thanh Bui Minh"],
     roleShort: "PH GUARDIAN",
     role: "Value Protector",
     station: "PH Planet",
@@ -144,6 +152,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Phương",
+    aliases: ["Phuong Vo Yen"],
     roleShort: "CADET",
     role: "Intern / Cadet",
     station: "Cadet / Learning Pod",

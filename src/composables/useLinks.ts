@@ -61,19 +61,22 @@ async function fetchLinks() {
   isLoading.value = false;
 }
 
-/** Diacritic-insensitive normalization so "Hue"/"Huệ", "Khai"/"Khải" still match. */
-function normName(s: string): string {
+/** Diacritic-insensitive, word-order-independent key: "Hung Tran Vu" and "Tran Vu Hung" → same. */
+function nameKey(s: string): string {
   return s
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
-    .trim();
+    .split(/\s+/)
+    .filter(Boolean)
+    .sort()
+    .join(" ");
 }
 
 /** Live per-member claimback scope from the Sheet, matched by crew name or configured aliases. */
 function memberScope(member: CrewMember): PortfolioRow[] {
-  const keys = [member.name, ...(member.aliases ?? [])].map(normName);
-  return portfolioRows.value.filter((r) => keys.includes(normName(r.member)));
+  const keys = new Set([member.name, ...(member.aliases ?? [])].map(nameKey));
+  return portfolioRows.value.filter((r) => keys.has(nameKey(r.member)));
 }
 
 function parseDate(value: string): number {
