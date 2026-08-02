@@ -6,13 +6,12 @@ const { selectedMember, openCrew, memberScope } = useLinks();
 
 const member = computed(() => selectedMember.value);
 
-// Only market staff (guardians / cadets) carry a brand portfolio — command & leads oversee, not own scope.
-const hasPortfolio = computed(() => {
+const scope = computed(() => (member.value ? memberScope(member.value) : []));
+const hasScope = computed(() => scope.value.length > 0);
+const isLeadership = computed(() => {
   const r = member.value?.rank;
-  return r === "guardian" || r === "cadet";
+  return r === "commander" || r === "lead";
 });
-
-const scope = computed(() => (member.value && hasPortfolio.value ? memberScope(member.value) : []));
 
 const stats = computed(() => {
   const rows = scope.value;
@@ -52,18 +51,22 @@ const stats = computed(() => {
               <span>{{ member.market }}</span>
             </div>
           </div>
-          <div v-if="hasPortfolio" class="member__stats">
+          <div v-if="hasScope" class="member__stats">
             <div class="member__stat"><div class="member__stat-num mono">{{ stats.brands }}</div><div class="member__stat-label mono">BRANDS</div></div>
             <div class="member__stat"><div class="member__stat-num member__stat-num--exc mono">{{ stats.exceptional }}</div><div class="member__stat-label mono">EXCEPTIONAL</div></div>
             <div class="member__stat"><div class="member__stat-num mono">{{ stats.platforms }}</div><div class="member__stat-label mono">PLATFORMS</div></div>
           </div>
         </header>
 
-        <div v-if="!hasPortfolio" class="member__leadnote">
-          <span class="member__leadnote-eyebrow mono">LEADERSHIP ROLE</span>
-          <p>
+        <div v-if="!hasScope" class="member__leadnote">
+          <span class="member__leadnote-eyebrow mono">{{ isLeadership ? "LEADERSHIP ROLE" : "NO ASSIGNED SCOPE" }}</span>
+          <p v-if="isLeadership">
             {{ member.name }} oversees value protection across all markets and does not carry an individual brand
             portfolio — the market guardians hold the assigned claimback scope.
+          </p>
+          <p v-else>
+            No claimback scope is assigned to {{ member.name }} yet — rows appear here once added to the Portfolio sheet
+            (the Member column must match this protector's name or alias).
           </p>
         </div>
 
@@ -103,9 +106,7 @@ const stats = computed(() => {
           </table>
         </div>
 
-          <p class="member__note mono">
-            Sample scope shown — live per-member data loads from the private Google Sheet once configured.
-          </p>
+          <p class="member__note mono">Live from the Portfolio sheet · {{ scope.length }} brands in scope.</p>
         </template>
       </template>
 

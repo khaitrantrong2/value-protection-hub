@@ -2,6 +2,8 @@ export type CrewRank = "commander" | "lead" | "guardian" | "cadet";
 
 export interface CrewMember {
   name: string;
+  /** Full name(s) as used in the Google Sheet "Portfolio" tab's Member column, for matching. */
+  aliases?: string[];
   roleShort: string;
   role: string;
   station: string;
@@ -73,6 +75,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Huệ",
+    aliases: ["Hue Le My"],
     roleShort: "VN GUARDIAN",
     role: "Value Protector",
     station: "VN Planet",
@@ -85,6 +88,7 @@ export const crew: CrewMember[] = [
   },
   {
     name: "Hùng",
+    aliases: ["Tran Vu Hung"],
     roleShort: "VN GUARDIAN",
     role: "Value Protector",
     station: "VN Planet",

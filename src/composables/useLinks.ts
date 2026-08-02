@@ -1,7 +1,7 @@
 import { computed, reactive, ref } from "vue";
 import type { CategoryId, CountryCode, Criticality, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
 import type { CrewMember } from "../data/crew";
-import { mockPortfolioFor, type PortfolioRow } from "../data/memberPortfolios";
+import type { PortfolioRow } from "../data/memberPortfolios";
 import {
   computeStats,
   filterLinks,
@@ -70,11 +70,10 @@ function normName(s: string): string {
     .trim();
 }
 
-/** Live per-member claimback scope from the Sheet, falling back to mock until it's wired. */
+/** Live per-member claimback scope from the Sheet, matched by crew name or configured aliases. */
 function memberScope(member: CrewMember): PortfolioRow[] {
-  const target = normName(member.name);
-  const rows = portfolioRows.value.filter((r) => normName(r.member) === target);
-  return rows.length ? rows : mockPortfolioFor(member);
+  const keys = [member.name, ...(member.aliases ?? [])].map(normName);
+  return portfolioRows.value.filter((r) => keys.includes(normName(r.member)));
 }
 
 function parseDate(value: string): number {
