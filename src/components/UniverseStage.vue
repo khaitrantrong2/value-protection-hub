@@ -22,10 +22,13 @@ interface ShipState {
   opacity: number;
   z: number;
   front: boolean;
+  rot: number;
 }
 
 const angles = sectors.map((s) => s.ang);
-const ships = reactive<ShipState[]>(sectors.map(() => ({ x: 0, y: 0, scale: 1, opacity: 1, z: 10, front: true })));
+const ships = reactive<ShipState[]>(
+  sectors.map(() => ({ x: 0, y: 0, scale: 1, opacity: 1, z: 10, front: true, rot: 0 })),
+);
 
 let size = { w: 0, h: 0 };
 let frameId = 0;
@@ -54,6 +57,11 @@ function positionShips() {
     ships[i].opacity = 0.5 + depth * 0.5;
     ships[i].front = depth > 0.42;
     ships[i].z = ships[i].front ? 20 : 6;
+    // Bank the craft along the orbit tangent so it flies nose-first (SVG nose points up by default).
+    const dir = Math.sign(s.spd) || 1;
+    const dx = -rx * Math.sin(a) * dir;
+    const dy = ry * Math.cos(a) * dir;
+    ships[i].rot = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
   }
 }
 
@@ -174,7 +182,9 @@ onBeforeUnmount(() => {
       @click="launch(s)"
     >
       <span class="stage__ship-glow"></span>
-      <StarfighterIcon :arch="s.arch" />
+      <span class="stage__ship-craft" :style="{ transform: `rotate(${ships[i].rot}deg)` }">
+        <StarfighterIcon :arch="s.arch" />
+      </span>
       <span class="stage__ship-label">{{ s.name }}</span>
     </button>
 
@@ -336,6 +346,12 @@ onBeforeUnmount(() => {
   opacity: 0.22;
   filter: blur(4px);
   pointer-events: none;
+}
+
+.stage__ship-craft {
+  display: grid;
+  place-items: center;
+  will-change: transform;
 }
 
 .stage__ship-label {
