@@ -5,10 +5,42 @@ import { useLinks } from "../composables/useLinks";
 
 const { openMember } = useLinks();
 
-const commander = computed(() => crew.find((m) => m.rank === "commander") ?? null);
-const leads = computed(() => crew.filter((m) => m.rank === "lead"));
-const guardians = computed(() => crew.filter((m) => m.rank === "guardian"));
-const cadets = computed(() => crew.filter((m) => m.rank === "cadet"));
+/** Only members on active duty appear in the formation (reassigned crew are kept in data but hidden). */
+const roster = computed(() => crew.filter((m) => m.active !== false));
+
+const commander = computed(() => roster.value.find((m) => m.rank === "commander") ?? null);
+const leads = computed(() => roster.value.filter((m) => m.rank === "lead"));
+const guardians = computed(() => roster.value.filter((m) => m.rank === "guardian"));
+const cadets = computed(() => roster.value.filter((m) => m.rank === "cadet"));
+
+const COUNTRY_NAME: Record<string, string> = {
+  TH: "Thailand",
+  VN: "Vietnam",
+  SG: "Singapore",
+  MY: "Malaysia",
+  PH: "Philippines",
+  ID: "Indonesia",
+};
+
+interface Pod {
+  code: string;
+  name: string;
+  members: CrewMember[];
+}
+
+function podsFor(codes: string[]): Pod[] {
+  return codes
+    .map((code) => ({
+      code,
+      name: COUNTRY_NAME[code] ?? code,
+      members: guardians.value.filter((g) => g.country === code),
+    }))
+    .filter((p) => p.members.length > 0);
+}
+
+// Geographic two-row arrangement: the big twin markets up top, the rest below.
+const podsTop = computed(() => podsFor(["TH", "VN"]));
+const podsBottom = computed(() => podsFor(["SG", "MY", "PH", "ID"]));
 
 function open(m: CrewMember) {
   openMember(m);
@@ -22,41 +54,21 @@ function open(m: CrewMember) {
         <p class="crewpage__eyebrow mono">INTREPID UNIVERSE</p>
         <h1 class="crewpage__title">Value Protection Crew</h1>
         <p class="crewpage__lead">
-          The crew protecting value across the Intrepid galaxy — one commander, the control leads, and the market
-          guardians holding every sector line. Select a protector to open their portfolio.
+          One commander at the core, the control &amp; data leads who power the engine, and the market guardians
+          holding every sector line. Select a protector to open their portfolio.
         </p>
       </header>
 
       <div class="crewpage__spine">
-        <!-- Command formation: commander apex + two leads a third lower -->
+        <!-- Control & Data leads (HQ row) -->
         <div class="tier">
-          <span class="tier__label mono">COMMAND</span>
-          <div class="formation">
+          <span class="tier__label mono">CONTROL · DATA · AR</span>
+          <div class="leads-row">
             <button
-              v-if="commander"
-              type="button"
-              class="hero-card formation__commander"
-              :style="{ '--accent': commander.accent }"
-              @click="open(commander)"
-            >
-              <div class="hero-card__avatar">
-                <span class="hero-card__halo"></span>
-                <span class="hero-card__ring"></span>
-                <span class="hero-card__body"><span class="hero-card__visor">{{ commander.name.charAt(0) }}</span></span>
-                <span class="hero-card__star">★</span>
-              </div>
-              <div class="hero-card__name">{{ commander.name }}</div>
-              <div class="hero-card__role mono">{{ commander.roleShort }} · {{ commander.clearance }}</div>
-              <p class="hero-card__blurb">{{ commander.blurb }}</p>
-              <div class="hero-card__station mono">{{ commander.station }}</div>
-            </button>
-
-            <button
-              v-for="(m, i) in leads.slice(0, 2)"
+              v-for="m in leads"
               :key="m.name"
               type="button"
-              class="crew-card crew-card--lead formation__lead"
-              :class="i === 0 ? 'formation__lead--l' : 'formation__lead--r'"
+              class="crew-card crew-card--lead"
               :style="{ '--accent': m.accent }"
               @click="open(m)"
             >
@@ -73,33 +85,88 @@ function open(m: CrewMember) {
           </div>
         </div>
 
-        <!-- Market guardians -->
-        <div class="tier">
-          <span class="tier__label mono">MARKET GUARDIANS</span>
-          <div class="tier__grid">
+        <!-- Commander — the core everyone orbits -->
+        <div v-if="commander" class="tier tier--commander">
+          <span class="tier__label mono">COMMANDER</span>
+          <div class="commander-wrap">
             <button
-              v-for="m in guardians"
-              :key="m.name"
               type="button"
-              class="crew-card"
-              :style="{ '--accent': m.accent }"
-              @click="open(m)"
+              class="hero-card"
+              :style="{ '--accent': commander.accent }"
+              @click="open(commander)"
             >
-              <div class="crew-card__avatar">
-                <span class="crew-card__halo"></span>
-                <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
-                <span class="crew-card__rank"></span>
+              <div class="hero-card__avatar">
+                <span class="hero-card__halo"></span>
+                <span class="hero-card__ring"></span>
+                <span class="hero-card__body"><span class="hero-card__visor">{{ commander.name.charAt(0) }}</span></span>
+                <span class="hero-card__star">★</span>
               </div>
-              <div class="crew-card__name">{{ m.name }}</div>
-              <div class="crew-card__role mono">{{ m.roleShort }}</div>
-              <div class="crew-card__meta mono"><span>{{ m.market }}</span><span>{{ m.clearance }}</span></div>
+              <div class="hero-card__name">{{ commander.name }}</div>
+              <div class="hero-card__role mono">{{ commander.roleShort }} · {{ commander.clearance }}</div>
+              <p class="hero-card__blurb">{{ commander.blurb }}</p>
+              <div class="hero-card__station mono">{{ commander.station }}</div>
             </button>
           </div>
         </div>
 
-        <!-- Cadet -->
+        <!-- Market guardians, grouped into country pods -->
+        <div class="tier">
+          <span class="tier__label mono">MARKET GUARDIANS</span>
+
+          <div class="pods">
+            <div v-for="pod in podsTop" :key="pod.code" class="pod">
+              <div class="pod__head mono"><span class="pod__code">{{ pod.code }}</span>{{ pod.name }}</div>
+              <div class="pod__cards">
+                <button
+                  v-for="m in pod.members"
+                  :key="m.name"
+                  type="button"
+                  class="crew-card"
+                  :style="{ '--accent': m.accent }"
+                  @click="open(m)"
+                >
+                  <div class="crew-card__avatar">
+                    <span class="crew-card__halo"></span>
+                    <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
+                    <span class="crew-card__rank"></span>
+                  </div>
+                  <div class="crew-card__name">{{ m.name }}</div>
+                  <div class="crew-card__role mono">{{ m.roleShort }}</div>
+                  <div class="crew-card__meta mono"><span>{{ m.market }}</span><span>{{ m.clearance }}</span></div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pods">
+            <div v-for="pod in podsBottom" :key="pod.code" class="pod">
+              <div class="pod__head mono"><span class="pod__code">{{ pod.code }}</span>{{ pod.name }}</div>
+              <div class="pod__cards">
+                <button
+                  v-for="m in pod.members"
+                  :key="m.name"
+                  type="button"
+                  class="crew-card"
+                  :style="{ '--accent': m.accent }"
+                  @click="open(m)"
+                >
+                  <div class="crew-card__avatar">
+                    <span class="crew-card__halo"></span>
+                    <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
+                    <span class="crew-card__rank"></span>
+                  </div>
+                  <div class="crew-card__name">{{ m.name }}</div>
+                  <div class="crew-card__role mono">{{ m.roleShort }}</div>
+                  <div class="crew-card__meta mono"><span>{{ m.market }}</span><span>{{ m.clearance }}</span></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flex support -->
         <div v-if="cadets.length" class="tier tier--cadet">
-          <span class="tier__label mono">CADET CORPS</span>
+          <span class="tier__label mono">FLEX SUPPORT</span>
           <div class="tier__row">
             <button
               v-for="m in cadets"
@@ -189,6 +256,10 @@ function open(m: CrewMember) {
   margin-bottom: 46px;
 }
 
+.tier--commander {
+  margin-bottom: 52px;
+}
+
 .tier__label {
   display: block;
   text-align: center;
@@ -220,54 +291,74 @@ function open(m: CrewMember) {
   flex-wrap: wrap;
 }
 
-.tier__grid {
+/* HQ leads row — 4 across on desktop, 2×2 on tablet, stacked on phones */
+.leads-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 1.6vw, 20px);
+  max-width: 1040px;
+  margin: 0 auto;
 
-  @media (max-width: 1080px) {
-    grid-template-columns: repeat(3, 1fr);
+  @media (max-width: 940px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 560px;
   }
-  @media (max-width: 720px) {
-    grid-template-columns: repeat(2, 1fr);
+  @media (max-width: 520px) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 320px;
   }
 }
 
-/* Command formation — commander apex, leads a third lower on each flank */
-.formation {
+/* Commander, centered under the leads */
+.commander-wrap {
   display: flex;
   justify-content: center;
+}
+
+/* Country pods — two geographic rows */
+.pods {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: flex-start;
-  gap: clamp(16px, 3vw, 48px);
-  max-width: 1160px;
-  margin: 0 auto;
-}
+  gap: clamp(20px, 3vw, 44px);
 
-.formation__commander {
-  order: 2;
-  flex: none;
-}
-
-.formation__lead {
-  order: 1;
-  flex: none;
-  margin-top: clamp(36px, 5vw, 84px);
-}
-
-.formation__lead--r {
-  order: 3;
-}
-
-@media (max-width: 820px) {
-  .formation {
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
+  & + .pods {
+    margin-top: 30px;
   }
-  .formation__lead {
-    order: 0;
-    margin-top: 0;
-  }
+}
+
+.pod {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pod__head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-text-200);
+}
+
+.pod__code {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--color-cyan-400);
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--color-cyan-400) 40%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-cyan-400) 10%, transparent);
+}
+
+.pod__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
 }
 
 /* ---- Cards (buttons) ---- */
@@ -415,8 +506,14 @@ function open(m: CrewMember) {
   }
 }
 
+/* Guardians inside pods — uniform, compact */
+.pod__cards .crew-card {
+  width: 152px;
+  padding: 20px 12px 16px;
+}
+
 .crew-card--lead {
-  width: min(320px, 90vw);
+  width: auto;
 }
 
 .crew-card--cadet {

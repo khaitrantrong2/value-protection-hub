@@ -59,8 +59,9 @@ const stats = computed(() => {
         </header>
 
         <div v-if="!hasScope" class="member__leadnote">
-          <span class="member__leadnote-eyebrow mono">{{ isLeadership ? "LEADERSHIP ROLE" : "NO ASSIGNED SCOPE" }}</span>
-          <p v-if="isLeadership">
+          <span class="member__leadnote-eyebrow mono">{{ isLeadership ? member.roleShort : "NO ASSIGNED SCOPE" }}</span>
+          <p v-if="member.scopeNote">{{ member.scopeNote }}</p>
+          <p v-else-if="isLeadership">
             {{ member.name }} oversees value protection across all markets and does not carry an individual brand
             portfolio — the market guardians hold the assigned claimback scope.
           </p>
