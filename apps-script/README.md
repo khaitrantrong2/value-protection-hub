@@ -1,9 +1,10 @@
-# Value Protection Hub — Apps Script Links API
+# Value Protection Hub — Apps Script Links and Atlas API
 
-This folder holds the Google Apps Script that turns a **private Google Sheet** into a
-JSON API for the Value Protection Hub frontend. The frontend fetches from the deployed
-Web App URL (`VITE_LINKS_API_URL`) and falls back to bundled mock data when that variable
-is empty or the request fails.
+This folder holds the bound Google Apps Script that serves a Google Sheet as JSON.
+Verify the actual Sheet and Web App sharing settings before adding confidential content.
+The legacy directory fetches the default Web App URL (`VITE_LINKS_API_URL`) and keeps its
+existing mock fallback. The separate `?action=atlas` route never silently falls back to
+demo after a live-source failure. See [Atlas editing and deployment](../docs/process-atlas.md).
 
 ## 1. Create the Google Sheet
 

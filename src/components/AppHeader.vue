@@ -2,7 +2,7 @@
 import { useLinks } from "../composables/useLinks";
 import Icon from "./Icon.vue";
 
-const { config, paletteOpen, goHome, openSector, openCrew } = useLinks();
+const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas } = useLinks();
 </script>
 
 <template>
@@ -22,6 +22,7 @@ const { config, paletteOpen, goHome, openSector, openCrew } = useLinks();
       <a class="hdr__link" href="#" @click.prevent="goHome">Universe</a>
       <a class="hdr__link" href="#" @click.prevent="openSector('all')">Directory</a>
       <a class="hdr__link" href="#" @click.prevent="openCrew">Crew</a>
+      <a class="hdr__link hdr__link--atlas" href="#atlas" :aria-current="view === 'atlas' ? 'page' : undefined" @click.prevent="openAtlas"><span class="hdr__atlas-full">Process </span>Atlas</a>
 
       <a
         v-if="config?.adminSheetUrl"
@@ -144,6 +145,23 @@ const { config, paletteOpen, goHome, openSector, openCrew } = useLinks();
   @include mq(lg, max) {
     display: none;
   }
+}
+
+.hdr__link--atlas {
+  &[aria-current="page"] { color: var(--color-text-400); background: var(--color-beige-600); }
+  @include mq(md, max) { display: inline-flex; padding: 8px; }
+}
+
+.hdr__atlas-full {
+  @include mq(md, max) { display: none; }
+}
+
+@include mq(sm, max) {
+  .hdr { gap: 8px; padding: 0 12px; }
+  .hdr__brand { gap: 8px; min-width: 0; }
+  .hdr__name { font-size: 13px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hdr__scan { padding: 9px; }
+  .hdr__scan kbd { display: none; }
 }
 
 .hdr__scan {

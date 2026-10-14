@@ -31,7 +31,7 @@ const scope = ref<Scope>("all");
 const viewMode = ref<ViewMode>("compact");
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
-const view = ref<"home" | "sector" | "crew" | "member">("home");
+const view = ref<"home" | "sector" | "crew" | "member" | "atlas">(window.location.hash === "#atlas" ? "atlas" : "home");
 const selectedMember = ref<CrewMember | null>(null);
 
 const RECENT_WINDOW_DAYS = 30;
@@ -168,6 +168,7 @@ export function useLinks() {
   }
 
   function openSector(next: Scope) {
+    clearAtlasHash();
     scope.value = next;
     criticalOnly.value = false;
     filters.query = "";
@@ -176,19 +177,31 @@ export function useLinks() {
   }
 
   function goHome() {
+    clearAtlasHash();
     view.value = "home";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function openCrew() {
+    clearAtlasHash();
     view.value = "crew";
     window.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function openMember(member: CrewMember) {
+    clearAtlasHash();
     selectedMember.value = member;
     view.value = "member";
     window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function clearAtlasHash() {
+    if (window.location.hash === "#atlas") window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+
+  function openAtlas() {
+    view.value = "atlas";
+    window.history.replaceState(null, "", "#atlas");
   }
 
   return {
@@ -198,6 +211,7 @@ export function useLinks() {
     goHome,
     openCrew,
     openMember,
+    openAtlas,
     memberScope,
     links,
     categories,

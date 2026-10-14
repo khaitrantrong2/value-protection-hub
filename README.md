@@ -9,9 +9,9 @@ project workspaces.
 
 Built by transforming a 3D Vue/Three.js portfolio into an operational finance-tech hub.
 
-> **This repository ships with mock data only.** Real internal links live in a private
-> Google Sheet and are served at runtime via a Google Apps Script Web App. See
-> [Security notes](#security-notes).
+> **This repository ships with generic demonstration content only.** Runtime data is
+> served from Google Sheets via Apps Script. Verify the actual Sheet and Web App access
+> settings; a Sheet is not automatically private. See [Security notes](#security-notes).
 
 ---
 
@@ -75,6 +75,24 @@ Key/Value rows: `PortalName`, `Subtitle`, `Maintainer`, `AdminSheetUrl`,
 `RequestLinkUrl`, `LastUpdatedNote`.
 
 Full schema and column semantics: [`apps-script/README.md`](./apps-script/README.md).
+
+### Process Atlas
+
+Open **Process Atlas** in the header, or `/#atlas`. Explore uses a pan/zoom process map;
+Walkthrough uses the same records in a linear view. Screens at 840px or smaller use the
+linear view. Supporting A is the technical automation pipeline, not a replacement for
+the business lifecycle; supporting B covers master/setup dependencies.
+
+The same `VITE_LINKS_API_URL` is called with `?action=atlas`. Deploy the additive Atlas
+route before connecting live content. Atlas reads only **Public + Published** records
+from four separate tabs; existing Links/Categories/Config/Portfolio behavior is unchanged.
+Unlike the legacy directory, failed Atlas requests do **not** automatically fall back
+to demonstration content. An explicit **Preview bundled draft · not live** action is
+available when the source is unavailable. Without an API URL, local development displays
+the clearly labelled bundled demo.
+
+Editing, publication, API contract, tests and release gates:
+[`docs/process-atlas.md`](./docs/process-atlas.md).
 
 ---
 
