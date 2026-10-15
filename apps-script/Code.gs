@@ -247,7 +247,7 @@ var ATLAS_COLUMNS = {
   AtlasReferences: ["ID", "StageID", "Order", "Group", "Title", "Body", "Applicability", "URL", "PracticeState", "Publication", "Visibility", "ContentVersion"],
   AtlasConfig: ["Key", "Value", "Publication", "Visibility"],
 };
-var ATLAS_PUBLIC_HOSTS = ["standards.auasb.gov.au", "docs.oracle.com", "system.netsuite.com", "ifrs.org", "www.ifrs.org", "iso.org", "www.iso.org", "developers.google.com", "gsap.com"];
+var ATLAS_PUBLIC_HOSTS = ["standards.auasb.gov.au", "docs.oracle.com", "ifrs.org", "www.ifrs.org", "iso.org", "www.iso.org", "developers.google.com", "gsap.com"];
 
 function atlasInvalid_() {
   var error = new Error("Invalid Atlas content");

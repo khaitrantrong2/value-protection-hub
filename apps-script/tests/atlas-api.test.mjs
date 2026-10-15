@@ -111,7 +111,7 @@ test("Atlas fails closed on missing or duplicated publication headers", () => {
 
 test("Atlas public URL policy rejects private, credentialed, non-HTTPS and lookalike URLs", () => {
   const { context } = runtime();
-  for (const url of ["http://gsap.com/docs", "https://docs.google.com/document/d/private", "https://localhost/", "https://gsap.com.evil.test/", "https://user:pass@gsap.com/", "https://gsap.com:443/", "javascript:alert(1)", "https://gsap.com/\nsecret"]) {
+  for (const url of ["http://gsap.com/docs", "https://docs.google.com/document/d/private", "https://system.netsuite.com/app/example", "https://localhost/", "https://gsap.com.evil.test/", "https://user:pass@gsap.com/", "https://gsap.com:443/", "javascript:alert(1)", "https://gsap.com/\nsecret"]) {
     assert.throws(() => context.atlasPublicURL_(url), /Invalid Atlas content/);
   }
   assert.equal(context.atlasPublicURL_("https://docs.oracle.com/en/"), "https://docs.oracle.com/en/");

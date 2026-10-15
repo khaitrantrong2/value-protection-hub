@@ -69,7 +69,7 @@ test("Wrong scalar types and malformed required structures fail closed", () => {
 });
 
 test("Reference URLs match the server allowlist and reject private or lookalike destinations", () => {
-  for (const url of ["http://docs.oracle.com/", "https://docs.google.com/document/d/example", "https://drive.google.com/example", "https://localhost/", "https://gsap.com.evil.test/", "https://user:pass@gsap.com/", "javascript:alert(1)", "https://gsap.com:443/"]) {
+  for (const url of ["http://docs.oracle.com/", "https://docs.google.com/document/d/example", "https://drive.google.com/example", "https://system.netsuite.com/app/example", "https://localhost/", "https://gsap.com.evil.test/", "https://user:pass@gsap.com/", "javascript:alert(1)", "https://gsap.com:443/"]) {
     const raw = envelope(); raw.atlas.references[0].url = url;
     assert.throws(() => service.parseAtlasResponse(raw), /Dữ liệu Atlas không hợp lệ/);
   }
