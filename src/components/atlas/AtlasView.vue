@@ -87,8 +87,8 @@ watch(() => props.data, () => { if (selectedId.value && !selected.value) selecte
       <nav class="atlas-chapters" aria-label="Process chapters"><button v-for="stage in chapters" :key="stage.id" type="button" :data-atlas-stage="stage.id" :aria-current="chapterId === stage.id ? 'step' : undefined" @click="chooseChapter(stage.id)"><span>{{ stage.id }}</span>{{ stage.shortTitle }}</button></nav>
       <div class="atlas-supporting" aria-label="Supporting processes"><button v-for="stage in supporting" :key="stage.id" type="button" :data-atlas-stage="stage.id" :aria-expanded="selectedId === stage.id" @click="selectedId === stage.id ? closeDetail() : select(stage.id)"><span class="atlas-support-id">{{ stage.id }}</span><span><strong>{{ stage.shortTitle }}</strong><small>Supports {{ stage.supports.join(' / ') || 'the core process' }}</small></span><AtlasStatus :state="stage.practiceState" /><Icon name="chevronRight" :size="16" /></button></div>
       <div class="atlas-workspace" :class="{ 'is-story': storyMode }">
-        <AtlasStory v-if="storyMode && chapter" :stage="chapter" :chapters="chapters" @chapter="chooseChapter" @detail="select" />
-        <AtlasCanvas v-else ref="canvas" :stages="data.stages" :selected-id="selectedId" @select="select" @fit="fit" />
+        <AtlasStory v-if="storyMode && chapter" :stage="chapter" :chapters="chapters" :references="data.references" @chapter="chooseChapter" @detail="select" />
+        <AtlasCanvas v-else ref="canvas" :stages="data.stages" :references="data.references" :selected-id="selectedId" @select="select" @fit="fit" />
         <AtlasStageDetail v-if="selected" :key="selected.id" :stage="selected" :controls="controls" :references="references" @close="closeDetail" />
       </div>
       <section class="atlas-page-references" aria-labelledby="atlas-references-title"><div><span class="atlas-eyebrow">REFERENCE LAYER / DETAILS ON DEMAND</span><h2 id="atlas-references-title">Rules, routes & review references</h2><p>Definitions and reported activities; proposed items remain labelled separately.</p></div><AtlasReferences :references="data.references" /></section>

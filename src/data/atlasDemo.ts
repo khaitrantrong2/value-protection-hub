@@ -144,7 +144,7 @@ export const atlasDemo: AtlasPayload = {
       caution: 'Late Brand confirmation must not be drawn as a gate that delays the original monthly accrual.',
       fork: 'parallel', applicability: 'Monthly close deadlines and internal reviewers follow the applicable market/model process.',
       practiceState: 'reported', pipeline: [], supports: [],
-      referenceIds: ['DOC-01', 'DOC-02', 'DOC-03', 'DOC-04', 'DOC-05', 'DOC-06', 'ESC-30', 'ESC-60', 'ESC-90'],
+      referenceIds: ['BRANCH-05A', 'BRANCH-05B', 'DOC-01', 'DOC-02', 'DOC-03', 'DOC-04', 'DOC-05', 'DOC-06', 'ESC-30', 'ESC-60', 'ESC-90'],
     }),
     stage({
       id: '06', kind: 'chapter', order: 6,
@@ -292,6 +292,8 @@ export const atlasDemo: AtlasPayload = {
     reference('R4', '04', 4, 'reason-code', 'Commercial negotiation', 'Identify a negotiated concession separately from an internal correction. Retain the Brand/KAM agreement and amount impact.', 'Proposed shared reason taxonomy.', 'proposed'),
     reference('R5', '04', 5, 'reason-code', 'Mapping / engine correction', 'A technical mapping, column/row, configuration or version issue changed the output. Link the correction to its run context.', 'Proposed shared reason taxonomy.', 'proposed'),
 
+    reference('BRANCH-05A', '05', 1, 'guidance', 'Monthly accounting', 'Reviewed preliminary estimate → VP Lead amount approval → freeze → AR upload preparation → NetSuite JE approval workflow and R2R account review. Monthly close does not wait for Brand confirmation; amount approval and JE approval are separate gates.', 'VP Lead, AR PIC and R2R; apply the local/model monthly close process.'),
+    reference('BRANCH-05B', '05', 2, 'guidance', 'Brand confirmation', 'Reviewed report → applicable internal commercial review → KAM obtains Brand confirmation or resolves discrepancies → confirmed billing version. Discrepancies return to VP/KAM review, separately from the original monthly accrual.', 'KAM, Brand and VP; reviewers and prerequisites vary by relationship.'),
     reference('DOC-01', '05', 1, 'document-step', 'Finance prepared', 'Prepare the claim report and billing context before the applicable internal reviews.', 'Common preparation step; not a settlement instruction.'),
     reference('DOC-02', '05', 2, 'document-step', 'Country Finance review', 'Obtain local Finance review where the market/relationship process requires it.', 'Conditional by country and relationship process master.'),
     reference('DOC-03', '05', 3, 'document-step', 'KAM / Marketing review', 'Review the commercial report and resolve discrepancies before sharing the confirmed version onward.', 'Applicable commercial review; reviewer varies by service.'),

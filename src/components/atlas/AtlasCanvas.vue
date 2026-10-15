@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import type { AtlasStage, AtlasStageId } from "../../types/atlas";
+import type { AtlasStage, AtlasStageId, AtlasReference } from "../../types/atlas";
 import { useAtlasCamera, type AtlasBounds } from "../../composables/useAtlasCamera";
 
-const props = defineProps<{ stages: AtlasStage[]; selectedId: AtlasStageId | null }>();
+const props = defineProps<{ stages: AtlasStage[]; references: AtlasReference[]; selectedId: AtlasStageId | null }>();
 const emit = defineEmits<{ select: [id: AtlasStageId]; fit: [] }>();
 const viewport = ref<HTMLElement | null>(null);
 const miniature = ref<SVGSVGElement | null>(null);
@@ -11,13 +11,18 @@ const bounds = { x: 32, y: 80, width: 3136, height: 820 };
 const { camera, viewportSize, dragging, focus, fit, zoom, wheel, pointerDown, pointerMove, pointerUp, centerAt, onResize } =
   useAtlasCamera(viewport, bounds, () => ({ top: 24, right: 24, bottom: 104, left: 24 }));
 const shortLabels: Record<string, string> = { "01": "Contract", "02": "Inputs", "03": "Engine", "04": "VP review", "05": "Workstreams", "06": "Billing", "07": "Settle", "08": "Completion" };
+const branchReferences = computed(() => props.references.filter(reference => reference.stageId === "05" && (reference.id === "BRANCH-05A" || reference.id === "BRANCH-05B")));
+const parallelLegend = computed(() => branchReferences.value.length === 2 ? branchReferences.value.map(reference => reference.title).join(" ∥ ") : "Parallel workstreams");
 const nodes = computed(() => props.stages.filter(stage => stage.kind === "chapter").flatMap(stage => {
   const x = 64 + (Number(stage.id) - 1) * 380;
-  if (stage.id === "05") return [
-    { key: "05A", stage, x, y: 150, width: 300, height: 220, title: "Monthly close", short: "Close", branch: "05 A" },
-    { key: "05B", stage, x, y: 630, width: 300, height: 220, title: "Brand confirmation", short: "Brand", branch: "05 B" },
-  ];
-  return [{ key: stage.id, stage, x, y: 390, width: 300, height: 220, title: stage.shortTitle, short: shortLabels[stage.id] ?? stage.shortTitle, branch: stage.id }];
+  if (stage.id === "05") return ["A", "B"].map((suffix, index) => {
+    const reference = branchReferences.value.find(item => item.id === `BRANCH-05${suffix}`);
+    return { key: `05${suffix}`, stage, x, y: index === 0 ? 150 : 630, width: 300, height: 220,
+      title: reference?.title || stage.shortTitle, body: reference?.body || stage.businessQuestion,
+      role: reference?.applicability || stage.roleTag, short: suffix, branch: `05 ${suffix}` };
+  });
+  return [{ key: stage.id, stage, x, y: 390, width: 300, height: 220, title: stage.shortTitle, body: stage.businessQuestion,
+    role: stage.roleTag, short: shortLabels[stage.id] ?? stage.shortTitle, branch: stage.id }];
 }));
 const compact = computed(() => camera.scale < 0.52);
 const detailed = computed(() => camera.scale >= 0.9);
@@ -85,7 +90,7 @@ defineExpose({ fit, frameSelection });
 
 <template>
   <div class="atlas-map-wrap">
-    <div class="atlas-map-legend" aria-label="Map legend"><span>Foundation → Calculation</span><span>Monthly close ∥ Brand confirmation</span><span>Realization / route-specific</span></div>
+    <div class="atlas-map-legend" aria-label="Map legend"><span>Process overview</span><span>{{ parallelLegend }}</span><span>Route-specific handoffs</span></div>
     <div ref="viewport" class="atlas-map" :class="{ 'is-dragging': dragging, 'is-compact': compact, 'is-detailed': detailed }" tabindex="0" role="region" aria-label="Process map. Drag or scroll to pan. Control plus scroll to zoom. Arrow keys pan, F fits the map."
       data-lenis-prevent @wheel="wheel" @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="pointerUp" @keydown="keydown">
       <svg class="atlas-paths" :viewBox="`0 0 ${viewportSize.width || 1} ${viewportSize.height || 1}`" aria-hidden="true">
@@ -94,10 +99,10 @@ defineExpose({ fit, frameSelection });
         <path :d="discrepancy" class="atlas-discrepancy" marker-end="url(#atlas-path-arrow)" />
       </svg>
       <button v-for="node in screenNodes" :key="node.key" type="button" class="atlas-node" :class="{ 'is-selected': selectedId === node.stage.id, 'is-accounting': node.key === '05A' }" :style="nodeStyle(node)"
-        :aria-label="`${node.branch}: ${node.title}. ${node.stage.businessQuestion}`" :aria-pressed="selectedId === node.stage.id" :tabindex="nodeVisible(node) ? 0 : -1" @click="emit('select', node.stage.id)">
+        :aria-label="`${node.branch}: ${node.title}. ${node.body}`" :aria-pressed="selectedId === node.stage.id" :tabindex="nodeVisible(node) ? 0 : -1" @click="emit('select', node.stage.id)">
         <span class="atlas-node-index">{{ node.branch }}</span><strong>{{ compact ? node.short : node.title }}</strong>
-        <span v-if="detailed" class="atlas-node-question">{{ node.stage.id === '05' ? (node.key === '05A' ? 'Approved estimate → freeze → JE workflow' : 'KAM review → confirm / resolve → billing') : node.stage.businessQuestion }}</span>
-        <span v-if="detailed" class="atlas-node-role">{{ node.stage.id === '05' ? (node.key === '05A' ? 'VP lead · AR PIC · R2R' : 'KAM · Brand · VP') : node.stage.roleTag }}</span>
+        <span v-if="detailed" class="atlas-node-question">{{ node.body }}</span>
+        <span v-if="detailed" class="atlas-node-role">{{ node.role }}</span>
       </button>
       <div class="atlas-map-tools"><button type="button" aria-label="Zoom out" @click="zoom(1 / 1.2)">−</button><span aria-live="polite">{{ Math.round(camera.scale * 100) }}%</span><button type="button" aria-label="Zoom in" @click="zoom(1.2)">+</button><button type="button" @click="emit('fit')">Fit</button></div>
       <button type="button" class="atlas-minimap" aria-label="Move map to clicked location; press Enter to fit" @click="minimapClick">
@@ -126,7 +131,7 @@ defineExpose({ fit, frameSelection });
 .atlas-node-index { font-size: 12px; color: var(--color-cyan-400); }
 .atlas-node strong { font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .atlas-node-question { font-size: 13px; line-height: 1.35; color: var(--color-text-300); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.atlas-node-role { margin-top: auto; font-size: 12px; line-height: 1.3; color: var(--color-text-300); }
+.atlas-node-role { margin-top: auto; font-size: 12px; line-height: 1.3; color: var(--color-text-300); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .is-compact .atlas-node { padding: 6px 3px; gap: 4px; align-items: center; justify-content: center; text-align: center; }
 .is-compact .atlas-node strong { font-size: 12px; line-height: 1.15; width: 100%; }
 .is-detailed .atlas-node strong { font-size: 19px; -webkit-line-clamp: 2; }

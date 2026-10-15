@@ -18,6 +18,9 @@ Sau khi API đã deploy đúng: sửa và lưu Sheet → **Refresh source** ho�
 Atlas không dùng server cache/localStorage. Layout, branch geometry, zoom hoặc thay schema
 cần sửa code và deploy frontend; thay wording không cần build lại.
 
+Hai nhánh 05 dùng reference IDs `BRANCH-05A` và `BRANCH-05B`: sửa Title/Body/Applicability
+ở AtlasReferences để Map và Walkthrough cùng cập nhật; không cần sửa paragraph trong Vue.
+
 Giữ nguyên headers và IDs. Stage IDs là text `01`–`08`, `A`, `B`, không chuyển thành số.
 Danh sách dùng `|`; Pipeline dùng một handoff trên mỗi dòng. Không để phần tử trống/trùng.
 Supports, ReferenceIDs, StageID phải trỏ đến record đang được publish.

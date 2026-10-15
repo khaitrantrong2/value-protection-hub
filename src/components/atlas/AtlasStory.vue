@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { AtlasStage, AtlasStageId } from "../../types/atlas";
+import type { AtlasStage, AtlasStageId, AtlasReference } from "../../types/atlas";
 import AtlasStatus from "./AtlasStatus.vue";
-const props = defineProps<{ stage: AtlasStage; chapters: AtlasStage[] }>();
+const props = defineProps<{ stage: AtlasStage; chapters: AtlasStage[]; references: AtlasReference[] }>();
 const emit = defineEmits<{ chapter: [id: AtlasStageId]; detail: [id: AtlasStageId] }>();
 const index = computed(() => props.chapters.findIndex(item => item.id === props.stage.id));
+const branches = computed(() => ["BRANCH-05A", "BRANCH-05B"].flatMap(id => {
+  const reference = props.references.find(item => item.stageId === props.stage.id && item.id === id);
+  return reference ? [reference] : [];
+}));
 function step(delta: number) { const stage = props.chapters[index.value + delta]; if (stage) emit("chapter", stage.id); }
 </script>
 <template>
   <article class="atlas-story" aria-labelledby="atlas-story-title" aria-live="polite">
     <div class="atlas-story-count">CHAPTER {{ stage.id }} / {{ String(chapters.length).padStart(2,'0') }}<AtlasStatus :state="stage.practiceState" /></div>
     <h2 id="atlas-story-title" tabindex="-1">{{ stage.title }}</h2><p class="atlas-story-question">{{ stage.businessQuestion }}</p><p class="atlas-story-narrative">{{ stage.narrative }}</p>
-    <div v-if="stage.fork === 'parallel'" class="atlas-story-branches">
-      <section><span>05 A / MONTHLY ACCOUNTING</span><h3>Preliminary accrual</h3><p>Reviewed estimate → amount approval → freeze → CSV / NetSuite workflow → JE approval & account review.</p><small>Monthly close does not wait for Brand confirmation.</small></section>
-      <section><span>05 B / COMMERCIAL</span><h3>Brand confirmation</h3><p>Reviewed report → internal review → Brand confirmation / discrepancy resolution → final billing version.</p><small>Discrepancies return to VP/KAM review.</small></section>
+    <div v-if="stage.fork === 'parallel' && branches.length" class="atlas-story-branches">
+      <section v-for="branch in branches" :key="branch.id"><AtlasStatus :state="branch.practiceState" /><h3>{{ branch.title }}</h3><p>{{ branch.body }}</p><small v-if="branch.applicability">{{ branch.applicability }}</small></section>
     </div>
     <div class="atlas-story-io"><section><h3>Input</h3><p>{{ stage.sipoc.input }}</p></section><section><h3>Output / handoff</h3><p>{{ stage.sipoc.output }}</p></section></div>
     <p class="atlas-story-caution">{{ stage.caution }}</p>
