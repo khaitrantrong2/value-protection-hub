@@ -2,6 +2,7 @@ import { computed, reactive, ref } from "vue";
 import type { CategoryId, CountryCode, Criticality, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
 import type { CrewMember } from "../data/crew";
 import type { PortfolioRow } from "../data/memberPortfolios";
+import { isAtlasHash } from "./useAtlasRouteState";
 import {
   computeStats,
   filterLinks,
@@ -31,8 +32,16 @@ const scope = ref<Scope>("all");
 const viewMode = ref<ViewMode>("compact");
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
-const view = ref<"home" | "sector" | "crew" | "member" | "atlas">(window.location.hash === "#atlas" ? "atlas" : "home");
+const view = ref<"home" | "sector" | "crew" | "member" | "atlas">(isAtlasHash(window.location.hash) ? "atlas" : "home");
 const selectedMember = ref<CrewMember | null>(null);
+
+// Shared navigation state lives for the app lifetime, including hash links and browser history.
+function syncAtlasView() {
+  if (isAtlasHash(window.location.hash)) view.value = "atlas";
+  else if (view.value === "atlas") view.value = "home";
+}
+window.addEventListener("hashchange", syncAtlasView);
+window.addEventListener("popstate", syncAtlasView);
 
 const RECENT_WINDOW_DAYS = 30;
 
@@ -196,12 +205,12 @@ export function useLinks() {
   }
 
   function clearAtlasHash() {
-    if (window.location.hash === "#atlas") window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (isAtlasHash(window.location.hash)) window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
   }
 
   function openAtlas() {
     view.value = "atlas";
-    window.history.replaceState(null, "", "#atlas");
+    if (!isAtlasHash(window.location.hash)) window.history.pushState(window.history.state, "", "#atlas");
   }
 
   return {
