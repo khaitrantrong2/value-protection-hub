@@ -6,6 +6,12 @@ The legacy directory fetches the default Web App URL (`VITE_LINKS_API_URL`) and 
 existing mock fallback. The separate `?action=atlas` route never silently falls back to
 demo after a live-source failure. See [Atlas editing and deployment](../docs/process-atlas.md).
 
+**Required for Web App execution:** in Project Settings → Script properties, configure
+`VPH_SPREADSHEET_ID` with the approved source Sheet's raw ID. The template opens that ID
+server-side; do not put it in client data or accept it from request parameters. Active-sheet
+fallback is for editor/legacy contexts, not a Web App deployment guarantee.
+[Google special-method restrictions](https://developers.google.com/apps-script/guides/bound#special_methods).
+
 ## 1. Create the Google Sheet
 
 Create a Sheet and add these tabs.

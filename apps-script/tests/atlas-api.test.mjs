@@ -6,9 +6,11 @@ import vm from "node:vm";
 const source = readFileSync(new URL("../Code.gs", import.meta.url), "utf8");
 const contract = readFileSync(new URL("../../src/types/atlas.ts", import.meta.url), "utf8");
 
-function runtime(initial = {}) {
+function runtime(initial = {}, options = {}) {
   const tables = { ...initial };
   const cache = new Map();
+  const properties = options.properties ?? {};
+  const calls = { active: 0, openById: [] };
   const sheets = Object.entries(tables).map(([name, values]) => ({
     getName: () => name,
     getLastRow: () => values.length,
@@ -22,7 +24,19 @@ function runtime(initial = {}) {
   };
   const context = vm.createContext({
     Date,
-    SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
+    SpreadsheetApp: {
+      getActiveSpreadsheet: () => {
+        calls.active++;
+        if (options.active === "throw") throw new Error("private active-context details");
+        return options.active === undefined ? spreadsheet : options.active;
+      },
+      openById: (id) => {
+        calls.openById.push(id);
+        if (options.openError) throw new Error("private source/access details");
+        return options.openResult === undefined ? spreadsheet : options.openResult;
+      },
+    },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (key) => properties[key] ?? null }) },
     CacheService: { getScriptCache: () => ({ get: (key) => cache.get(key), put: (key, value) => cache.set(key, value) }) },
     ContentService: {
       MimeType: { JSON: "application/json" },
@@ -32,7 +46,7 @@ function runtime(initial = {}) {
     Utilities: { formatDate: (date) => date.toISOString().slice(0, 10) },
   });
   vm.runInContext(source, context);
-  return { context, cache };
+  return { context, cache, spreadsheet, properties, calls };
 }
 
 function table(columns, rows) {
@@ -227,4 +241,64 @@ test("Dates and orders are valid bounded scalar values", () => {
   assert.equal(context.atlasDate_("2024-02-29"), "2024-02-29");
   assert.equal(context.atlasDate_(new Date("2026-10-15T00:00:00Z")), "2026-10-15");
   for (const value of ["", 0, -1, true, [], {}, "1e2", 10000]) assert.throws(() => context.atlasOrder_(value));
+});
+
+const genericSourceID = "GENERIC_TEST_SOURCE_ID_000001";
+
+test("Configured source opens by ID without any active spreadsheet context", () => {
+  for (const active of [null, "throw"]) {
+    const { context, calls } = runtime(fixture(), { active, properties: { VPH_SPREADSHEET_ID: genericSourceID } });
+    assert.equal(atlasResponse(context).ok, true);
+    assert.ok(calls.openById.length > 0);
+    assert.ok(calls.openById.every((value) => value === genericSourceID));
+    assert.equal(calls.active, 0);
+  }
+});
+
+test("Configured source takes precedence over active context and request-supplied IDs", () => {
+  const { context, calls } = runtime(fixture(), { active: { getSheetByName: () => { throw new Error("wrong active spreadsheet"); } }, properties: { VPH_SPREADSHEET_ID: genericSourceID } });
+  const response = JSON.parse(context.doGet({ parameter: { action: "atlas", spreadsheetId: "IGNORED_REQUEST_SOURCE_000002" } }).body);
+  assert.equal(response.ok, true);
+  assert.equal(calls.active, 0);
+  assert.ok(calls.openById.every((value) => value === genericSourceID));
+});
+
+test("Missing, invalid or inaccessible source configuration returns only generic Atlas errors", () => {
+  const cases = [
+    { active: null },
+    { active: "throw" },
+    { properties: { VPH_SPREADSHEET_ID: "short" } },
+    { properties: { VPH_SPREADSHEET_ID: ` ${genericSourceID} ` } },
+    { properties: { VPH_SPREADSHEET_ID: "https://example.test/private-source" } },
+    { properties: { VPH_SPREADSHEET_ID: "x".repeat(151) } },
+    { properties: { VPH_SPREADSHEET_ID: genericSourceID }, openError: true },
+    { properties: { VPH_SPREADSHEET_ID: genericSourceID }, openResult: null },
+  ];
+  for (const options of cases) {
+    const { context } = runtime(fixture(), options);
+    assert.deepEqual(atlasResponse(context), { ok: false, error: { code: "ATLAS_UNAVAILABLE", message: "Atlas content could not be loaded." } });
+  }
+});
+
+test("Legacy cache is source-specific after repointing and malformed config cannot reuse cached data", () => {
+  const sourceA = runtime({ Links: [["ID", "Title", "IsActive"], ["A", "Source A", true]] });
+  const sourceB = runtime({ Links: [["ID", "Title", "IsActive"], ["B", "Source B", true]] });
+  const idA = "GENERIC_TEST_SOURCE_A_000001", idB = "GENERIC_TEST_SOURCE_B_000002";
+  const { context, properties, cache } = runtime({}, { properties: { VPH_SPREADSHEET_ID: idA } });
+  context.SpreadsheetApp.openById = (id) => id === idA ? sourceA.spreadsheet : sourceB.spreadsheet;
+  assert.equal(JSON.parse(context.doGet().body).links[0].Title, "Source A");
+  properties.VPH_SPREADSHEET_ID = idB;
+  assert.equal(JSON.parse(context.doGet().body).links[0].Title, "Source B");
+  assert.equal(cache.size, 2);
+  properties.VPH_SPREADSHEET_ID = "invalid";
+  cache.set("vph_payload_v1", JSON.stringify({ links: [{ Title: "Old source marker" }] }));
+  assert.throws(() => context.doGet(), { message: "Source spreadsheet is not configured or accessible." });
+});
+
+test("Editor/legacy source fallback preserves the original cache key and returns a fixed source error if absent", () => {
+  const { context, cache } = runtime({ Links: [["ID", "Title", "IsActive"], ["A", "Editor source", true]] });
+  assert.equal(JSON.parse(context.doGet().body).links[0].Title, "Editor source");
+  assert.equal(cache.has("vph_payload_v1"), true);
+  const missing = runtime({}, { active: null });
+  assert.throws(() => missing.context.getSourceSpreadsheet_(), { message: "Source spreadsheet is not configured or accessible." });
 });

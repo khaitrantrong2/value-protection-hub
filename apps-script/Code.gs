@@ -17,6 +17,7 @@
  *   AtlasStages / AtlasControls / AtlasReferences / AtlasConfig — separate action=atlas
  *     route with allowlisted fields and explicit Public + Published rows only.
  *     Publication and evidence-location labels do not assert control effectiveness.
+ * Web App source: set Script Property VPH_SPREADSHEET_ID; no request parameter selects a file.
  */
 
 var LINK_COLUMNS = [
@@ -38,9 +39,11 @@ var LINK_COLUMNS = [
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === "atlas") return doGetAtlas_();
+  var sourceID = getSourceSpreadsheetId_();
+  var cacheKey = sourceID ? "vph_payload_v1:" + sourceID : "vph_payload_v1";
   // Serve a 60-second server cache so repeat hits skip re-reading the sheet (faster response).
   var cache = CacheService.getScriptCache();
-  var cached = cache.get("vph_payload_v1");
+  var cached = cache.get(cacheKey);
   if (cached) {
     return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
   }
@@ -53,7 +56,7 @@ function doGet(e) {
   };
   var json = JSON.stringify(payload);
   try {
-    cache.put("vph_payload_v1", json, 60); // edits show within ~1 minute
+    cache.put(cacheKey, json, 60); // edits show within ~1 minute; source changes use a separate key
   } catch (err) {
     // payload > 100KB — skip caching, still return fresh
   }
@@ -136,7 +139,7 @@ function colIndex_(headers, aliases) {
 
 /** Finds a sheet named exactly, else the first whose name contains the keyword (case-insensitive). */
 function findSheetLike_(keyword) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSourceSpreadsheet_();
   var exact = ss.getSheetByName("Portfolio");
   if (exact) return exact;
   var all = ss.getSheets();
@@ -166,7 +169,7 @@ function getConfig() {
 
 /** Generic reader: first row is the header, remaining rows become keyed objects. */
 function readSheet(sheetName) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  var sheet = getSourceSpreadsheet_().getSheetByName(sheetName);
   if (!sheet) return [];
 
   var range = sheet.getDataRange();
@@ -210,6 +213,30 @@ function isTrue(value) {
 
 function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Web App executions cannot rely on a bound editor's active spreadsheet context. */
+function getSourceSpreadsheetId_() {
+  try {
+    var id = PropertiesService.getScriptProperties().getProperty("VPH_SPREADSHEET_ID");
+    if (id === null || id === "") return "";
+    if (typeof id !== "string" || !/^[A-Za-z0-9_-]{20,150}$/.test(id)) throw new Error();
+    return id;
+  } catch (err) {
+    throw new Error("Source spreadsheet is not configured or accessible.");
+  }
+}
+
+function getSourceSpreadsheet_() {
+  var id = getSourceSpreadsheetId_();
+  try {
+    // The fallback supports editor calls only; deployed Web Apps must configure the property.
+    var spreadsheet = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
+    if (!spreadsheet) throw new Error();
+    return spreadsheet;
+  } catch (err) {
+    throw new Error("Source spreadsheet is not configured or accessible.");
+  }
 }
 
 /** Atlas content is public only after an explicit publication decision in the source Sheet. */
@@ -295,7 +322,7 @@ function atlasEvidenceLabel_(value) {
 }
 
 function atlasPublishedRows_(sheetName) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  var sheet = getSourceSpreadsheet_().getSheetByName(sheetName);
   if (!sheet) atlasInvalid_();
   var rowCount = sheet.getLastRow();
   var colCount = sheet.getLastColumn();

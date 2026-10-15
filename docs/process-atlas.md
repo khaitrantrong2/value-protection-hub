@@ -78,8 +78,12 @@ giữ last-good in-memory **với warning**, không ghi là dữ liệu mới.
 ## One-time deployment gate
 
 1. Xác định project **đang phục vụ đúng source Sheet**; không overwrite project lạ.
-2. Backup phiên bản source và deployment hiện tại. Code.gs là template cho **bound Sheet**;
-   standalone project cần explicit `openById` integration được review, không giả active Sheet.
+2. Backup phiên bản source và deployment hiện tại. Project Settings → Script properties:
+   đặt `VPH_SPREADSHEET_ID` bằng raw ID của source Sheet đã được duyệt (không phải URL).
+   Template dùng `openById`; không hardcode ID vào public repo hoặc nhận ID từ request.
+   `getActiveSpreadsheet` chỉ là fallback khi chạy trong editor, không phải cấu hình Web App.
+   [Google xác nhận special methods không dùng được trong Web App](https://developers.google.com/apps-script/guides/bound#special_methods);
+   [openById reference](https://developers.google.com/apps-script/reference/spreadsheet/spreadsheet-app#openById(String)).
 3. Cập nhật additive `action=atlas` route, giữ default legacy response. Human duyệt access
    settings trước deploy; không tự mở public/external quyền hoặc đổi Sheet sharing.
 4. GET default API vẫn đúng Links/Categories/Config/Portfolio. GET `?action=atlas` phải đúng
