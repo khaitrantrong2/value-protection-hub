@@ -7,7 +7,7 @@ import VaultCard from "./VaultCard.vue";
 import SkeletonCard from "./SkeletonCard.vue";
 import Icon from "./Icon.vue";
 
-const { scope, workspaceLinks, categories, filters, criticalOnly, isLoading, openSector, goHome } = useLinks();
+const { scope, workspaceLinks, categories, filters, criticalOnly, isLoading, source, error, openSector, goHome } = useLinks();
 
 const activeSector = computed(() => sectors.find((s) => s.categoryId === scope.value) ?? null);
 
@@ -82,6 +82,10 @@ const dock = computed(() => [
         </div>
       </header>
 
+      <p v-if="source === 'mock'" class="sector__source-note" role="status">
+        Demo directory data · {{ error ? 'Live source unavailable; these are sample links.' : 'No live API configured.' }}
+      </p>
+
       <div class="sector__controls">
         <label class="sector__search">
           <Icon name="search" :size="16" />
@@ -148,6 +152,7 @@ const dock = computed(() => [
 </template>
 
 <style lang="scss" scoped>
+.sector__source-note { margin-top: 12px; padding: 8px 12px; border-left: 2px solid var(--color-orange-400); background: var(--color-orange-muted); color: var(--color-text-300); font-size: 12px; line-height: 1.4; }
 .sector {
   position: relative;
   z-index: 1;
