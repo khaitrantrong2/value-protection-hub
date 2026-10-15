@@ -13,13 +13,17 @@ const props = defineProps<{ data: AtlasPayload | null; source: "live" | "demo" |
 const emit = defineEmits<{ refresh: []; preview: [] }>();
 const mode = ref<"explore" | "story">("explore");
 const compactScreen = ref(false);
+const focusMap = ref(false);
 const chapterId = ref<AtlasStageId>("01");
 const selectedId = ref<AtlasStageId | null>(null);
 const canvas = ref<InstanceType<typeof AtlasCanvas> | null>(null);
 const page = ref<HTMLElement | null>(null);
+const workspace = ref<HTMLElement | null>(null);
+const exitFocusButton = ref<HTMLButtonElement | null>(null);
 const { prefersReducedMotion } = useReducedMotion();
 let mediaQuery: MediaQueryList | undefined;
 let detailOrigin: HTMLElement | null = null;
+let focusOrigin: HTMLElement | null = null;
 const chapters = computed(() => props.data?.stages.filter(stage => stage.kind === "chapter").sort((a,b) => a.order - b.order) ?? []);
 const supporting = computed(() => props.data?.stages.filter(stage => stage.kind === "supporting").sort((a,b) => a.order - b.order) ?? []);
 const chapter = computed(() => chapters.value.find(stage => stage.id === chapterId.value) ?? chapters.value[0]);
@@ -30,7 +34,7 @@ const storyMode = computed(() => mode.value === "story" || compactScreen.value);
 const sourceLabel = computed(() => props.source === "live" ? "Google Sheets source" : props.source === "demo" ? "Demo content · not live source" : "Source unavailable");
 function select(id: AtlasStageId) {
   const active = document.activeElement as HTMLElement | null;
-  if (active && !active.closest(".atlas-detail")) detailOrigin = active;
+  detailOrigin = active && !active.closest(".atlas-detail") ? active : null;
   selectedId.value = id;
   if (/^0[1-8]$/.test(id)) chapterId.value = id;
   if (compactScreen.value) nextTick(() => page.value?.querySelector(".atlas-detail")?.scrollIntoView({ block: "start", behavior: "instant" }));
@@ -43,11 +47,39 @@ function closeDetail() {
   if (detailOrigin?.isConnected && !detailOrigin.closest(".atlas-detail") && !hiddenMapOrigin) detailOrigin.focus({ preventScroll: true });
   else {
     const fallbackId = closingId === "A" || closingId === "B" ? closingId : chapterId.value;
-    page.value?.querySelector<HTMLElement>(`button[data-atlas-stage="${fallbackId}"]`)?.focus({ preventScroll: true });
+    const fallback = focusMap.value
+      ? workspace.value?.querySelector<HTMLElement>(`button[data-atlas-node-stage="${fallbackId}"][tabindex="0"]`) ?? exitFocusButton.value
+      : page.value?.querySelector<HTMLElement>(`button[data-atlas-stage="${fallbackId}"]`);
+    fallback?.focus({ preventScroll: true });
   }
   detailOrigin = null;
 }
-async function fit() { closeDetail(); await nextTick(); canvas.value?.fit(); }
+async function fit() {
+  closeDetail();
+  await nextTick();
+  if (!focusMap.value && workspace.value) {
+    const fits = workspace.value.offsetHeight <= (page.value?.clientHeight ?? 0);
+    workspace.value.scrollIntoView({ block: fits ? "center" : "start", behavior: prefersReducedMotion.value ? "instant" : "smooth" });
+  }
+  canvas.value?.fit();
+}
+async function exitFocus(restore = true) {
+  focusMap.value = false;
+  await nextTick();
+  if (restore) {
+    const target = focusOrigin?.isConnected ? focusOrigin : page.value?.querySelector<HTMLElement>(".atlas-view-modes button:last-child");
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion.value ? "instant" : "smooth" });
+  }
+  focusOrigin = null;
+}
+async function enterFocus() {
+  if (compactScreen.value || storyMode.value) return;
+  focusOrigin = document.activeElement as HTMLElement | null;
+  focusMap.value = true;
+  await nextTick();
+  exitFocusButton.value?.focus({ preventScroll: true });
+}
 async function chooseChapter(id: AtlasStageId) {
   const changed = chapterId.value !== id;
   chapterId.value = id;
@@ -59,39 +91,45 @@ async function chooseChapter(id: AtlasStageId) {
   heading?.focus({ preventScroll: true });
   heading?.scrollIntoView({ block: "start", behavior: prefersReducedMotion.value ? "instant" : "smooth" });
 }
-function switchMode(value: "explore" | "story") { mode.value = value; closeDetail(); }
+function switchMode(value: "explore" | "story") { if (value === "story" && focusMap.value) void exitFocus(false); mode.value = value; closeDetail(); }
 function keydown(event: KeyboardEvent) {
   const target = event.target as HTMLElement;
   if (target.matches("input,textarea,select") || target.isContentEditable || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.key === "Escape") { event.stopPropagation(); event.preventDefault(); if (selectedId.value) closeDetail(); }
+  if (event.key === "Escape") { event.stopPropagation(); event.preventDefault(); if (selectedId.value) closeDetail(); else if (focusMap.value) void exitFocus(); }
   if (/^[0-8]$/.test(event.key)) {
     event.stopPropagation();
     if (event.key !== "0") { const item = chapters.value[Number(event.key) - 1]; if (item) { event.preventDefault(); chooseChapter(item.id); } }
   }
 }
-function updateMedia(event: MediaQueryListEvent | MediaQueryList) { compactScreen.value = event.matches; }
+function updateMedia(event: MediaQueryListEvent | MediaQueryList) { compactScreen.value = event.matches; if (event.matches && focusMap.value) void exitFocus(); }
 onMounted(() => { mediaQuery = window.matchMedia("(max-width: 840px)"); updateMedia(mediaQuery); mediaQuery.addEventListener("change", updateMedia); });
 onBeforeUnmount(() => mediaQuery?.removeEventListener("change", updateMedia));
-watch(() => props.data, () => { if (selectedId.value && !selected.value) selectedId.value = null; }, { deep: false });
+watch(() => props.data, () => {
+  if (selectedId.value && !selected.value) selectedId.value = null;
+  if (!props.data && focusMap.value) void exitFocus(false);
+}, { deep: false });
 </script>
 
 <template>
   <section ref="page" class="atlas-view vph-scroll" aria-label="Value Protection Process Atlas" @keydown="keydown">
-    <div class="atlas-page-head"><div><span class="atlas-eyebrow">BUSINESS UNDERSTANDING / ONBOARDING</span><h1>Claimback <em>to realization.</em></h1><p>{{ data?.meta.subtitle || 'Follow the commercial obligation through calculation, accounting and settlement.' }}</p></div><div class="atlas-head-actions"><span class="atlas-version">{{ data?.meta.processStatus || 'Draft' }} · {{ data?.meta.contentVersion || 'D0' }}</span><button type="button" :disabled="isLoading" @click="emit('refresh')"><Icon name="clock" :size="16" />{{ isLoading ? 'Loading…' : 'Refresh source' }}</button></div></div>
+    <div class="atlas-page-head" :inert="focusMap || undefined"><div><span class="atlas-eyebrow">BUSINESS UNDERSTANDING / ONBOARDING</span><h1>Claimback <em>to realization.</em></h1><p>{{ data?.meta.subtitle || 'Follow the commercial obligation through calculation, accounting and settlement.' }}</p></div><div class="atlas-head-actions"><span class="atlas-version">{{ data?.meta.processStatus || 'Draft' }} · {{ data?.meta.contentVersion || 'D0' }}</span><button type="button" :disabled="isLoading" @click="emit('refresh')"><Icon name="clock" :size="16" />{{ isLoading ? 'Loading…' : 'Refresh source' }}</button></div></div>
     <div class="atlas-source-state" role="status"><span>{{ sourceLabel }}</span><span v-if="refreshedAt">Fetched: {{ refreshedAt }}</span><span v-if="data?.meta.updatedAt">Content updated: {{ data.meta.updatedAt }}</span><span>Source availability ≠ control effectiveness</span></div>
     <p v-if="error" class="atlas-source-warning" role="alert">{{ error }}</p>
     <div v-if="isLoading && !data" class="atlas-loading" aria-busy="true"><p>Loading the process source…</p><div v-for="index in 4" :key="index"></div></div>
     <div v-else-if="!data || !chapters.length" class="atlas-empty"><h2>No process content available</h2><p>Check the configured source or published content, then refresh. No control conclusion is inferred from this empty state.</p><button type="button" @click="emit('refresh')">Try again</button><button v-if="source === 'unavailable'" type="button" @click="emit('preview')">Preview bundled draft · not live</button></div>
     <template v-else>
-      <div class="atlas-view-bar"><div class="atlas-view-modes" aria-label="Process view"><button type="button" :aria-pressed="!storyMode" :disabled="compactScreen" @click="switchMode('explore')"><Icon name="project" :size="16" />Explore</button><button type="button" :aria-pressed="storyMode" @click="switchMode('story')"><Icon name="list" :size="16" />Walkthrough</button></div><p>{{ compactScreen ? 'Linear walkthrough for smaller screens.' : 'One source · overview, story and shared stage detail.' }}</p></div>
-      <nav class="atlas-chapters" aria-label="Process chapters"><button v-for="stage in chapters" :key="stage.id" type="button" :data-atlas-stage="stage.id" :aria-current="chapterId === stage.id ? 'step' : undefined" @click="chooseChapter(stage.id)"><span>{{ stage.id }}</span>{{ stage.shortTitle }}</button></nav>
-      <div class="atlas-supporting" aria-label="Supporting processes"><button v-for="stage in supporting" :key="stage.id" type="button" :data-atlas-stage="stage.id" :aria-expanded="selectedId === stage.id" @click="selectedId === stage.id ? closeDetail() : select(stage.id)"><span class="atlas-support-id">{{ stage.id }}</span><span><strong>{{ stage.shortTitle }}</strong><small>Supports {{ stage.supports.join(' / ') || 'the core process' }}</small></span><AtlasStatus :state="stage.practiceState" /><Icon name="chevronRight" :size="16" /></button></div>
-      <div class="atlas-workspace" :class="{ 'is-story': storyMode }">
-        <AtlasStory v-if="storyMode && chapter" :stage="chapter" :chapters="chapters" :references="data.references" @chapter="chooseChapter" @detail="select" />
-        <AtlasCanvas v-else ref="canvas" :stages="data.stages" :references="data.references" :selected-id="selectedId" @select="select" @fit="fit" />
-        <AtlasStageDetail v-if="selected" :key="selected.id" :stage="selected" :controls="controls" :references="references" @close="closeDetail" />
+      <div class="atlas-view-bar" :inert="focusMap || undefined"><div class="atlas-view-modes" aria-label="Process view"><button type="button" :aria-pressed="!storyMode" :disabled="compactScreen" @click="switchMode('explore')"><Icon name="project" :size="16" />Explore</button><button type="button" :aria-pressed="storyMode" @click="switchMode('story')"><Icon name="list" :size="16" />Walkthrough</button><button v-if="!compactScreen && !storyMode" type="button" :aria-pressed="focusMap" @click="focusMap ? exitFocus() : enterFocus()">Focus map ↗</button></div><p>{{ compactScreen ? 'Linear walkthrough for smaller screens.' : 'One source · overview, story and shared stage detail.' }}</p></div>
+      <nav class="atlas-chapters" :inert="focusMap || undefined" aria-label="Process chapters"><button v-for="stage in chapters" :key="stage.id" type="button" :data-atlas-stage="stage.id" :aria-current="chapterId === stage.id ? 'step' : undefined" @click="chooseChapter(stage.id)"><span>{{ stage.id }}</span>{{ stage.shortTitle }}</button></nav>
+      <div class="atlas-supporting" :inert="focusMap || undefined" aria-label="Supporting processes"><button v-for="stage in supporting" :key="stage.id" type="button" :data-atlas-stage="stage.id" :aria-expanded="selectedId === stage.id" @click="selectedId === stage.id ? closeDetail() : select(stage.id)"><span class="atlas-support-id">{{ stage.id }}</span><span><strong>{{ stage.shortTitle }}</strong><small>Supports {{ stage.supports.join(' / ') || 'the core process' }}</small></span><AtlasStatus :state="stage.practiceState" /><Icon name="chevronRight" :size="16" /></button></div>
+      <div ref="workspace" class="atlas-workspace" :class="{ 'is-story': storyMode, 'is-focused': focusMap }">
+        <div v-if="focusMap" class="atlas-focus-toolbar"><div><strong>Process Atlas / Focus map</strong><span>{{ sourceLabel }} · {{ data.meta.contentVersion }} · {{ data.meta.processStatus }}</span><span v-if="error" class="atlas-focus-warning" role="alert">Source warning: {{ error }}</span></div><button ref="exitFocusButton" type="button" @click="exitFocus()"><Icon name="close" :size="16" />Exit focus</button></div>
+        <div class="atlas-workspace-body">
+          <AtlasStory v-if="storyMode && chapter" :stage="chapter" :chapters="chapters" :references="data.references" @chapter="chooseChapter" @detail="select" />
+          <AtlasCanvas v-else ref="canvas" :stages="data.stages" :references="data.references" :selected-id="selectedId" @select="select" @fit="fit" />
+          <AtlasStageDetail v-if="selected" :key="selected.id" :stage="selected" :controls="controls" :references="references" @close="closeDetail" />
+        </div>
       </div>
-      <section class="atlas-page-references" aria-labelledby="atlas-references-title"><div><span class="atlas-eyebrow">REFERENCE LAYER / DETAILS ON DEMAND</span><h2 id="atlas-references-title">Rules, routes & review references</h2><p>Definitions and reported activities; proposed items remain labelled separately.</p></div><AtlasReferences :references="data.references" /></section>
+      <section class="atlas-page-references" :inert="focusMap || undefined" aria-labelledby="atlas-references-title"><div><span class="atlas-eyebrow">REFERENCE LAYER / DETAILS ON DEMAND</span><h2 id="atlas-references-title">Rules, routes & review references</h2><p>Definitions and reported activities; proposed items remain labelled separately.</p></div><AtlasReferences :references="data.references" /></section>
       <footer class="atlas-page-footer"><span>Read-only process material · {{ data.meta.contentVersion }}</span><span>Effective from: {{ data.meta.effectiveFrom || 'Pending approval' }}</span><span>1–8 chapters · Escape closes detail</span></footer>
     </template>
   </section>
@@ -126,7 +164,20 @@ button:disabled { opacity: .5; }
 .atlas-support-id { color: var(--color-cyan-400); font-size: 16px; }
 .atlas-supporting strong { font-size: 14px; font-weight: 500; }
 .atlas-supporting small { display: block; margin-top: 4px; font-size: 12px; color: var(--color-text-300); }
-.atlas-workspace { display: flex; align-items: stretch; border: 1px solid var(--color-card-border); border-radius: var(--radius-lg); background: var(--space-deep); overflow: hidden; min-width: 0; }
+.atlas-workspace { display: flex; flex-direction: column; border: 1px solid var(--color-card-border); border-radius: var(--radius-lg); background: var(--space-deep); overflow: hidden; min-width: 0; }
+.atlas-workspace-body { display: flex; align-items: stretch; min-width: 0; min-height: 0; }
+.atlas-workspace.is-focused { position: fixed; inset: calc(var(--height-header) + 8px) 16px 16px; z-index: calc(var(--z-index-header) - 1); border-color: var(--color-card-border-hover); box-shadow: 0 16px 64px var(--space-abyss); }
+.atlas-focus-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--color-card-border); background: var(--space-navy); flex: none; }
+.atlas-focus-toolbar strong { font-size: 15px; font-weight: 500; }
+.atlas-focus-toolbar span { display: block; color: var(--color-text-300); font-size: 12px; margin-top: 4px; }
+.atlas-focus-toolbar>div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.atlas-focus-toolbar button { flex: none; }
+.atlas-focus-toolbar .atlas-focus-warning { color: var(--color-orange-400); }
+.is-focused .atlas-workspace-body { flex: 1; overflow: hidden; }
+.is-focused :deep(.atlas-map-wrap) { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.is-focused :deep(.atlas-map) { flex: 1; height: auto; min-height: 0; }
+.is-focused :deep(.atlas-map-legend),.is-focused :deep(.atlas-map-foot) { flex: none; }
+.is-focused :deep(.atlas-detail) { height: 100%; max-height: none; min-height: 0; }
 .atlas-page-references { display: grid; gap: 20px; margin-top: 32px; }
 .atlas-page-references h2 { font-size: 24px; font-weight: 500; line-height: 1.2; margin-top: 8px; }
 .atlas-page-references p { color: var(--color-text-300); font-size: 14px; margin-top: 8px; }
@@ -137,6 +188,6 @@ button:disabled { opacity: .5; }
 .atlas-empty button { margin: 0 8px 8px 0; }
 .atlas-loading>div { height: 40px; background: var(--color-beige-500); border-radius: 8px; margin-top: 12px; }
 @media(max-width:1100px) { .atlas-view { padding: 24px; } .atlas-supporting .atlas-status { display: none; } }
-@media(max-width:840px) { .atlas-view { padding: 20px 16px 32px; } .atlas-chapters { grid-template-columns: repeat(4,minmax(0,1fr)); } .atlas-workspace { flex-direction: column; } .atlas-supporting { grid-template-columns: minmax(0,1fr); } .atlas-supporting .atlas-status { display: inline-block; } }
+@media(max-width:840px) { .atlas-view { padding: 20px 16px 32px; } .atlas-chapters { grid-template-columns: repeat(4,minmax(0,1fr)); } .atlas-workspace-body { flex-direction: column; } .atlas-supporting { grid-template-columns: minmax(0,1fr); } .atlas-supporting .atlas-status { display: inline-block; } }
 @media(max-width:400px) { .atlas-view { padding: 16px 12px 24px; } .atlas-chapters { gap: 4px; } .atlas-chapters button { padding: 8px 6px; } .atlas-supporting button { padding: 12px; } .atlas-supporting .atlas-status { display: none; } .atlas-view-bar p { display: none; } .atlas-head-actions button { font-size: 13px; } }
 </style>

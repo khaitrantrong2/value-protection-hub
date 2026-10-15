@@ -18,6 +18,9 @@ Sau khi API đã deploy đúng: sửa và lưu Sheet → **Refresh source** ho�
 Atlas không dùng server cache/localStorage. Layout, branch geometry, zoom hoặc thay schema
 cần sửa code và deploy frontend; thay wording không cần build lại.
 
+Desktop có **Focus map** để mở board rộng dưới header; source/demo và cảnh báo vẫn hiện.
+Escape đóng detail trước, rồi thoát focus. Màn hình 840px trở xuống dùng linear walkthrough.
+
 Hai nhánh 05 dùng reference IDs `BRANCH-05A` và `BRANCH-05B`: sửa Title/Body/Applicability
 ở AtlasReferences để Map và Walkthrough cùng cập nhật; không cần sửa paragraph trong Vue.
 
@@ -97,6 +100,8 @@ Sheet và local tests không chứng minh production integration đã hoạt đ�
 header parity, edits/uncached refresh, old API, bad URLs/schema/links, timeouts and cancellation.
 Browser gate: 320/840/1024/1440px; min/Fit/medium/max zoom; title inside cards; 05 A/B,
 detail panel, keyboard 1–8/Escape, offscreen Tab order, mobile Next and reduced motion.
+Camera math/lifecycle, reduced-motion branch và request races có test riêng; không coi
+synthetic tests là bằng chứng API live hoặc visual verification.
 
 Rollback frontend bằng previous Vercel deployment; rollback API bằng saved deployment
 version; rollback content bằng Sheet version history. Giữ Atlas tabs để recover/review,

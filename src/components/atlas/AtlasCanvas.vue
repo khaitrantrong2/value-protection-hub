@@ -99,7 +99,7 @@ defineExpose({ fit, frameSelection });
         <path :d="discrepancy" class="atlas-discrepancy" marker-end="url(#atlas-path-arrow)" />
       </svg>
       <button v-for="node in screenNodes" :key="node.key" type="button" class="atlas-node" :class="{ 'is-selected': selectedId === node.stage.id, 'is-accounting': node.key === '05A' }" :style="nodeStyle(node)"
-        :aria-label="`${node.branch}: ${node.title}. ${node.body}`" :aria-pressed="selectedId === node.stage.id" :tabindex="nodeVisible(node) ? 0 : -1" @click="emit('select', node.stage.id)">
+        :data-atlas-node-stage="node.stage.id" :aria-label="`${node.branch}: ${node.title}. ${node.body}`" :aria-pressed="selectedId === node.stage.id" :tabindex="nodeVisible(node) ? 0 : -1" @click="emit('select', node.stage.id)">
         <span class="atlas-node-index">{{ node.branch }}</span><strong>{{ compact ? node.short : node.title }}</strong>
         <span v-if="detailed" class="atlas-node-question">{{ node.body }}</span>
         <span v-if="detailed" class="atlas-node-role">{{ node.role }}</span>

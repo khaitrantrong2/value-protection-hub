@@ -34,7 +34,7 @@ const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas } = u
         <Icon name="external" :size="14" /> Source
       </a>
 
-      <button type="button" class="hdr__scan" @click="paletteOpen = true">
+      <button type="button" class="hdr__scan" aria-label="Open command scanner" @click="paletteOpen = true">
         <Icon name="search" :size="15" />
         <span class="hdr__scan-label">Scan</span>
         <kbd class="mono">Ctrl K</kbd>
