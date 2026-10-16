@@ -2,8 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue';
 import { gsap } from 'gsap';
 import { crew, type CrewMember } from '../data/crew';
-import type { ShipArch } from '../data/sectors';
-import { advancePatrol, fleetMetrics, fleetPoint, fleetSeed, type FleetPoint, type FleetVariant } from '../services/fleetMotion';
+import { advancePatrol, crewHullState, fleetHullFor, fleetMetrics, fleetOrbitTrace, fleetOrbitalState, fleetPoint, fleetSeed, type FleetPoint, type FleetVariant } from '../services/fleetMotion';
 import { useLocale } from '../i18n';
 import StarfighterIcon from './StarfighterIcon.vue';
 
@@ -21,10 +20,10 @@ const compactHome = ref(false);
 const tipMember = computed(() => compactHome.value ? undefined : props.members.find(member => member.id !== props.selectedId && member.id === (hovered.value || focused.value)));
 const tipPosition = ref({ left: '50%', top: '50%' });
 const layout = ref(fleetMetrics(active.length, 1200, 500, props.variant));
-const arches: ShipArch[] = ['scout', 'interceptor', 'cruiser', 'shuttle'];
+const viewport = ref({ width: 1200, height: 500 });
+const tracks = computed(() => [0, 1, 2].flatMap(track => [false, true].map(front => ({ key: `${track}-${front}`, track, front, path: fleetOrbitTrace(track, viewport.value.width, viewport.value.height, front) }))));
 let width = 1, height = 1, resize: ResizeObserver | undefined, preference: MediaQueryList | undefined, ticking = false;
 const held = (id: string) => hovered.value === id || focused.value === id || props.selectedId === id;
-const arch = (member: CrewMember) => arches[fleetSeed(member.id) % arches.length];
 function setButton(id: string, element: Element | ComponentPublicInstance | null) {
   if (element instanceof HTMLElement) buttons.set(id, element); else buttons.delete(id);
 }
@@ -32,10 +31,22 @@ function place(deltaSeconds = 0) {
   for (const member of active) {
     const phase = advancePatrol(phases.get(member.id) || 0, deltaSeconds, props.paused || reduced.value || hidden.value || held(member.id));
     phases.set(member.id, phase);
-    const point = fleetPoint(slots.get(member.id)!, active.length, width, height, phase, props.variant);
+    const slot = slots.get(member.id)!;
+    const point = fleetPoint(slot, active.length, width, height, phase, props.variant);
     points.set(member.id, point);
     const element = buttons.get(member.id);
-    if (element) element.style.transform = layout.value.picker ? '' : `translate(${point.x}px,${point.y}px) translate(-50%,-50%)`;
+    if (element) {
+      element.style.transform = layout.value.picker ? '' : `translate(${point.x}px,${point.y}px) translate(-50%,-50%)`;
+      const pose = props.variant === 'home'
+        ? { ...fleetOrbitalState(slot, active.length, width, height, phase), pitch: 0 }
+        : crewHullState(slot, phase);
+      element.style.setProperty('--ship-heading', `${pose.heading + (props.variant === 'crew' ? fleetSeed(member.id) % 42 - 21 : 0)}deg`);
+      element.style.setProperty('--ship-bank', `${pose.bank}deg`);
+      element.style.setProperty('--ship-pitch', `${pose.pitch}deg`);
+      element.style.setProperty('--ship-depth-scale', `${pose.scale}`);
+      element.style.setProperty('--hull-brightness', `${props.variant === 'home' ? .9 + pose.depth * .18 : .95 + pose.depth * .12}`);
+      element.style.zIndex = held(member.id) ? '4' : pose.depth < 0 ? '1' : '2';
+    }
   }
   const point = points.get(hovered.value || focused.value);
   if (point) {
@@ -65,6 +76,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', readVisibility); readVisibility();
   resize = new ResizeObserver(entries => {
     width = entries[0].contentRect.width; height = entries[0].contentRect.height;
+    viewport.value = { width, height };
     compactHome.value = props.variant === 'home' && width <= 500;
     if (compactHome.value) { hovered.value = ''; focused.value = ''; }
     layout.value = fleetMetrics(active.length, width, height, props.variant); place(); syncMotion();
@@ -76,8 +88,9 @@ onBeforeUnmount(() => { gsap.ticker.remove(tick); resize?.disconnect(); preferen
 
 <template>
   <div ref="host" class="protector-fleet" data-protector-fleet :class="[`protector-fleet--${variant}`, { 'protector-fleet--still': paused || reduced || hidden || layout.picker, 'protector-fleet--picker': layout.picker, 'protector-fleet--ambient': compactHome }]" role="group" :aria-label="text('Value Protector fleet', 'Hạm đội Value Protector')">
+    <svg v-if="variant === 'home'" class="fleet-orbit-tracks" :viewBox="`0 0 ${viewport.width} ${viewport.height}`" preserveAspectRatio="none" aria-hidden="true"><path v-for="track in tracks" :key="track.key" :d="track.path" :data-orbit-plane="track.track" :class="{ 'is-front': track.front }" /><g class="fleet-orbit-glints"><path v-for="index in 12" :key="index" :d="`M${viewport.width * ((index * .193) % .92 + .04) - 2},${viewport.height * ((index * .283) % .82 + .08)}h4m-2-2v4`" :style="{ animationDelay: `${index * -.37}s` }" /></g></svg>
     <button v-for="member in members" :key="member.id" :ref="element => setButton(member.id, element)" type="button" class="fleet-ship" :class="{ 'fleet-ship--held': held(member.id), 'fleet-ship--selected': selectedId === member.id }" :style="layout.picker ? undefined : { width: layout.buttonWidth + 'px', height: layout.buttonHeight + 'px' }" :data-protector-id="member.id" :disabled="compactHome" :aria-hidden="compactHome ? 'true' : undefined" :tabindex="compactHome ? -1 : 0" :aria-label="`${member.name} · ${t('crew.profiles.' + member.profileKey + '.role')} · ${member.country || member.market}`" :aria-pressed="selectedId === member.id" :aria-describedby="!layout.picker && tipMember?.id === member.id ? 'fleet-hover-tip-' + variant : undefined" @pointerenter="hovered = member.id; place()" @pointerleave="hovered = ''" @focus="focused = member.id; place()" @blur="focused = ''" @click="select(member)">
-      <span class="fleet-ship__hull" aria-hidden="true" :style="{ '--ship-tilt': `${fleetSeed(member.id) % 42 - 21}deg` }"><StarfighterIcon :arch="arch(member)" /></span>
+      <span class="fleet-ship__hull" aria-hidden="true"><StarfighterIcon :arch="fleetHullFor(member.id)" :livery="fleetSeed(member.id)" /></span>
       <span class="fleet-ship__name">{{ member.name }}</span>
     </button>
     <div v-if="tipMember && tipMember.id !== selectedId && !layout.picker" :id="'fleet-hover-tip-' + variant" class="fleet-tooltip" role="tooltip" :style="tipPosition"><strong>{{ tipMember.name }}</strong><span>{{ t('crew.profiles.' + tipMember.profileKey + '.role') }} · {{ tipMember.country || tipMember.market }}</span></div>
@@ -87,7 +100,7 @@ onBeforeUnmount(() => { gsap.ticker.remove(tick); resize?.disconnect(); preferen
 <style scoped>
 .protector-fleet { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
 .fleet-ship { position:absolute; top:0; left:0; width:88px; height:78px; padding:4px; border:1px solid transparent; border-radius:50%; background:transparent; color:var(--color-cyan-400); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; pointer-events:auto; touch-action:manipulation; font:inherit; }
-.fleet-ship__hull { width:44px; height:50px; display:grid; place-items:center; transform:rotate(var(--ship-tilt)); filter:drop-shadow(0 0 7px color-mix(in srgb,var(--color-cyan-400) 25%,transparent)); }
+.fleet-ship__hull { width:44px; height:50px; display:grid; place-items:center; transform:perspective(160px) rotate(var(--ship-heading,0deg)) rotateY(var(--ship-bank,0deg)) rotateX(var(--ship-pitch,0deg)) scale(var(--ship-depth-scale,1)); filter:drop-shadow(0 0 7px color-mix(in srgb,var(--color-cyan-400) 25%,transparent)) brightness(var(--hull-brightness,1)); }
 .fleet-ship__name { flex:none; width:max-content; max-width:120px; margin-top:2px; padding:2px 5px; border-radius:4px; color:var(--color-text-400); background:color-mix(in srgb,var(--space-deep) 85%,transparent); font-size:12px; line-height:1.4; white-space:normal; text-align:center; }
 .fleet-ship:hover,.fleet-ship:focus-visible,.fleet-ship--selected { border-color:var(--color-cyan-400); background:color-mix(in srgb,var(--color-cyan-400) 8%,transparent); z-index:4; }
 .fleet-ship:focus-visible { outline:2px solid var(--color-orange-400); outline-offset:3px; }
@@ -97,12 +110,23 @@ onBeforeUnmount(() => { gsap.ticker.remove(tick); resize?.disconnect(); preferen
 .fleet-tooltip strong { display:block; color:var(--color-text-400); font-size:13px; font-weight:500; }
 .fleet-tooltip span { display:block; margin-top:4px; color:var(--color-text-300); font-size:11px; line-height:1.5; }
 .protector-fleet--home .fleet-ship { width:52px; height:52px; }
-.protector-fleet--home .fleet-ship__hull { transform:rotate(var(--ship-tilt)) scale(.7); }
+.protector-fleet--home .fleet-ship__hull { width:38px; height:42px; }
+.protector-fleet--home .fleet-ship__hull :deep(svg) { width:38px; height:44px; }
 .protector-fleet--home .fleet-ship__name { position:absolute; top:100%; visibility:hidden; max-width:100px; }
 .protector-fleet--home .fleet-ship--held .fleet-ship__name { visibility:visible; }
 .protector-fleet--ambient .fleet-ship { pointer-events:none; cursor:default; }
+.fleet-orbit-tracks { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; fill:none; stroke:#AC93D7; stroke-width:.65; opacity:.38; }
+.fleet-orbit-tracks>path { stroke-dasharray:2 8; opacity:.28; }
+.fleet-orbit-tracks>path.is-front { opacity:.8; stroke-dasharray:none; }
+.fleet-orbit-tracks>path[data-orbit-plane="1"] { stroke:#89AFD0; }
+.fleet-orbit-tracks>path[data-orbit-plane="2"] { stroke:#D7BA7D; }
+.fleet-orbit-glints { stroke:#EBDBB5; stroke-width:1; }
+.fleet-orbit-glints path { animation:orbital-glint 5s ease-in-out infinite; }
+.protector-fleet--still .fleet-orbit-glints path { animation-play-state:paused; }
+@keyframes orbital-glint { 0%,100% { opacity:.15; } 50% { opacity:.85; } }
 .protector-fleet--picker { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:6px; padding:4px; overflow:auto; overscroll-behavior:contain; pointer-events:auto; }
 .protector-fleet--picker .fleet-ship { position:relative; inset:auto; width:100%; height:auto; min-height:44px; padding:6px; flex-direction:row; gap:8px; border-radius:8px; border-color:var(--color-card-border); background:var(--space-deep); }
 .protector-fleet--picker .fleet-ship__name { position:static; visibility:visible; max-width:none; width:auto; background:transparent; }
-@media(max-width:600px) { .fleet-ship { width:64px; height:44px; padding:2px; } .fleet-ship__hull { flex:none; width:22px; height:18px; transform:rotate(var(--ship-tilt)); } .fleet-ship__hull :deep(svg) { width:22px; height:22px; } .fleet-ship__name { max-width:72px; margin-top:0; padding:0 1px; font-size:10px; line-height:1.1; } .protector-fleet--home .fleet-ship { width:44px; height:44px; } .protector-fleet--home .fleet-ship__hull { transform:rotate(var(--ship-tilt)); } }
+@media(max-width:600px) { .fleet-ship { width:64px; height:44px; padding:2px; } .fleet-ship__hull { flex:none; width:22px; height:18px; } .fleet-ship__hull :deep(svg) { width:22px; height:22px; } .fleet-ship__name { max-width:72px; margin-top:0; padding:0 1px; font-size:10px; line-height:1.1; } .protector-fleet--home .fleet-ship { width:44px; height:44px; } .protector-fleet--home .fleet-ship__hull { width:26px; height:30px; } .protector-fleet--home .fleet-ship__hull :deep(svg) { width:26px; height:30px; } }
+@media(prefers-reduced-motion:reduce) { .fleet-orbit-glints path { animation:none; } }
 </style>

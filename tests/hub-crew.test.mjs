@@ -18,6 +18,7 @@ async function load(path) {
 }
 const { crew } = await load("../src/data/crew.ts");
 const helpers = await load("../src/data/crewDirectory.ts");
+const fleetMotion = await load("../src/services/fleetMotion.ts");
 const { messages } = await load("../src/i18n/messages/crew.ts");
 const rows = [
   { member: "Huệ", country: "VN", brand: "Brand A", class: "Retail", complexity: "Standard", platforms: ["Tiktok", "SHOPEE"] },
@@ -80,13 +81,16 @@ function runtime(source = "live", scope = []) {
   const stubs = {
     vue: Vue,
     "../data/crew": { crew }, "../data/crewDirectory": helpers,
+    "../services/fleetMotion": fleetMotion,
     "../i18n": { useLocale: () => ({ locale, t: translator(locale), text: (en, vi) => locale.value === 'vi' ? vi : en }) },
     "../i18n/messages/crew": { messages },
     "../composables/useLinks": { useLinks: () => state },
     "../composables/useCrewDirectory": { useCrewDirectory: () => filters, useMemberPortfolioFilters: () => portfolioFilters },
     "./Icon.vue": Vue.defineComponent({ setup: () => () => Vue.h("i") }),
+    "./StarfighterIcon.vue": Vue.defineComponent({ setup: () => () => Vue.h('svg') }),
     "./CrewSourceNotice.vue": Vue.defineComponent({ setup: () => () => Vue.h("div", "source status") }),
     "./MemberPortfolio.vue": Vue.defineComponent({ props: ["rows"], setup: props => () => Vue.h("div", `${props.rows.length} published rows`) }),
+    "./PortfolioColumnFilter.vue": Vue.defineComponent({ props: ["label"], setup: (props, { slots }) => () => Vue.h("details", [Vue.h("summary", props.label), slots.default?.()]) }),
     "./CrewMemberCard.vue": Vue.defineComponent({ props: ["member"], setup: props => () => Vue.h("button", { "data-crew-member": props.member.id }, props.member.name) }),
     "./ProtectorFleet.vue": Vue.defineComponent({ props: ["members"], setup: props => () => Vue.h("div", props.members.map(member => Vue.h("button", { "data-crew-member": member.id }, member.name))) }),
     "./MemberScopePanel.vue": Vue.defineComponent({ setup: () => () => Vue.h('aside') }),
@@ -108,14 +112,15 @@ test("Both language catalogs cover the same UI keys and every published role pro
   }
 });
 
-test("Team fleet renders all active teammates with the same ship component, not a featured leader", async () => {
+test("Team fleet always renders every active teammate without search or selection controls", async () => {
   const app = runtime();
   const html = await app.render("CrewView");
   assert.equal((html.match(/data-crew-member=/g) || []).length, 17);
   assert.match(html, /data-crew-member="khai"/);
   assert.doesNotMatch(html, /data-crew-member="andriani"|hero-card|crewpage__spine|ALPHA-01|COMMANDER/);
+  assert.doesNotMatch(html, /type="search"|<select|data-hub-inspector/);
   app.filters.function = "automation";
-  assert.equal(((await app.render("CrewView")).match(/data-crew-member=/g) || []).length, 2);
+  assert.equal(((await app.render("CrewView")).match(/data-crew-member=/g) || []).length, 17);
   app.filters.function = "all"; app.filters.query = "doi soat";
   assert.match(await app.render("CrewView"), /data-crew-member="lan"/);
 });

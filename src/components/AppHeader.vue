@@ -6,7 +6,7 @@ import Icon from './Icon.vue';
 import { containDialogFocus } from '../services/focusScope';
 
 const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas, openStart } = useLinks();
-const { t, locale, setLocale } = useLocale();
+const { t } = useLocale();
 const menu = ref<HTMLDialogElement | null>(null);
 const menuOpen = ref(false);
 const items = computed(() => [
@@ -35,10 +35,6 @@ onBeforeUnmount(closeMenu);
       <a v-for="item in items" :key="item.id" :href="item.href" :aria-current="current(item.id) ? 'page' : undefined" @click.prevent="item.action">{{ item.label }}</a>
     </nav>
     <div class="hdr__tools">
-      <div class="language-switch" role="group" :aria-label="t('shell.language')">
-        <button type="button" lang="en" :aria-label="t('shell.english')" :aria-pressed="locale === 'en'" @click="setLocale('en')">EN</button>
-        <button type="button" lang="vi" :aria-label="t('shell.vietnamese')" :aria-pressed="locale === 'vi'" @click="setLocale('vi')">VI</button>
-      </div>
       <button class="hdr__search" type="button" :aria-label="t('shell.searchLabel')" @click="paletteOpen = true"><Icon name="search" :size="18" /><span>{{ t('shell.search') }}</span><kbd>⌘ / Ctrl K</kbd></button>
       <button class="hdr__menu" type="button" :aria-label="t('shell.menu')" :aria-expanded="menuOpen" aria-controls="hub-mobile-menu" @click="showMenu"><Icon name="list" :size="22" /></button>
     </div>
@@ -60,9 +56,6 @@ onBeforeUnmount(closeMenu);
 .hdr__desktop a { display: flex; align-items: center; min-height: 44px; padding: 0 11px; font-size: 13px; border-radius: var(--radius-md); color: var(--color-text-300); white-space: nowrap; transition: background .18s, color .18s; }
 .hdr__desktop a:hover, .hdr__desktop a[aria-current] { background: var(--color-beige-600); color: var(--color-text-400); }
 .hdr__tools { display: flex; align-items: center; gap: 10px; flex: none; }
-.language-switch { display: flex; border: 1px solid var(--color-card-border); border-radius: var(--radius-md); padding: 2px; }
-.language-switch button { min-width: 36px; min-height: 38px; padding: 0 7px; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-200); font-size: 12px; font-weight: 650; }
-.language-switch button[aria-pressed='true'] { color: var(--color-text-400); background: var(--color-beige-700); }
 .hdr__search, .hdr__menu { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; border: 1px solid var(--color-card-border); border-radius: var(--radius-md); background: var(--color-beige-500); color: var(--color-text-300); }
 .hdr__search { padding: 0 12px; font-size: 13px; }
 .hdr__search kbd { color: var(--color-text-200); font-size: 9px; }
@@ -75,5 +68,5 @@ onBeforeUnmount(closeMenu);
 .mobile-menu nav a[aria-current] { background: var(--color-beige-700); }
 @media (max-width: 1170px) { .hdr__search span, .hdr__search kbd { display: none; } .hdr__search { padding: 0; } .hdr { gap: 12px; } }
 @media (max-width: 980px) { .hdr__desktop { display: none; } .hdr__menu { display: flex; } }
-@media (max-width: 480px) { .hdr { padding: 10px 12px; gap: 6px; } .hdr__brand { gap: 7px; } .hdr__brand img { width: 28px; height: 28px; } .hdr__name { font-size: 12px; } .hdr__tagline { display: none; } .hdr__tools { gap: 5px; } .language-switch button { min-width: 29px; min-height: 40px; padding: 0 5px; } }
+@media (max-width: 480px) { .hdr { padding: 10px 12px; gap: 6px; } .hdr__brand { gap: 7px; } .hdr__brand img { width: 28px; height: 28px; } .hdr__name { font-size: 12px; } .hdr__tagline { display: none; } .hdr__tools { gap: 5px; } }
 </style>

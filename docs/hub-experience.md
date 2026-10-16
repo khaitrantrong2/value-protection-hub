@@ -1,19 +1,23 @@
-# Hub experience: bilingual UI and team-first discovery
+# Hub experience: the Value Protection universe
 
 ## Decisions
 
 Keep Vue/Vite, existing brand tokens and GSAP. Improve the whole Hub instead of creating
 a separate visual system for Atlas or Crew.
 
-**Interface language is not business approval.** Pinned vue-i18n 11.4.14 owns UI catalogs.
+**The public UI is English-only until business translations are complete.** The
+EN/VI switch is removed and legacy VI preferences cannot enable a partial interface.
+Catalogs and pinned vue-i18n 11.4.14 remain as review-gated infrastructure, not a claim
+that business content has been translated. Interface language is not business approval.
 Original process records remain the source of truth. The optional Sheet overlay only
 translates complete logical records matching the current whole-record fingerprint.
 No runtime machine translation or auto-review. See [translation contract](atlas-translations.md).
 
 **Presentation is not a reporting line.** Crew groups describe collaboration functions
-and market coverage, not an organizational hierarchy. All active people use the same
-ship. Lead responsibilities remain visible without a central hero, command wording or
-clearance badge. Inactive identities are retained in source but hidden from active roster.
+and market coverage, not an organizational hierarchy. Active people use varied hulls
+and deterministic multicolor liveries. Khai has a signature Aegis hull at his request,
+not a central hero or an inferred reporting line. Inactive identities are retained in
+source but hidden from the active roster.
 
 **Portfolio counts are not performance.** Distinguish unique brand names, published scope
 rows and canonical platforms. These are not workload, exposure, completeness or ranking.
@@ -41,11 +45,12 @@ English UI default is not an authoritative-language declaration.
 
 - Five destinations remain available on desktop and native mobile menu.
 - Search groups routes, processes, assets and people; accent folding and curated finance synonyms improve discovery without duplicating records.
-- Directory defaults to a semantic six-column table with sticky headings. Cards remain optional, compact and share the same safe destination actions. Mobile rows expand locally; filter URL state is shareable. Crew/profile filters are retained in-session only.
+- Directory defaults to a semantic six-column table with sticky headings. Source/time tooltip sits beside search; Country/View/Category are compact controls. Cards remain optional; legacy status/priority URL filters show removable active chips, not another filter panel. Portfolio filters live in table headings and retain state in-session.
 - Native dialogs contain focus and restore it when closed. Page shortcuts ignore inputs, selects, editable content and open dialogs. Skip link, visible focus and reduced motion are preserved.
 - Source states distinguish live, retained/stale, unavailable and explicit demo. Original timestamps survive failed refreshes; late responses cannot overwrite newer requests.
 - Missing/blocked/invalid destinations have no Open. Session-link warnings do not claim access was checked; copy success/failure is visible.
-- Explore retains its canvas through Guide navigation. Locale, source popover and pipeline visibility do not reframe it.
+- Explore retains its canvas through Guide navigation. Source popover and pipeline visibility do not reframe it. Source/version/publication notes are not repeated across the Guide; evidence-to-locate placeholders are hidden without changing underlying evidence states.
+- Reloading the page refetches the source; there are no manual Refresh source controls. Original timestamps and stale/error notices remain. The legacy API may cache briefly.
 
 ## Galaxy and fleet meaning
 
@@ -59,8 +64,9 @@ do not establish ownership of a category vault. Empty/unavailable source is not 
 of no responsibility or no resources. Movement, vessel type and location encode no rank,
 performance, control effectiveness or financial risk.
 
-Selection only highlights a target and opens a non-modal inspector; camera does not pan,
-zoom or Fit. Portfolio scrolling is contained within its panel. Only hovered, focused
+Home selection highlights a target and opens a non-modal inspector; camera does not pan,
+zoom or Fit. Crew selection opens a full member page with an internally scrolling table
+and Excel-style column filters. Only hovered, focused
 or selected ships pause; other ships retain their time-based speed. Labels remain upright.
 Pause, reduced-motion and hidden-tab cleanup are supported. Tiny Crew maps become an
 internally scrollable static picker; small Home maps use one grouped planet/person
@@ -101,8 +107,8 @@ Reference patterns, not unreviewed runtime installations:
 ## Release gates
 
 Run npm test, npm run build, dependency audit and git diff --check. Inspect the actual
-configured preview for desktop/mobile navigation, EN/VI context, search/filter/link states,
-Crew symmetry and Atlas camera stability. Fixtures do not prove live permissions,
+configured preview for desktop/mobile navigation, English-only legacy-language handling,
+search/filter/link states, Crew identity and Atlas camera stability. Fixtures do not prove live permissions,
 operating effectiveness or cross-browser certification. Review preview before production
 merge. Do not broaden source access for a demo. Rollback via previous Vercel deployment,
 prior API version and Sheet version history.

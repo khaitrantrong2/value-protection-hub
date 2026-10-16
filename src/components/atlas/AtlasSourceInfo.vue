@@ -6,17 +6,16 @@ import { useLocale } from "../../i18n";
 const { t, text } = useLocale();
 
 const props = defineProps<{ source: "live" | "demo" | "unavailable"; meta?: AtlasPayload["meta"]; error?: string; refreshedAt?: string; isLoading: boolean }>();
-const emit = defineEmits<{ refresh: [] }>();
 const details = ref<HTMLDetailsElement | null>(null);
 const summary = ref<HTMLElement | null>(null);
 const label = computed(() => props.source === "live" ? props.error ? t("atlas.sourceRetained") : t("atlas.sourceLive") : props.source === "demo" ? t("atlas.sourceDemo") : props.isLoading ? t("atlas.sourceLoading") : t("atlas.sourceUnavailable"));
 const errorLabel = computed(() => {
   if (!props.error) return "";
-  if (props.source === "demo") return text("This is the bundled draft, not the latest Google Sheet content. Refresh to retry the live source.", "Đây là bản nháp đóng gói, không phải nội dung Google Sheet mới nhất. Tải lại để thử nguồn trực tiếp.");
+  if (props.source === "demo") return text("This is the bundled draft, not the latest Google Sheet content. Reload the page to retry the live source.", "Đây là bản nháp đóng gói, không phải nội dung Google Sheet mới nhất. Tải lại trang để thử nguồn trực tiếp.");
   if (props.error.includes("chưa hỗ trợ Atlas")) return text("The source API does not yet support Atlas. Update the Apps Script deployment.", "API nguồn chưa hỗ trợ Atlas. Cần cập nhật bản triển khai Apps Script.");
   if (props.error.includes("không hợp lệ")) return text("The published source or API configuration is invalid. Ask the source owner to review it.", "Nguồn xuất bản hoặc cấu hình API không hợp lệ. Nhờ chủ nguồn kiểm tra lại.");
-  if (props.error.includes("hết thời gian")) return text("The source request timed out. Try refreshing again.", "Yêu cầu tải nguồn hết thời gian. Hãy tải lại.");
-  return text("The source could not be refreshed. Check the connection and try again.", "Chưa tải lại được nguồn. Kiểm tra kết nối và thử lại.");
+  if (props.error.includes("hết thời gian")) return text("The source request timed out. Reload the page to retry.", "Yêu cầu tải nguồn hết thời gian. Hãy tải lại trang để thử lại.");
+  return text("The source could not be loaded. Check the connection and reload the page.", "Chưa tải được nguồn. Kiểm tra kết nối và tải lại trang.");
 });
 function close() { if (details.value) details.value.open = false; summary.value?.focus({ preventScroll: true }); }
 function outside(event: PointerEvent) { if (details.value?.open && !details.value.contains(event.target as Node)) details.value.open = false; }
@@ -32,10 +31,8 @@ onBeforeUnmount(() => window.removeEventListener("pointerdown", outside));
       <p class="source-label" role="status">{{ label }}</p>
       <dl><dt>{{ text("Publication", "Trạng thái xuất bản") }}</dt><dd>{{ meta?.processStatus || text('Draft', 'Bản nháp') }}</dd><dt>{{ text("Content version", "Phiên bản nội dung") }}</dt><dd>{{ meta?.contentVersion || 'D0' }}</dd><dt>{{ text("Effective from", "Hiệu lực từ") }}</dt><dd>{{ meta?.effectiveFrom || t('atlas.pendingApproval') }}</dd><dt>{{ text("Content updated", "Nội dung cập nhật") }}</dt><dd>{{ meta?.updatedAt || t('atlas.unspecified') }}</dd><dt>{{ text("Fetched", "Tải nguồn lúc") }}</dt><dd>{{ refreshedAt || text('No live-source fetch timestamp', 'Chưa có thời điểm tải nguồn trực tiếp') }}</dd></dl>
       <p v-if="error" class="source-warning" role="alert">{{ errorLabel }}</p>
-      <p class="source-language-note">{{ t("atlas.translationNotice") }}</p>
       <p class="source-limit">{{ text("Reported practice is process-owner context, not tested operating effectiveness or an approved SOP.", "Thực tế được xác nhận là thông tin từ chủ quy trình, không phải kết luận kiểm tra tính hữu hiệu vận hành hay SOP đã phê duyệt.") }}</p>
       <details class="atlas-map-help"><summary>{{ text("Map controls & notation", "Thao tác & ký hiệu bản đồ") }}</summary><p>{{ text("Drag / scroll to pan. Ctrl/⌘ + scroll or +/− to zoom. Fit restores the overview. Click a stage to read its guide.", "Kéo / cuộn để di chuyển. Ctrl/⌘ + cuộn hoặc +/− để phóng to, thu nhỏ. Vừa khung đưa về tổng quan. Chọn một giai đoạn để đọc tài liệu.") }}</p><p>{{ text("Arrow keys pan; F fits; 1–8 opens the chapter guide. Dashed arrow: rework. Data lane connectors show supporting dependencies, not extra business stages.", "Phím mũi tên để di chuyển; F để vừa khung; 1–8 để mở chương. Mũi tên nét đứt: xử lý lại. Đường nối luồng dữ liệu thể hiện quan hệ hỗ trợ, không phải giai đoạn nghiệp vụ bổ sung.") }}</p></details>
-      <button type="button" class="source-refresh" :disabled="isLoading" @click="emit('refresh')"><Icon name="clock" :size="16" />{{ isLoading ? text('Loading source…', 'Đang tải nguồn…') : text('Refresh source', 'Tải lại nguồn') }}</button>
     </section>
   </details>
 </template>
@@ -58,7 +55,6 @@ p { font-size: 12px; line-height: 1.6; color: var(--color-text-300); overflow-wr
 .atlas-map-help { margin-top: 16px; font-size: 12px; color: var(--color-text-300); }
 .atlas-map-help summary { cursor: pointer; min-height: 44px; padding: 12px 0; color: var(--color-text-400); }
 .atlas-map-help p+p { margin-top: 8px; }
-.source-refresh { margin-top: 16px; width: 100%; font-size: 12px; }
 summary:focus-visible,button:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 2px; }
 @media(max-width:540px) { .atlas-source-info>summary { position: relative; width: 44px; padding: 8px; justify-content: center; } .source-info-text { display: none; } .source-signal { position: absolute; right: 4px; top: 3px; font-size: 10px; } }
 </style>

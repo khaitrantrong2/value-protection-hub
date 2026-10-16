@@ -29,7 +29,7 @@ const processSteps = computed(() => [[text("Input", "Đầu vào"), props.stage.
 
     <section class="guide-section" data-guide-section="ownership" tabindex="-1"><h3><span>03</span> {{ text("Ownership & responsibilities", "Vai trò & trách nhiệm") }}</h3><dl class="guide-raci"><div v-for="([label, value], index) in raci" :key="label"><dt><span>{{ ['A','R','C','I'][index] }}</span>{{ label }}</dt><dd>{{ value || t('atlas.unspecified') }}</dd></div></dl></section>
 
-    <section class="guide-section" data-guide-section="controls" tabindex="-1"><h3><span>04</span> {{ text("Risks, controls & evidence", "Rủi ro, kiểm soát & bằng chứng") }} <small>{{ controls.length }}</small></h3><p class="guide-control-note">{{ text("Reported controls describe current practice. Located evidence does not, by itself, establish operating effectiveness.", "Kiểm soát được xác nhận mô tả thực tế hiện hành. Việc xác định nơi lưu bằng chứng không tự chứng minh tính hữu hiệu vận hành.") }}</p><p v-if="!controls.length" class="guide-empty">{{ text("No control record is published for this stage.", "Chưa có bản ghi kiểm soát được xuất bản cho giai đoạn này.") }}</p>
+    <section class="guide-section" data-guide-section="controls" tabindex="-1"><h3><span>04</span> {{ text("Risks & controls", "Rủi ro & kiểm soát") }} <small>{{ controls.length }}</small></h3><p v-if="!controls.length" class="guide-empty">{{ text("No control record is published for this stage.", "Chưa có bản ghi kiểm soát được xuất bản cho giai đoạn này.") }}</p>
       <article v-for="control in controls" :key="control.id" class="guide-control"><header><span class="guide-record-id">{{ control.id }}</span><h4>{{ control.title }}</h4><AtlasStatus :state="control.practiceState" control /></header><dl class="guide-control-facts"><dt>{{ text("What could go wrong", "Rủi ro có thể xảy ra") }}</dt><dd>{{ control.wcgw || t('atlas.unspecified') }}</dd><dt>{{ text("Assertions", "Cơ sở dẫn liệu") }}</dt><dd>{{ control.assertions.join(' · ') || t('atlas.unspecified') }}</dd><dt>{{ text("Control activity", "Hoạt động kiểm soát") }}</dt><dd>{{ control.nature === "preventive" ? text("Preventive", "Phòng ngừa") : control.nature === "detective" ? text("Detective", "Phát hiện") : text("Mixed", "Kết hợp") }} · {{ control.frequency || text('Frequency not specified', 'Chưa ghi tần suất') }}<br>{{ text("Owner", "Vai trò phụ trách") }}: {{ control.ownerRole || t('atlas.unspecified') }}</dd><dt>{{ text("Evidence status", "Trạng thái bằng chứng") }}</dt><dd><AtlasStatus :state="control.evidenceState" /><p>{{ control.evidenceLocation || text('No evidence location recorded', 'Chưa ghi nơi lưu bằng chứng') }}</p></dd><dt>{{ text("Limitation / residual risk", "Giới hạn / rủi ro còn lại") }}</dt><dd>{{ control.limitation || t('atlas.unspecified') }}</dd></dl><footer><p>{{ text("Source basis", "Cơ sở nguồn") }}: {{ control.sourceBasis || t('atlas.unspecified') }}</p><span>{{ control.contentVersion || t('atlas.noVersion') }}</span></footer></article>
     </section>
 
@@ -37,25 +37,25 @@ const processSteps = computed(() => [[text("Input", "Đầu vào"), props.stage.
 
     <section class="guide-section"><h3><span>06</span> {{ text("Related references", "Tham chiếu liên quan") }} <small>{{ references.length }}</small></h3><p class="guide-small">{{ references.length ? text('Open a definition or document sequence in the reference appendix.', 'Mở định nghĩa hoặc trình tự chứng từ trong phụ lục tham chiếu.') : text('No related reference is linked to this chapter in the published source.', 'Nguồn xuất bản chưa liên kết tham chiếu nào cho chương này.') }}</p><div v-if="references.length" class="guide-reference-links"><button v-for="item in references" :key="item.id" type="button" @click="emit('reference', item)"><span>{{ item.id }}</span><strong>{{ item.title }}</strong><Icon name="arrowRight" :size="14" /></button></div></section>
 
-    <footer class="guide-source-basis"><h3>{{ text("Source & document status", "Nguồn & trạng thái tài liệu") }}</h3><dl class="guide-facts"><dt>{{ text("Content version", "Phiên bản nội dung") }}</dt><dd>{{ stage.contentVersion || t('atlas.unspecified') }}</dd><dt>{{ text("Effective from", "Hiệu lực từ") }}</dt><dd>{{ stage.effectiveFrom || t('atlas.pendingApproval') }}</dd><dt v-if="stage.updatedAt">{{ text("Content updated", "Nội dung cập nhật") }}</dt><dd v-if="stage.updatedAt">{{ stage.updatedAt }}</dd><dt>{{ text("Source basis", "Cơ sở nguồn") }}</dt><dd>{{ stage.sourceBasis || t('atlas.unspecified') }}</dd></dl></footer>
+    <details class="guide-source-basis"><summary>{{ text("Document notes", "Ghi chú tài liệu") }}</summary><dl class="guide-facts"><dt>{{ text("Content version", "Phiên bản nội dung") }}</dt><dd>{{ stage.contentVersion || t('atlas.unspecified') }}</dd><dt>{{ text("Effective from", "Hiệu lực từ") }}</dt><dd>{{ stage.effectiveFrom || t('atlas.pendingApproval') }}</dd><dt v-if="stage.updatedAt">{{ text("Content updated", "Nội dung cập nhật") }}</dt><dd v-if="stage.updatedAt">{{ stage.updatedAt }}</dd><dt>{{ text("Source basis", "Cơ sở nguồn") }}</dt><dd>{{ stage.sourceBasis || t('atlas.unspecified') }}</dd></dl></details>
   </article>
 </template>
 
 <style scoped>
 .guide-chapter-index { color: var(--color-cyan-400); font-size: 11px; letter-spacing: .08em; }
-h2 { font-size: clamp(26px,3vw,38px); font-weight: 500; line-height: 1.15; letter-spacing: -.025em; margin-top: 12px; overflow-wrap: anywhere; }
-.guide-question { margin-top: 20px; font-size: 18px; line-height: 1.5; color: var(--color-text-400); }
-.guide-chapter-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 20px; font-size: 12px; color: var(--color-text-300); }
-.guide-section { padding-top: 28px; margin-top: 32px; border-top: 1px solid var(--color-card-border); }
-.guide-section>p { max-width: 65ch; }
-h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; font-size: 18px; line-height: 1.4; font-weight: 500; margin-bottom: 16px; }
+h2 { font-size: clamp(24px,2.6vw,34px); font-weight: 600; line-height: 1.25; letter-spacing: -.025em; margin-top: 8px; overflow-wrap: anywhere; text-wrap: balance; }
+.guide-question { margin-top: 12px; font-size: 16px; line-height: 1.6; color: var(--color-text-400); }
+.guide-chapter-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 12px; font-size: 12px; color: var(--color-text-300); }
+.guide-section { padding-top: 20px; margin-top: 24px; border-top: 1px solid var(--color-card-border); }
+.guide-section>p { max-width: 78ch; }
+h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; font-size: 16px; line-height: 1.5; font-weight: 500; margin-bottom: 12px; }
 h3>span { font-size: 11px; color: var(--color-cyan-400); font-variant-numeric: tabular-nums; }
 h3>small { color: var(--color-text-300); font-size: 12px; font-weight: 400; }
-p,dd { font-size: 15px; line-height: 1.75; color: var(--color-text-300); white-space: pre-line; overflow-wrap: anywhere; }
-.guide-facts { display: grid; grid-template-columns: 140px minmax(0,1fr); gap: 12px 20px; margin-top: 24px; }
+p,dd { font-size: 14px; line-height: 1.7; color: var(--color-text-300); white-space: pre-line; overflow-wrap: anywhere; }
+.guide-facts { display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 8px 16px; margin-top: 16px; }
 dt { color: var(--color-text-400); font-size: 12px; line-height: 1.6; } dd { margin: 0; }
 .guide-mini-flow { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border: 1px solid var(--color-card-border); border-radius: 8px; background: var(--space-navy); }
-.guide-mini-flow section { position: relative; padding: 20px; min-width: 0; }
+.guide-mini-flow section { position: relative; padding: 16px; min-width: 0; }
 .guide-mini-flow section+section { border-left: 1px solid var(--color-card-border); }
 h4 { font-size: 15px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
 .guide-mini-flow h4 { margin-bottom: 10px; color: var(--color-cyan-400); font-size: 12px; }
@@ -75,7 +75,6 @@ h4 { font-size: 15px; font-weight: 500; line-height: 1.5; overflow-wrap: anywher
 .guide-raci>div { border-bottom: 1px solid var(--color-card-border); padding-bottom: 16px; }
 .guide-raci dt { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
 .guide-raci dt>span { color: var(--color-cyan-400); font-size: 16px; }
-.guide-control-note { font-size: 13px; max-width: 680px; }
 .guide-empty { margin-top: 16px; }
 .guide-control { margin-top: 24px; border: 1px solid var(--color-card-border); border-radius: 8px; overflow: hidden; }
 .guide-control>header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 16px 20px; background: var(--space-navy); border-bottom: 1px solid var(--color-card-border); }
@@ -100,10 +99,10 @@ button:hover { background: var(--color-command-bg-soft); border-color: var(--col
 .guide-reference-links button { display: grid; grid-template-columns: auto minmax(0,1fr) 14px; gap: 8px; align-items: center; padding: 12px; }
 .guide-reference-links span { font-size: 10px; color: var(--color-cyan-400); }
 .guide-reference-links strong { font-size: 12px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
-.guide-source-basis { margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--color-card-border); }
-.guide-source-basis h3 { font-size: 14px; }
+.guide-source-basis { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--color-card-border); }
+.guide-source-basis summary { cursor: pointer; min-height: 44px; padding: 12px 0; color: var(--color-text-300); font-size: 12px; }
 .guide-source-basis dd { font-size: 12px; line-height: 1.65; }
-button:focus-visible,[tabindex='-1']:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 3px; }
-@media(max-width:1100px) { .guide-mini-flow { grid-template-columns: minmax(0,1fr); } .guide-mini-flow section+section { border-left: 0; border-top: 1px solid var(--color-card-border); } .guide-flow-arrow { right: 20px; top: auto; bottom: -8px; transform: rotate(90deg); } }
+button:focus-visible,summary:focus-visible,[tabindex='-1']:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 3px; }
+@media(max-width:840px) { .guide-mini-flow { grid-template-columns: minmax(0,1fr); } .guide-mini-flow section+section { border-left: 0; border-top: 1px solid var(--color-card-border); } .guide-flow-arrow { right: 20px; top: auto; bottom: -8px; transform: rotate(90deg); } }
 @media(max-width:840px) { .guide-section { margin-top: 28px; padding-top: 24px; } .guide-raci,.guide-reference-links,.guide-branch-grid { grid-template-columns: minmax(0,1fr); } .guide-control-facts,.guide-facts { grid-template-columns: minmax(0,1fr); gap: 8px; } .guide-facts dd+dt,.guide-control-facts dd+dt { margin-top: 8px; } .guide-control>header,.guide-control-facts { padding: 16px; } .guide-control>footer { padding: 12px 16px; } .guide-question { font-size: 16px; } p,dd { font-size: 14px; line-height: 1.75; } }
 </style>

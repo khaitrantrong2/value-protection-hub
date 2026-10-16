@@ -1,10 +1,17 @@
 export type Locale = 'en' | 'vi';
 export const LOCALE_STORAGE_KEY = 'vph:locale:v1';
+// The public UI stays English until the business-content translation is complete.
+// Keep the reviewed-overlay contract and catalogs available, not a partial switch.
+export const TRANSLATION_ENABLED = false;
 export const isLocale = (value: unknown): value is Locale => value === 'en' || value === 'vi';
 
 export function resolveLocale(search: string, saved: unknown): Locale {
   const explicit = new URLSearchParams(search).get('lang');
   return isLocale(explicit) ? explicit : isLocale(saved) ? saved : 'en';
+}
+
+export function resolveInterfaceLocale(search: string, saved: unknown): Locale {
+  return TRANSLATION_ENABLED ? resolveLocale(search, saved) : 'en';
 }
 
 /** Locale is outside the Atlas hash contract; all page/filter/hash context is preserved. */

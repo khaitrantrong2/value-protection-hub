@@ -11,7 +11,7 @@ import { localizeAtlasPayload } from "../../services/atlasTranslationService";
 import { useAtlasRouteState } from "../../composables/useAtlasRouteState";
 
 const props = defineProps<{ data: AtlasPayload | null; source: "live" | "demo" | "unavailable"; isLoading: boolean; error?: string; refreshedAt?: string }>();
-const emit = defineEmits<{ refresh: []; preview: [] }>();
+const emit = defineEmits<{ preview: [] }>();
 const { t, text, locale } = useLocale();
 const localizedData = ref<AtlasPayload | null>(null);
 const translatedKeys = ref(new Set<string>());
@@ -73,12 +73,12 @@ watch(() => props.data, () => { if (props.data && state.stageId && !props.data.s
       <div class="atlas-toolbar-actions">
         <nav class="atlas-view-modes" :aria-label="text('Atlas pages', 'Chế độ xem quy trình')"><button ref="exploreButton" type="button" :aria-pressed="!guideMode" @click="returnToMap"><Icon name="project" :size="16" />{{ t("atlas.explore") }}</button><button type="button" :aria-pressed="guideMode" @click="openGuide()"><Icon name="template" :size="16" />{{ t("atlas.guide") }}</button></nav>
         <label v-show="!guideMode" class="atlas-data-toggle"><input v-model="showDataPipeline" type="checkbox"><span>{{ t("atlas.showPipeline") }}</span></label>
-        <AtlasSourceInfo :source="source" :meta="data?.meta" :error="error" :refreshed-at="refreshedAt" :is-loading="isLoading" @refresh="emit('refresh')" />
+        <AtlasSourceInfo :source="source" :meta="data?.meta" :error="error" :refreshed-at="refreshedAt" :is-loading="isLoading" />
       </div>
     </header>
     <p v-if="error" class="atlas-source-warning" role="alert">{{ source === 'live' ? text('Showing the last successful source copy.', 'Đang giữ bản đọc nguồn thành công gần nhất.') : source === 'demo' ? text('Bundled draft, not the live source.', 'Bản nháp đóng gói, không phải nguồn trực tiếp.') : text('The process source could not be loaded.', 'Chưa tải được nguồn nội dung quy trình.') }} <span>{{ text("Details in Source Info.", "Xem chi tiết trong Thông tin nguồn.") }}</span></p>
     <div v-if="isLoading && !data" class="atlas-loading" aria-busy="true"><p>{{ text("Loading the process source…", "Đang tải nội dung quy trình…") }}</p><div v-for="index in 4" :key="index"></div></div>
-    <div v-else-if="!data || !chapters.length" class="atlas-empty"><h2>{{ text("No process content available", "Chưa có nội dung quy trình") }}</h2><p>{{ text("Check the configured source or published content, then refresh. No control conclusion is inferred from this empty state.", "Kiểm tra nguồn đã cấu hình hoặc nội dung đã xuất bản, rồi tải lại. Trạng thái trống không thể hiện kết luận về kiểm soát.") }}</p><button type="button" @click="emit('refresh')">{{ text("Try again", "Thử lại") }}</button><button v-if="source === 'unavailable'" type="button" @click="emit('preview')">{{ text("Preview bundled draft · not live", "Xem bản nháp đóng gói · không trực tiếp") }}</button></div>
+    <div v-else-if="!data || !chapters.length" class="atlas-empty"><h2>{{ text("No process content available", "Chưa có chương quy trình") }}</h2><p>{{ text("Check the connection and reload the page. An unavailable source is not evidence that no process exists.", "Kiểm tra kết nối và tải lại trang. Nguồn không khả dụng không có nghĩa là không có quy trình.") }}</p><button v-if="source === 'unavailable'" type="button" @click="emit('preview')">{{ text("Preview bundled draft · not live", "Xem bản nháp đóng gói · không trực tiếp") }}</button></div>
     <div v-else class="atlas-workspace" :class="{ 'is-guide': guideMode }">
       <div v-show="!guideMode" class="atlas-canvas-slot"><AtlasCanvas ref="canvas" :stages="(localizedData || data).stages" :references="(localizedData || data).references" :selected-id="null" :active="!guideMode" :show-data-pipeline="showDataPipeline" @select="openGuide" @fit="canvas?.fit()" /></div>
       <AtlasProcessGuide v-if="guideMode" :data="localizedData || data" :translated-keys="translatedKeys" :stage-id="guideStageId" :active-tab="state.inspectorTab" :reference-group="state.libraryGroup" :reference-id="state.referenceId" :source-label="sourceLabel" :source-warning="error ? text('The last refresh did not complete. Check Source info and retry.', 'Lần tải nguồn gần nhất chưa hoàn tất. Xem Thông tin nguồn và thử lại.') : undefined" :version="version" @stage="route.setGuideStage" @reference="openReference" @references="openReferences" @map="returnToMap" />

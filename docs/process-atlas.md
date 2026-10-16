@@ -15,7 +15,7 @@ approved SOP hoặc kết luận operating effectiveness. Explore và Process Gu
 | AtlasGuide | Hướng dẫn ngay trong Sheet | Không được serialize qua API |
 | Translations | Bản dịch theo ID và fingerprint source | Overlay đủ Reviewed + Published + Public; xem [contract](atlas-translations.md) |
 
-Sau khi API đã deploy đúng: sửa và lưu Sheet → **Source Info → Refresh source** hoặc reload page.
+Sau khi API đã deploy đúng: sửa và lưu Sheet → reload page. Không còn nút Refresh source riêng; API cũ có thể cache ngắn hạn.
 Atlas không dùng server cache/localStorage. Layout, branch geometry, zoom hoặc thay schema
 cần sửa code và deploy frontend; thay wording không cần build lại.
 
@@ -29,7 +29,7 @@ scroll lồng với canvas. Không cần bật Focus map riêng.
   Master data vẫn có phạm vi hỗ trợ xuyên suốt 01–08 trong source và Guide; vị trí node
   không giới hạn scope nghiệp vụ. `Show Data Pipeline` chỉ ẩn/hiện lớp minh họa, không Fit.
 - **Source Info** gom metadata, source/version, status, ngày hiệu lực, thời điểm fetch,
-  refresh và hướng dẫn tương tác. Demo/retained-copy vẫn có badge/cảnh báo rõ bên ngoài.
+  và hướng dẫn tương tác. Demo/retained-copy vẫn có badge/cảnh báo rõ bên ngoài.
   Không còn Go to stage, legend, help footer hoặc thư viện dưới canvas.
 - **Process Guide** là trang đọc riêng với mục lục bên trái và document bên phải: scope,
   narrative, mini-flow Input → Process → Output, RACI, risks/controls/evidence/limitations,
@@ -37,7 +37,7 @@ scroll lồng với canvas. Không cần bật Focus map riêng.
   giữ đủ các nhóm và record, có tìm kiếm/type filter; không còn modal/side inspector.
 
 Canvas giữ nguyên instance khi đọc Guide và quay lại, nên camera/zoom không bị reset.
-EN/VI dùng query `?lang=en` hoặc `?lang=vi` trước hash; đổi ngôn ngữ không remount/Fit canvas.
+UI hiện chỉ dùng tiếng Anh; nút EN/VI được gỡ cho đến khi có bản dịch nghiệp vụ hoàn chỉnh. Link cũ `?lang=vi` vẫn mở đúng route/filter nhưng dùng giao diện tiếng Anh.
 UI labels có catalog riêng; nội dung thiếu bản dịch được review giữ nguyên source,
 không dịch máy hoặc coi bản EN mặc định là bản nghiệp vụ có thẩm quyền.
 Hidden viewport 0×0 không ghi đè measurement dương cuối cùng; Guide không truyền selection

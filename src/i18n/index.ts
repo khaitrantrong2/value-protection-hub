@@ -4,7 +4,7 @@ import { messages as shellMessages } from './messages/shell';
 import { messages as crewMessages } from './messages/crew';
 import { messages as directoryMessages } from './messages/directory';
 import { messages as atlasMessages } from './messages/atlas';
-import { isLocale, localeURL, LOCALE_STORAGE_KEY, resolveLocale, type Locale } from './localeState';
+import { isLocale, localeURL, LOCALE_STORAGE_KEY, resolveInterfaceLocale, TRANSLATION_ENABLED, type Locale } from './localeState';
 
 function savedLocale(): string | null {
   try { return localStorage.getItem(LOCALE_STORAGE_KEY); } catch { return null; }
@@ -12,7 +12,7 @@ function savedLocale(): string | null {
 
 export const i18n = createI18n({
   legacy: false,
-  locale: resolveLocale(typeof window === 'undefined' ? '' : window.location.search ?? '', savedLocale()),
+  locale: resolveInterfaceLocale(typeof window === 'undefined' ? '' : window.location.search ?? '', savedLocale()),
   fallbackLocale: 'en',
   messages: {
     en: { ...shellMessages.en, ...crewMessages.en, ...directoryMessages.en, ...atlasMessages.en },
@@ -25,7 +25,7 @@ export const i18n = createI18n({
 const locale = computed(() => i18n.global.locale.value as Locale);
 
 function setLocale(value: Locale) {
-  if (!isLocale(value)) return;
+  if (!TRANSLATION_ENABLED || !isLocale(value)) return;
   i18n.global.locale.value = value;
   try { localStorage.setItem(LOCALE_STORAGE_KEY, value); } catch { /* preference storage is optional */ }
   if (typeof window !== 'undefined' && window.location.href) {
@@ -50,7 +50,7 @@ export function startLocaleSync(): () => void {
   };
   const stop = watch(locale, applyDocument, { immediate: true });
   const onHistory = () => {
-    i18n.global.locale.value = resolveLocale(window.location.search, savedLocale());
+    i18n.global.locale.value = resolveInterfaceLocale(window.location.search, savedLocale());
   };
   window.addEventListener('popstate', onHistory);
   return () => { stop(); window.removeEventListener('popstate', onHistory); };

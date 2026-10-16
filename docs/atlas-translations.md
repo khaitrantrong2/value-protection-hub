@@ -1,5 +1,9 @@
 # Reviewed Atlas translations
 
+Public translation is currently disabled (`TRANSLATION_ENABLED = false`). The release
+uses an English interface without EN/VI controls. This document describes the retained
+review-gated overlay contract; it does not assert that a complete translation is available.
+
 The optional `Translations` Sheet tab extends the existing API without changing source records or requiring a second frontend request. `action=atlas` includes an optional `atlas.translations`; `action=translations` returns the same eligible overlay rows. Old deployments without the extension remain supported.
 
 Header contract: `EntityType, EntityID, Field, Locale, Text, SourceFingerprint, ReviewStatus, Publication, Visibility`.

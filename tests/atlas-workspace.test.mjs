@@ -214,7 +214,7 @@ test("Back and Forward restore Guide stage, legacy section anchor and reference 
   } finally { view.unmount(); }
 });
 
-test("Stale warnings reach Source Info and Guide while Refresh stays an explicit action", async () => {
+test("Stale warnings reach Source Info and Guide without a redundant source refresh action", async () => {
   const warning = "Retained copy: latest source refresh failed.";
   const view = runtime({ error: warning });
   try {
@@ -228,7 +228,7 @@ test("Stale warnings reach Source Info and Guide while Refresh stays an explicit
     assert.equal(view.latest("guide").props.sourceLabel, "Google Sheets · retained copy");
     assert.equal(view.latest("guide").props.version, "test-business-understanding");
     view.latest("sourceInfo").emit("refresh"); await view.flush();
-    assert.equal(view.emitted.refresh, 1); assert.equal(view.emitted.preview, 0);
+    assert.equal(view.emitted.refresh, 0); assert.equal(view.emitted.preview, 0);
   } finally { view.unmount(); }
 });
 

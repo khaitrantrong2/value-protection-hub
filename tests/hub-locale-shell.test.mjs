@@ -8,7 +8,15 @@ const source = readFileSync(new URL('../src/i18n/localeState.ts', import.meta.ur
 const compiled = await transform(source, { loader: 'ts', format: 'cjs', target: 'es2022' });
 const runtime = vm.createContext({ module: { exports: {} }, URL, URLSearchParams });
 vm.runInContext(compiled.code, runtime);
-const { resolveLocale, localeURL } = runtime.module.exports;
+const { resolveLocale, resolveInterfaceLocale, TRANSLATION_ENABLED, localeURL } = runtime.module.exports;
+
+test('Public interface stays English even with legacy VI links or stored preference', () => {
+  assert.equal(TRANSLATION_ENABLED, false);
+  assert.equal(resolveInterfaceLocale('?lang=vi', 'vi'), 'en');
+  assert.equal(resolveInterfaceLocale('', 'vi'), 'en');
+  const header = readFileSync(new URL('../src/components/AppHeader.vue', import.meta.url), 'utf8');
+  assert.doesNotMatch(header, /language-switch|setLocale\(/);
+});
 
 test('Explicit shared language wins over preference; invalid language uses saved preference or English', () => {
   assert.equal(resolveLocale('?lang=vi', 'en'), 'vi');

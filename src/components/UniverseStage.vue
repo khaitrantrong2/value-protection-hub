@@ -91,8 +91,8 @@ onBeforeUnmount(resetFocusTween);
 <template>
   <section ref="stageRef" class="galaxy" :aria-label="text('Intrepid Value Protection system map', 'Bản đồ hệ Value Protection của Intrepid')" @keydown="onKeydown">
     <div class="galaxy__toolbar">
-      <span class="galaxy__map-label">{{ text('INTREPID SYSTEM', 'HỆ INTREPID') }}</span>
-      <button type="button" class="galaxy__motion" :aria-pressed="paused" :disabled="prefersReducedMotion" @click="paused = !paused"><span aria-hidden="true">{{ paused || prefersReducedMotion ? '▷' : 'Ⅱ' }}</span>{{ prefersReducedMotion ? text('Reduced motion', 'Giảm chuyển động') : paused ? text('Resume fleet', 'Cho tàu di chuyển') : text('Pause fleet', 'Dừng chuyển động') }}</button>
+      <span class="galaxy__map-label">{{ text('RESOURCE SYSTEM', 'HỆ TÀI NGUYÊN') }}</span>
+      <button type="button" class="galaxy__motion" :aria-pressed="paused" :disabled="prefersReducedMotion" @click="paused = !paused"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path v-if="paused || prefersReducedMotion" d="m5 3 7 5-7 5Z" fill="currentColor"/><path v-else d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2"/></svg>{{ prefersReducedMotion ? text('Reduced motion', 'Giảm chuyển động') : paused ? text('Resume fleet', 'Cho tàu di chuyển') : text('Pause fleet', 'Dừng chuyển động') }}</button>
     </div>
     <label class="galaxy__mobile-select"><span>{{ text('Explore vaults & protectors', 'Khám phá vault & protector') }}</span><select :value="selectedPlanet?.id ?? (selectedMember ? 'crew:' + selectedMember.id : '')" @change="chooseVault"><option value="" disabled>{{ text('Select a planet or protector', 'Chọn hành tinh hoặc protector') }}</option><optgroup :label="text('Resource vaults', 'Hành tinh tài nguyên')"><option v-for="planet in vaultPlanets" :key="planet.id" :value="planet.id">{{ t('shell.categories.' + planet.id) }}</option></optgroup><optgroup :label="text('Value Protectors', 'Đội ngũ Value Protector')"><option v-for="member in activeCrew" :key="member.id" :value="'crew:' + member.id">{{ member.name }} · {{ member.country || member.market }}</option></optgroup></select></label>
     <div class="galaxy__space">
@@ -113,21 +113,21 @@ onBeforeUnmount(resetFocusTween);
       </button>
       <ProtectorFleet :members="activeCrew" :selected-id="selectedMember?.id" :paused="paused" variant="home" @select="inspectMember" />
     </div>
-    <div class="galaxy__legend" aria-hidden="true"><span><i class="galaxy__legend-planet"></i>{{ text('Planets · resource vaults', 'Hành tinh · kho tài nguyên') }}</span><span><i class="galaxy__legend-ship">⌁</i>{{ text('Ships · Value Protectors', 'Chiến hạm · Value Protectors') }}</span></div>
+    <div class="galaxy__legend" aria-hidden="true"><span><i class="galaxy__legend-planet"></i>{{ text('Planets · resource vaults', 'Hành tinh · kho tài nguyên') }}</span><span><svg class="galaxy__legend-ship" width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="m10 2 2 7 5 5-6-2-1 6-1-6-6 2 5-5Z" stroke="currentColor" stroke-width=".9"/></svg>{{ text('Ships · Value Protectors', 'Chiến hạm · Value Protectors') }}</span></div>
     <GalaxyVaultInspector v-if="selectedPlanet" :key="selectedPlanet.id" :planet="selectedPlanet" :resources="resources" :source="source" :loading="isLoading" @close="closeInspector" @open="openSector(selectedPlanet.id)" />
     <MemberScopePanel v-else-if="selectedMember" :member="selectedMember" @close="closeInspector" />
   </section>
 </template>
 
 <style lang="scss" scoped>
-.galaxy { isolation:isolate; position:relative; width:100%; flex:1; min-height:450px; overflow:hidden; border-top:1px solid rgba(189,162,231,.13); border-bottom:1px solid rgba(189,162,231,.09); background:radial-gradient(ellipse at 40% 47%,rgba(48,24,82,.22),transparent 61%),linear-gradient(160deg,rgba(10,7,25,.45),rgba(9,10,26,.2)); }
+.galaxy { isolation:isolate; position:relative; width:100%; flex:1; min-height:450px; overflow:hidden; background:radial-gradient(ellipse at 45% 49%,rgba(73,41,114,.16),transparent 66%); }
 .galaxy__toolbar { position:absolute; top:12px; left:20px; right:16px; z-index:22; display:flex; align-items:center; justify-content:space-between; gap:16px; pointer-events:none; }
-.galaxy__map-label { font-size:9px; letter-spacing:.2em; color:var(--color-text-200); }
+.galaxy__map-label { font-size:8px; letter-spacing:.22em; color:var(--color-text-200); opacity:.8; }
 .galaxy__motion { pointer-events:auto; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:5px 9px; border:1px solid rgba(189,162,231,.2); border-radius:5px; background:rgba(14,10,31,.74); font-size:10px; color:var(--color-text-300); cursor:pointer; }
 .galaxy__motion>span { font-size:13px; }.galaxy__motion:disabled { cursor:default; opacity:.75; }
 .galaxy__space { position:absolute; inset:0; }
 .galaxy__space :deep(.protector-fleet) { z-index:6; }
-.galaxy__nebula { position:absolute; width:75%; height:70%; left:10%; top:10%; transform:rotate(-22deg); pointer-events:none; background:radial-gradient(ellipse at 40% 50%,rgba(116,66,158,.12),transparent 58%),radial-gradient(ellipse at 80% 50%,rgba(72,97,143,.1),transparent 54%); }
+.galaxy__nebula { position:absolute; width:91%; height:78%; left:1%; top:5%; transform:rotate(-22deg); pointer-events:none; background:radial-gradient(ellipse at 40% 50%,rgba(132,71,166,.18),transparent 58%),radial-gradient(ellipse at 80% 50%,rgba(72,117,143,.12),transparent 54%); }
 .galaxy__orbits { position:absolute; inset:3% 5%; width:90%; height:94%; pointer-events:none; overflow:visible; fill:none; stroke:rgba(173,146,219,.21); stroke-width:.8; }
 .galaxy__orbits ellipse:nth-child(2) { stroke:rgba(206,191,237,.16); }.galaxy__orbits ellipse:nth-child(3) { stroke:rgba(171,154,216,.12); }
 .galaxy__core { position:absolute; left:46%; top:51%; width:clamp(132px,14vw,190px); aspect-ratio:1; transform:translate(-50%,-50%); pointer-events:none; z-index:3; }

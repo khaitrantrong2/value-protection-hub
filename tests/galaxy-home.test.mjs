@@ -5,6 +5,8 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { compileScript, parse } from '@vue/compiler-sfc';
 import * as Vue from 'vue';
+import { renderToString } from 'vue/server-renderer';
+import { createLocaleHarness } from './localeHarness.mjs';
 
 const code = (await transform(readFileSync(new URL('../src/data/galaxy.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'cjs', target: 'es2022' })).code;
 const context = vm.createContext({ module: { exports: {} } });
@@ -69,4 +71,30 @@ test('Rapid planet inspection clears interrupted target transforms and closing c
     disposed.forEach(callback => callback());
     assert.equal(tweens[1].killed, 1, 'Unmount cleanup is idempotent');
   } finally { effect.stop(); }
+});
+
+test('Source availability stays inside the vault inspector and never turns missing evidence into an empty-owner conclusion', async () => {
+  const descriptor = parse(readFileSync(new URL('../src/components/GalaxyVaultInspector.vue', import.meta.url), 'utf8')).descriptor;
+  const compiled = (await transform(compileScript(descriptor, { id: 'galaxy-vault-source', inlineTemplate: true }).content, { loader: 'ts', format: 'cjs', target: 'es2022' })).code;
+  const safetyCode = (await transform(readFileSync(new URL('../src/services/linkSafety.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'cjs', target: 'es2022' })).code;
+  const safety = vm.createContext({ module: { exports: {} }, URL });
+  vm.runInContext(safetyCode, safety);
+  const stubs = {
+    vue: Vue, '../i18n': { useLocale: () => createLocaleHarness('en') }, '../data/galaxy': context.module.exports,
+    '../services/linkSafety': safety.module.exports,
+    './Icon.vue': Vue.defineComponent({ setup: () => () => Vue.h('i') }),
+  };
+  const runtime = vm.createContext({ module: { exports: {} }, setTimeout, clearTimeout, require(path) { assert.ok(stubs[path], path); return stubs[path]; } });
+  vm.runInContext(compiled, runtime);
+  const props = { planet: vaultPlanets[0], resources: [], source: 'unavailable', loading: false };
+  const unavailable = await renderToString(Vue.createSSRApp(runtime.module.exports.default, props));
+  assert.match(unavailable, /Source unavailable/);
+  assert.match(unavailable, /Owner information unavailable/);
+  assert.doesNotMatch(unavailable, /No owner published for this vault/);
+  assert.match(unavailable, /empty view does not establish/);
+  const demo = await renderToString(Vue.createSSRApp(runtime.module.exports.default, { ...props, source: 'mock' }));
+  assert.match(demo, /Demo · not live/);
+  const stale = await renderToString(Vue.createSSRApp(runtime.module.exports.default, { ...props, source: 'stale' }));
+  assert.match(stale, /Retained source · refresh failed/);
+  assert.match(stale, /not new approval authority/);
 });

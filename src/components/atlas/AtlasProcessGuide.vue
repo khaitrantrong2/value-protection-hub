@@ -57,15 +57,13 @@ onMounted(focusDocument);
         <h3>{{ t("atlas.appendix") }}</h3><button type="button" :aria-current="referenceGroup === 'all' ? 'page' : undefined" @click="emit('references', 'all')"><Icon name="list" :size="16" /><strong>{{ t("atlas.allReferences") }}</strong><small>{{ data.references.length }}</small></button>
         <div v-if="referenceGroup !== null" class="guide-toc-reference-types"><button v-for="group in groups" :key="group.id" type="button" :aria-current="referenceGroup === group.id ? 'page' : undefined" @click="emit('references', group.id)"><strong>{{ group.title }}</strong><small>{{ group.count }}</small></button></div>
       </nav>
-      <footer>{{ text("Business-understanding material. Not an approved SOP or an OE conclusion.", "Tài liệu tìm hiểu doanh nghiệp. Không phải SOP đã phê duyệt hay kết luận về tính hữu hiệu vận hành.") }}</footer>
     </aside>
 
     <div class="guide-document-column">
       <div class="guide-mobile-toc"><label for="atlas-guide-mobile-chapter">{{ t("atlas.contents") }}</label><select id="atlas-guide-mobile-chapter" :value="mobileValue" @change="changeMobile"><optgroup :label="t('atlas.process')"><option v-for="stage in chapters" :key="stage.id" :value="`stage:${stage.id}`">{{ stage.id }} · {{ stage.shortTitle }}</option></optgroup><optgroup v-if="supporting.length" :label="t('atlas.supporting')"><option v-for="stage in supporting" :key="stage.id" :value="`stage:${stage.id}`">{{ stage.id }} · {{ stage.shortTitle }}</option></optgroup><optgroup :label="t('atlas.appendix')"><option value="references:all">{{ t("atlas.allReferences") }} ({{ data.references.length }})</option><option v-for="group in groups" :key="group.id" :value="`references:${group.id}`">{{ group.title }} ({{ group.count }})</option></optgroup></select></div>
       <div ref="documentPane" class="guide-document-scroll" :aria-label="text('Process Guide document', 'Nội dung tài liệu quy trình')" tabindex="0" data-lenis-prevent>
         <div class="guide-document">
-          <header class="guide-document-context"><div class="guide-document-label"><span>{{ text("CLAIMBACK · BUSINESS UNDERSTANDING GUIDE", "CLAIMBACK · TÀI LIỆU TÌM HIỂU DOANH NGHIỆP") }}</span><button type="button" @click="emit('map')"><Icon name="project" :size="16" />{{ t("atlas.backToMap") }}</button><button type="button" class="guide-print" @click="printChapter">{{ t("atlas.print") }}</button></div><div class="guide-document-metadata"><span>{{ sourceLabel }}</span><span>{{ version || t('atlas.noVersion') }}</span><span class="guide-document-status">{{ data.meta.processStatus || text('Business-understanding draft', 'Bản nháp tìm hiểu doanh nghiệp') }}</span></div><p class="guide-document-disclaimer">{{ text("Reported practice and controls ≠ independently tested operating effectiveness.", "Thực tế và kiểm soát được xác nhận ≠ tính hữu hiệu vận hành đã được kiểm tra độc lập.") }}</p><p v-if="sourceWarning" class="guide-document-warning" role="status">{{ sourceWarning }}</p></header>
-    <p class="guide-translation-notice" role="status">{{ t("atlas.translationNotice") }}</p>
+          <header class="guide-document-context"><div class="guide-document-label"><span>{{ text("CLAIMBACK · PROCESS GUIDE", "CLAIMBACK · TÀI LIỆU QUY TRÌNH") }}</span><button type="button" @click="emit('map')"><Icon name="project" :size="16" />{{ t("atlas.backToMap") }}</button><button type="button" class="guide-print" @click="printChapter">{{ t("atlas.print") }}</button></div><p v-if="sourceWarning" class="guide-document-warning" role="status">{{ sourceWarning }}</p></header>
           <AtlasGuideStage v-if="referenceGroup === null && selected" :stage="selected" :controls="controls" :references="references" :support-stages="supports" @stage="emit('stage', $event)" @reference="emit('reference', $event)" />
           <AtlasGuideReferences v-else-if="referenceGroup !== null" :references="data.references" :stages="data.stages" :group="referenceGroup" :group-names="groupNames" :reference-id="referenceId" @group="emit('references', $event)" @stage="emit('stage', $event)" />
           <div v-else class="guide-no-chapter"><h2 id="atlas-guide-title" tabindex="-1">{{ text("No published chapter", "Chưa có chương được xuất bản") }}</h2><p>{{ text("Choose another chapter or refresh the process source.", "Chọn chương khác hoặc tải lại nguồn nội dung.") }}</p></div>
@@ -78,13 +76,13 @@ onMounted(focusDocument);
 </template>
 
 <style scoped>
-.atlas-process-guide { display: grid; grid-template-columns: 248px minmax(0,1fr); width: 100%; height: 100%; min-height: 0; min-width: 0; overflow: hidden; color: var(--color-text-400); background: var(--space-deep); }
+.atlas-process-guide { display: grid; grid-template-columns: 216px minmax(0,1fr); width: 100%; height: 100%; min-height: 0; min-width: 0; overflow: hidden; color: var(--color-text-400); background: var(--space-deep); }
 .guide-toc { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; border-right: 1px solid var(--color-card-border); background: var(--space-navy); }
 .guide-toc>header { flex: none; padding: 16px 16px 12px; }
 .guide-toc>header>span { color: var(--color-cyan-400); font-size: 10px; letter-spacing: .08em; }
 .guide-toc h2 { font-size: 20px; line-height: 1.2; font-weight: 500; margin-top: 4px; }
 .guide-toc-nav { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 12px 20px; scrollbar-width: thin; }
-.guide-toc-nav h3 { padding: 0 8px; margin: 24px 0 8px; color: var(--color-text-300); font-size: 11px; font-weight: 400; }
+.guide-toc-nav h3 { padding: 0 8px; margin: 16px 0 6px; color: var(--color-text-300); font-size: 11px; font-weight: 400; }
 .guide-toc-nav h3:first-child { margin-top: 0; }
 button { cursor: pointer; color: var(--color-text-400); min-height: 44px; border: 1px solid var(--color-card-border); border-radius: 6px; background: var(--space-navy); padding: 8px 12px; }
 .guide-toc-nav button { display: flex; gap: 10px; align-items: baseline; width: 100%; border-color: transparent; text-align: left; padding: 10px 8px; }
@@ -96,11 +94,10 @@ button { cursor: pointer; color: var(--color-text-400); min-height: 44px; border
 .guide-toc-nav button[aria-current=page] strong { color: var(--color-cyan-400); }
 .guide-toc-reference-types { margin: 4px 0 0 20px; border-left: 1px solid var(--color-card-border); padding-left: 8px; }
 .guide-toc-reference-types button { gap: 8px; }
-.guide-toc>footer { flex: none; padding: 8px 16px; border-top: 1px solid var(--color-card-border); color: var(--color-text-300); font-size: 10px; line-height: 1.5; }
 .guide-document-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .guide-document-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-gutter: stable; }
-.guide-document { max-width: 980px; padding: 24px 40px 48px; margin: 0 auto; }
-.guide-document-context { padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--color-card-border); }
+.guide-document { max-width: 1120px; padding: 12px clamp(20px,3vw,44px) 32px; margin: 0 auto; }
+.guide-document-context { padding-bottom: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--color-card-border); }
 .guide-document-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .guide-document-label>span { flex: 1 1 180px; }
 .guide-print { font-size: 11px !important; }
@@ -110,7 +107,7 @@ button { cursor: pointer; color: var(--color-text-400); min-height: 44px; border
   .guide-document-column,.guide-document-scroll { display: block; height: auto; overflow: visible; }
   .guide-document { max-width: none; margin: 0; padding: 0; }
   .guide-document-context { break-inside: avoid; border-color: #bbb; }
-  .guide-document-metadata,.guide-document-label>span,.guide-document-disclaimer,.guide-document-status { color: #222; }
+  .guide-document-label>span { color: #222; }
   .guide-document :deep(*) { color: #111 !important; background: transparent !important; box-shadow: none !important; }
   .guide-document :deep(.guide-control),.guide-document :deep(.guide-mini-flow),.guide-document :deep(.guide-reference-record) { break-inside: avoid; border-color: #aaa; }
   .guide-document :deep(button) { border-color: #aaa; }
@@ -119,12 +116,8 @@ button { cursor: pointer; color: var(--color-text-400); min-height: 44px; border
 }
 .guide-document-label>span { color: var(--color-text-300); font-size: 10px; letter-spacing: .06em; line-height: 1.5; }
 .guide-document-label button { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 12px; }
-.guide-document-status { color: var(--color-orange-400); }
-.guide-document-disclaimer { margin-top: 4px; font-size: 11px; line-height: 1.5; color: var(--color-text-300); }
-.guide-document-metadata { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; color: var(--color-text-300); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
-.guide-translation-notice { padding: 10px 12px; border-left: 2px solid var(--color-cyan-400); color: var(--color-text-300); font-size: 12px; line-height: 1.65; margin-bottom: 20px; background: var(--color-beige-500); }
 .guide-document-warning { margin-top: 20px; padding: 12px 16px; border-left: 2px solid var(--color-orange-400); background: var(--color-orange-muted); color: var(--color-text-300); font-size: 13px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
-.guide-chapter-navigation { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--color-card-border); }
+.guide-chapter-navigation { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-card-border); }
 .guide-chapter-navigation>button { display: grid; align-content: start; gap: 8px; text-align: left; padding: 16px; }
 .guide-chapter-navigation>button>span { color: var(--color-text-300); font-size: 11px; }
 .guide-chapter-navigation>button>strong { font-size: 13px; line-height: 1.5; font-weight: 400; overflow-wrap: anywhere; }
@@ -137,7 +130,7 @@ button:not(:disabled):hover { border-color: var(--color-card-border-hover); back
 .guide-no-chapter p { margin-top: 16px; color: var(--color-text-300); font-size: 14px; }
 .guide-mobile-toc { display: none; }
 button:focus-visible,select:focus-visible,.guide-document-scroll:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: -2px; }
-@media(max-width:1100px) { .atlas-process-guide { grid-template-columns: 216px minmax(0,1fr); } .guide-document { padding: 24px 28px 40px; } }
+@media(max-width:1100px) { .atlas-process-guide { grid-template-columns: 200px minmax(0,1fr); } .guide-document { padding: 12px 24px 32px; } }
 @media(max-width:840px) { .atlas-process-guide { grid-template-columns: minmax(0,1fr); } .guide-toc { display: none; } .guide-mobile-toc { display: flex; flex: none; align-items: center; gap: 12px; padding: 12px 16px; background: var(--space-navy); border-bottom: 1px solid var(--color-card-border); } .guide-mobile-toc label { font-size: 12px; color: var(--color-text-300); } .guide-mobile-toc select { min-width: 0; flex: 1; min-height: 44px; padding: 8px 24px 8px 12px; border: 1px solid var(--color-card-border); border-radius: 6px; background: var(--space-deep); color: var(--color-text-400); font: inherit; font-size: 16px; } .guide-document { padding: 20px 20px 32px; } .guide-document-label { align-items: flex-start; } .guide-document-label>span { max-width: 160px; } .guide-document-label button { padding: 8px; } }
 @media(max-width:400px) { .guide-document { padding-right: 16px; padding-left: 16px; } .guide-chapter-navigation { gap: 8px; } .guide-chapter-navigation>button { padding: 12px; } .guide-mobile-toc { padding: 8px 12px; gap: 8px; } }
 @media(max-height:480px) { .guide-toc>header { padding-top: 12px; padding-bottom: 12px; } .guide-toc>header p,.guide-toc>footer { display: none; } .guide-mobile-toc { padding-top: 8px; padding-bottom: 8px; } }

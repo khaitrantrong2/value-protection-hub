@@ -2,15 +2,16 @@
 
 Vue 3 / TypeScript / Vite workspace for finding Value Protection resources, understanding
 the claimback lifecycle, and discovering the team's published responsibilities.
-The interface retains the Hub's purple/amethyst identity with English/Vietnamese UI
-catalogs, keyboard navigation and reduced-motion support.
+The interface retains the Hub's purple/amethyst identity with an English UI,
+keyboard navigation and reduced-motion support. Translation catalogs remain in source;
+the public language switch is disabled until business-content translation is complete.
 
 ## Destinations
 
 - **Universe** — Intrepid at the core, ten resource-vault planets and a fleet of real Value Protectors; selected scope opens without moving the camera.
 - **Start here** — three compact flight paths for business understanding, team/responsibilities and daily work; vocabulary lives in the Process Guide.
 - **Directory** — table by default, optional compact cards, search, country/type/category/status/priority filters and truthful source/link states.
-- **Team** — equal-weight protector ships, search/market/function discovery and internally scrollable portfolio panels; not an inferred org chart.
+- **Team** — all active protector ships, individual hulls/liveries and full-page portfolios with column-header filters; not an inferred org chart. Khai's signature hull is a visual identity only.
 - **Process Atlas** — Explore canvas and a separate document-style Process Guide reading the same records.
 
 ## Run and verify
@@ -36,9 +37,9 @@ API, Directory starts unavailable; Atlas development uses a clearly labelled bun
 
 | Content | Edit location | Release |
 | --- | --- | --- |
-| Resources / categories / configuration / portfolio | Existing Links, Categories, Config, Portfolio Sheet tabs | Refresh/reload; legacy API may cache briefly |
-| Process / controls / references / metadata | AtlasStages, AtlasControls, AtlasReferences, AtlasConfig | Publish eligible records, then Source Info → Refresh source |
-| Reviewed process translations | Optional Translations Sheet tab | Complete current reviewed overlay, then refresh Atlas |
+| Resources / categories / configuration / portfolio | Existing Links, Categories, Config, Portfolio Sheet tabs | Reload page; legacy API may cache briefly |
+| Process / controls / references / metadata | AtlasStages, AtlasControls, AtlasReferences, AtlasConfig | Publish eligible records, then reload page |
+| Reviewed process translations | Optional Translations Sheet tab | Review-gated infrastructure only; not exposed in the English-only release |
 | UI labels / Crew profile copy | src/i18n/messages/ | Frontend build/deploy |
 | Crew identities / grouping / active roster | src/data/crew.ts | Frontend build/deploy; preserve stable IDs |
 | Layout / interactions / schema | Components / services / types | Tests, build and preview review |
@@ -46,21 +47,21 @@ API, Directory starts unavailable; Atlas development uses a clearly labelled bun
 Keep IDs as text (`01` is not `1`). Publication/API labels do not change actual
 Sheet or file sharing permissions. Verify access separately.
 
-- [Hub experience and bilingual maintenance](docs/hub-experience.md)
+- [Hub experience and translation boundary](docs/hub-experience.md)
 - [Atlas editing, business guardrails and API](docs/process-atlas.md)
 - [Reviewed translations contract](docs/atlas-translations.md)
 - [Apps Script setup and legacy schemas](apps-script/README.md)
 
 ## Navigation and language
 
-Use `?lang=en` or `?lang=vi` before the hash. URL language wins over saved preference;
-otherwise the last choice is remembered, initially English. Switching does not reload,
-reset filters, or Fit the Atlas camera. The UI default does not declare English to be
-the authoritative business text.
+The public interface is English-only. Legacy `?lang=vi` links and stored preferences
+also resolve to English without changing the page/filter hash. Original business text
+is not rewritten or declared authoritative by the interface language. EN/VI catalogs
+and the reviewed-overlay contract remain available for a future complete translation.
 
-Examples: `/?lang=vi#crew`, `/#member?id=khai`,
+Examples: `/#crew`, `/#member?id=khai`,
 `/#directory?country=VN&q=accrual`, `/#atlas?mode=guide&stage=04&tab=controls`.
-Directory filters (including allowlisted `type`) are shareable; Crew filters persist in-session, not in the URL.
+Directory filters (including allowlisted `type`) are shareable; portfolio filters persist in-session, not in the URL.
 Table is the default; `mode=cards` selects cards, and legacy `mode=compact` links remain valid.
 Ctrl/⌘K opens search. Escape closes a modal before any underlying page shortcut.
 

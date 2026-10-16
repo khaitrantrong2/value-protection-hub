@@ -23,7 +23,7 @@ async function runtime(componentName, scope = [], source = 'live') {
   const locale = Vue.ref('en'), callbacks = new Set(), listeners = new Map(), mediaListeners = new Set();
   const doc = { hidden: false, activeElement: null, addEventListener(key, fn) { listeners.set(key, fn); }, removeEventListener(key, fn) { if (listeners.get(key) === fn) listeners.delete(key); } };
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.props = {}; this.style = {}; this.parent = null; this.isConnected = true; this.tabIndex = 0; Vue.markRaw(this); }
+    constructor(tag) { this.tag = tag; this.children = []; this.props = {}; this.style = { setProperty(key, value) { this[key] = value; } }; this.parent = null; this.isConnected = true; this.tabIndex = 0; Vue.markRaw(this); }
     focus() { doc.activeElement = this; }
     contains(item) { return item === this || this.children.some(child => child.contains(item)); }
     matches(selector) { return selector === ':disabled' && !!this.props.disabled; }
@@ -40,7 +40,7 @@ async function runtime(componentName, scope = [], source = 'live') {
     '../data/crew': { crew }, '../services/fleetMotion': motion,
     '../i18n': { useLocale: () => ({ locale, text: (en, vi) => locale.value === 'vi' ? vi : en, t(key, params = {}) { const value = key.split('.').reduce((item, part) => item?.[part], messages[locale.value]); assert.equal(typeof value, 'string', key); return value.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? ''); } }) },
     '../composables/useLinks': { useLinks: () => state },
-    './StarfighterIcon.vue': Vue.defineComponent({ props: ['arch'], setup: props => () => Vue.h('svg', { 'data-hull': props.arch }) }),
+    './StarfighterIcon.vue': Vue.defineComponent({ props: ['arch', 'livery'], setup: props => () => Vue.h('svg', { 'data-hull': props.arch, 'data-livery': props.livery }) }),
     './CrewSourceNotice.vue': Vue.defineComponent({ setup: () => () => Vue.h('div', 'Source status') }),
     './MemberPortfolio.vue': Vue.defineComponent({ props: ['rows', 'memberId'], setup: props => () => Vue.h('div', { 'data-portfolio-member': props.memberId }, `${props.rows.length} published rows`) }),
     './Icon.vue': Vue.defineComponent({ setup: () => () => Vue.h('i') }),
@@ -70,6 +70,8 @@ test('Actual fleet renders 17 equal ship buttons with original SVG designs and a
   assert.equal(new Set(app.ships().map(ship => ship.props.class.replace(/fleet-ship--\w+/g, ''))).size, 1);
   assert.ok(app.ships().every(ship => ship.props['aria-label'].includes(' · ')));
   assert.ok(app.all().some(item => item.tag === 'svg'));
+  assert.equal(app.all().find(item => item.props['data-hull'] === 'aegis').props['data-livery'], motion.fleetSeed('khai'));
+  assert.equal(new Set(app.all().filter(item => item.props['data-livery'] !== undefined).map(item => item.props['data-livery'])).size, 17);
   assert.ok(!app.ships().some(ship => ship.props['data-protector-id'] === 'andriani'));
   app.app.unmount();
 });
@@ -86,6 +88,28 @@ test('Hover and selected ships stop while other actual ship transforms continue 
   app.tick(.08);
   assert.notEqual(first.style.transform, held);
   assert.equal(second.style.transform, selected);
+  app.app.unmount();
+});
+
+test('Crew depth animates hulls independently while hover, focus and selection freeze the full vessel', async () => {
+  const app = await runtime('ProtectorFleet'), [first, second] = app.ships();
+  const hullStyle = ship => ['--ship-heading', '--ship-bank', '--ship-pitch', '--ship-depth-scale', '--hull-brightness'].map(key => ship.style[key]);
+  const initial = hullStyle(first), other = hullStyle(second);
+  assert.notDeepEqual(initial, other);
+  app.tick(.08);
+  assert.notDeepEqual(hullStyle(first), initial);
+  assert.match(first.style.transform, /^translate\([^)]+\) translate\(-50%,-50%\)$/);
+  assert.equal(first.style.width, '88px'); assert.equal(first.style.height, '78px');
+  first.props.onPointerenter(); await Vue.nextTick();
+  const hovered = hullStyle(first), moving = hullStyle(second);
+  app.tick(.08);
+  assert.deepEqual(hullStyle(first), hovered); assert.notDeepEqual(hullStyle(second), moving);
+  first.props.onPointerleave(); first.props.onFocus(); await Vue.nextTick();
+  app.tick(.08); assert.deepEqual(hullStyle(first), hovered);
+  first.props.onBlur(); app.props.selectedId = first.props['data-protector-id']; await Vue.nextTick();
+  app.tick(.08); assert.deepEqual(hullStyle(first), hovered);
+  app.props.selectedId = ''; await Vue.nextTick(); app.tick(.08);
+  assert.notDeepEqual(hullStyle(first), hovered);
   app.app.unmount();
 });
 

@@ -124,16 +124,14 @@ test("Source Info removes its exact outside-pointer listener on unmount", () => 
   assert.equal(view.removed[0][1], listener);
 });
 
-test("Only an explicit Refresh source click emits refresh; loading renders a disabled button", () => {
+test("Source Info has no refresh action; reading metadata never refetches the source", () => {
   const view = runtime(props(), true);
   const button = descendants(view.state({}, [])).find(node => node.props?.class === "source-refresh");
-  assert.ok(button);
+  assert.equal(button, undefined);
   assert.deepEqual(view.events, []);
-  button.props.onClick();
-  assert.deepEqual(view.events, [["refresh"]]);
   const loading = runtime(props({ isLoading: true }), true);
   const disabled = descendants(loading.state({}, [])).find(node => node.props?.class === "source-refresh");
-  assert.equal(disabled.props.disabled, true);
+  assert.equal(disabled, undefined);
   assert.deepEqual(loading.events, []);
 });
 

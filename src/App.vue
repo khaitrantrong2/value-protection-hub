@@ -78,7 +78,7 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", onKeydown); stopLo
         <CommandHero />
       </div>
       <StartHere v-else-if="view === 'start'" />
-      <AtlasView v-else-if="view === 'atlas'" :data="atlasData" :source="atlasSource" :is-loading="atlasLoading" :error="atlasError" :refreshed-at="atlasRefreshedAt" @refresh="refreshAtlas" @preview="previewAtlasDraft" />
+      <AtlasView v-else-if="view === 'atlas'" :data="atlasData" :source="atlasSource" :is-loading="atlasLoading" :error="atlasError" :refreshed-at="atlasRefreshedAt" @preview="previewAtlasDraft" />
       <CrewView v-else-if="view === 'crew'" />
       <MemberView v-else-if="view === 'member'" />
       <SectorView v-else />

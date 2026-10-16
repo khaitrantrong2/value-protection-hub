@@ -74,19 +74,19 @@ function runtime() {
 const asset = (id, url, status = "Active") => ({ id, url, status, title: `Asset ${id}`, description: "", owner: "VP", country: "VN", category: "claimback-trackers", tags: [], accessNote: "" });
 const keyEvent = (key, target, extra = {}) => ({ key, target, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...extra });
 
-test("Header exposes all five destinations, language choice and current Team state for member pages", async () => {
+test("Header exposes all five destinations and current Team state without advertising an incomplete language switch", async () => {
   const app = runtime();
   try {
     app.state.view.value = "member";
     let html = await app.render("AppHeader");
     for (const href of ["#start", "#directory", "#crew", "#atlas"]) assert.ok(html.includes(`href="${href}"`));
     assert.match(html, /href="#crew" aria-current="page"/);
-    assert.match(html, /lang="en" aria-label="English" aria-pressed="true"/);
+    assert.doesNotMatch(html, /aria-label="English"|aria-label="Tiếng Việt"|hdr__language|hdr__locale/);
     assert.match(html, /aria-controls="hub-mobile-menu"/);
     assert.match(html, /Skip to main content/);
     app.locale.value = "vi";
     html = await app.render("AppHeader");
-    assert.match(html, /lang="vi" aria-label="Tiếng Việt" aria-pressed="true"/);
+    assert.doesNotMatch(html, /aria-label="English"|aria-label="Tiếng Việt"/);
     assert.match(html, /Đến nội dung chính/);
   } finally { app.stop(); }
 });
@@ -102,25 +102,23 @@ test("Start here keeps three distinct routes and merges responsibilities without
       const html = await app.render("StartHere");
       assert.equal((html.match(/<h1>/g) || []).length, 1);
       assert.equal((html.match(/<dt>/g) || []).length, 0);
+      assert.equal((html.match(/class="start-station start-station--/g) || []).length, 3);
+      assert.doesNotMatch(html, /<animateMotion/, 'Reduced motion suppresses introductory flight sparks');
       assert.doesNotMatch(html, /Who owns this\?|Ai phụ trách\?|A shared vocabulary|Thống nhất cách hiểu/);
       assert.match(html, lang === "en" ? /Explore Team &amp; Responsibilities/ : /Khám phá đội ngũ &amp; trách nhiệm/);
     }
   } finally { app.stop(); }
 });
 
-test("Home removes duplicate launch CTAs while labeling demo/stale source honestly", async () => {
+test("Home emphasizes the team identity in an asymmetric composition without global source badges or duplicate launch CTAs", async () => {
   const app = runtime();
   try {
-    const home = app.setup("CommandHero");
-    app.state.source.value = "mock";
-    assert.equal(home.sourceLabel.value, "Demo · not live");
-    app.state.source.value = "stale";
-    assert.equal(home.sourceLabel.value, "Retained source · refresh failed");
     app.locale.value = "vi";
-    assert.equal(home.sourceLabel.value, "Dữ liệu giữ lại · làm mới thất bại");
     const html = await app.render("CommandHero");
-    assert.doesNotMatch(html, /SYSTEM ONLINE|Understand the process|Meet the team|Tìm trên Google Drive|hero__actions|hero__hub-search/);
-    assert.match(html, /Value Protection Universe/);
+    assert.doesNotMatch(html, /SYSTEM ONLINE|Understand the process|Meet the team|Tìm trên Google Drive|hero__actions|hero__hub-search|hero__source|Live source|Retained source/);
+    assert.match(html, /<h1><span>VALUE<\/span><span>PROTECTION<\/span><\/h1>/);
+    assert.match(html, /class="hero__visual"/);
+    assert.match(html, /INTREPID UNIVERSE/);
     assert.equal((html.match(/<h1>/g) || []).length, 1);
     assert.deepEqual(app.destinations, []);
     assert.deepEqual(app.navigation, []);

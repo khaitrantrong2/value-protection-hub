@@ -140,7 +140,8 @@ test("Actual Guide templates preserve each chapter narrative, SIPOC, RACI and al
       seen.add(control.id);
       for (const value of [control.id, control.title, control.wcgw, ...control.assertions, control.frequency, control.ownerRole, control.evidenceLocation, control.limitation, control.sourceBasis]) if (value) assert.ok(html.includes(escape(value)), `${control.id}: missing ${value.slice(0, 50)}`);
     }
-    assert.match(html, /Not an approved SOP or an OE conclusion/);
+    assert.doesNotMatch(html, /guide-document-metadata|guide-document-disclaimer|guide-translation-notice/);
+    assert.doesNotMatch(html, /Evidence to locate/);
     assert.match(html, /Pending approval/);
   }
   assert.equal(seen.size, 24);
