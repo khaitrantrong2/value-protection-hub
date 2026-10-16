@@ -16,8 +16,10 @@ import type {
 import type { PortfolioRow } from "../data/memberPortfolios";
 import { mockCategories } from "../data/mockCategories";
 import { mockLinks } from "../data/mockLinks";
+import { matchesSearch } from "./search";
+import { getLinkDestination } from "./linkSafety";
 
-const API_URL = import.meta.env.VITE_LINKS_API_URL as string | undefined;
+const API_URL = (import.meta.env.VITE_LINKS_API_URL as string | undefined)?.trim() ?? "";
 
 const DEFAULT_CONFIG: PortalConfig = {
   portalName: "Value Protection Hub",
@@ -69,7 +71,7 @@ function toStatus(value: string): LinkStatus {
   if (v === "review") return "Review";
   if (v === "blocked") return "Blocked";
   if (v === "archived") return "Archived";
-  return "Active";
+  return v === "active" ? "Active" : "Review";
 }
 
 function toCriticality(value: string): Criticality {
@@ -90,16 +92,16 @@ function toCountry(value: string): CountryCode | "" {
 function parseLinkRow(row: LinkRow): LinkItem {
   return {
     id: String(row.ID ?? "").trim(),
-    category: toCategoryId(row.Category ?? ""),
+    category: toCategoryId(String(row.Category ?? "")),
     title: String(row.Title ?? "").trim(),
     description: String(row.Description ?? "").trim(),
     url: String(row.URL ?? "").trim(),
     owner: String(row.Owner ?? "").trim(),
-    country: toCountry(row.Country ?? ""),
-    status: toStatus(row.Status ?? ""),
-    tags: toTags(row.Tags ?? ""),
+    country: toCountry(String(row.Country ?? "")),
+    status: toStatus(String(row.Status ?? "")),
+    tags: toTags(String(row.Tags ?? "")),
     accessNote: String(row.AccessNote ?? "").trim(),
-    criticality: toCriticality(row.Criticality ?? ""),
+    criticality: toCriticality(String(row.Criticality ?? "")),
     sortOrder: toNumber(row.SortOrder),
     isActive: toBool(row.IsActive ?? true),
     lastUpdated: String(row.LastUpdated ?? "").trim(),
@@ -107,14 +109,14 @@ function parseLinkRow(row: LinkRow): LinkItem {
 }
 
 function parseCategoryRow(row: CategoryRow): CategoryDef {
-  const id = toCategoryId(row.Category ?? "");
+  const id = toCategoryId(String(row.Category ?? ""));
   const seed = mockCategories.find((c) => c.id === id);
   return {
     id,
-    name: row.Category?.trim() || seed?.name || id,
-    description: row.Description?.trim() || seed?.description || "",
-    color: row.Color?.trim() || seed?.color || "var(--accent-gray)",
-    icon: row.Icon?.trim() || seed?.icon || "folder",
+    name: String(row.Category ?? "").trim() || seed?.name || id,
+    description: String(row.Description ?? "").trim() || seed?.description || "",
+    color: String(row.Color ?? "").trim() || seed?.color || "var(--accent-gray)",
+    icon: String(row.Icon ?? "").trim() || seed?.icon || "folder",
     sortOrder: toNumber(row.SortOrder, seed?.sortOrder ?? 999),
   };
 }
@@ -126,8 +128,8 @@ function parseConfigRows(rows: ConfigRow[] | undefined): PortalConfig {
     portalName: map.get("PortalName") || DEFAULT_CONFIG.portalName,
     subtitle: map.get("Subtitle") || DEFAULT_CONFIG.subtitle,
     maintainer: map.get("Maintainer") || DEFAULT_CONFIG.maintainer,
-    adminSheetUrl: map.get("AdminSheetUrl") || "",
-    requestLinkUrl: map.get("RequestLinkUrl") || "",
+    adminSheetUrl: getLinkDestination({ url: map.get("AdminSheetUrl") || "" }).href ?? "",
+    requestLinkUrl: getLinkDestination({ url: map.get("RequestLinkUrl") || "" }).href ?? "",
     lastUpdatedNote: map.get("LastUpdatedNote") || "",
   };
 }
@@ -166,87 +168,120 @@ export interface LoadLinksResult {
   categories: CategoryDef[];
   config: PortalConfig;
   portfolio: PortfolioRow[];
-  source: "live" | "mock";
+  source: "live" | "stale" | "mock";
+  refreshedAt?: string;
   error?: string;
 }
 
-const CACHE_KEY = "vph:data:v1";
+const CACHE_KEY = "vph:data:v2:";
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const MAX_BYTES = 2 * 1024 * 1024;
+const REQUEST_TIMEOUT = 12000;
+type CacheStorage = Pick<Storage, "getItem" | "setItem">;
+export interface DirectoryLoadOptions { apiUrl?: string; signal?: AbortSignal; fetcher?: typeof fetch; storage?: CacheStorage | null }
 
-/** Returns the last successful live payload from localStorage for instant first paint (stale-while-revalidate). */
-export function readCachedLinks(): LoadLinksResult | null {
+function cacheStorage(options: DirectoryLoadOptions): CacheStorage | null {
+  if (options.storage !== undefined) return options.storage;
+  try { return typeof localStorage === "undefined" ? null : localStorage; } catch { return null; }
+}
+function cacheKey(apiUrl: string): string {
+  let hash = 2166136261;
+  for (const char of apiUrl) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  return CACHE_KEY + (hash >>> 0).toString(36);
+}
+function rowArray(value: unknown, max: number): value is Record<string, string | number | boolean | null>[] {
+  return Array.isArray(value) && value.length <= max && value.every((row) => row && typeof row === "object" && !Array.isArray(row) && Object.keys(row).length <= 50 && Object.values(row).every((cell) => cell == null || typeof cell === "boolean" || (typeof cell === "number" && Number.isFinite(cell)) || (typeof cell === "string" && cell.length <= 12000)));
+}
+function parsePayload(value: unknown): Omit<LoadLinksResult, "source" | "refreshedAt"> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+  const data = value as Record<string, unknown>;
+  if (!rowArray(data.links, 5000) || (data.categories !== undefined && !rowArray(data.categories, 100)) || (data.config !== undefined && !rowArray(data.config, 100)) || (data.portfolio !== undefined && !rowArray(data.portfolio, 20000))) throw new Error();
+  const rows = data as unknown as LinksApiResponse;
+  const parsedLinks = rows.links.map(parseLinkRow);
+  if (parsedLinks.some(link => link.isActive && (!link.id || !link.title))) throw new Error();
+  const links = parsedLinks.filter(link => link.isActive);
+  if (new Set(links.map((link) => link.id)).size !== links.length) throw new Error();
+  const parsedCategories = (rows.categories ?? []).map(parseCategoryRow);
+  return { links, categories: withFallbackCategories(links, parsedCategories.length ? parsedCategories : [...mockCategories]), config: parseConfigRows(rows.config), portfolio: (rows.portfolio ?? []).map(parsePortfolioRow).filter((row) => row.member) };
+}
+
+function validCachedResult(value: unknown): value is LoadLinksResult {
+  if (!value || typeof value !== "object") return false;
+  const result = value as LoadLinksResult;
+  const strings = (record: unknown, keys: string[]) => !!record && typeof record === "object" && keys.every((key) => typeof (record as Record<string, unknown>)[key] === "string");
+  const stringArray = (items: unknown): items is string[] => Array.isArray(items) && items.length <= 100 && items.every((item) => typeof item === "string");
+  const linksValid = Array.isArray(result.links) && result.links.length <= 5000 && result.links.every((link) => strings(link, ["id", "title", "url", "description", "owner", "category", "country", "status", "criticality", "lastUpdated", "accessNote"]) && Number.isFinite(link.sortOrder) && typeof link.isActive === "boolean" && stringArray(link.tags));
+  const categoriesValid = Array.isArray(result.categories) && result.categories.length <= 100 && result.categories.every((category) => strings(category, ["id", "name", "icon", "color", "description"]) && Number.isFinite(category.sortOrder));
+  const portfolioValid = Array.isArray(result.portfolio) && result.portfolio.length <= 20000 && result.portfolio.every((row) => strings(row, ["member", "country", "brand", "class", "complexity"]) && stringArray(row.platforms));
+  return linksValid && categoriesValid && portfolioValid && strings(result.config, ["portalName", "subtitle", "maintainer", "adminSheetUrl", "requestLinkUrl", "lastUpdatedNote"]);
+}
+
+/** A retained copy is never relabelled live; its original fetch timestamp is preserved. */
+export function readCachedLinks(options: DirectoryLoadOptions = {}): LoadLinksResult | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const c = JSON.parse(raw) as {
-      ts: number;
-      links: LinkItem[];
-      categories: CategoryDef[];
-      config: PortalConfig;
-      portfolio?: PortfolioRow[];
-    };
-    if (!c.ts || Date.now() - c.ts > CACHE_TTL) return null;
-    return { links: c.links, categories: c.categories, config: c.config, portfolio: c.portfolio ?? [], source: "live" };
+    const apiUrl = options.apiUrl ?? API_URL;
+    if (!apiUrl) return null;
+    const raw = cacheStorage(options)?.getItem(cacheKey(apiUrl));
+    if (!raw || raw.length > MAX_BYTES) return null;
+    const c = JSON.parse(raw);
+    if (c.apiUrl !== apiUrl || !Number.isFinite(c.ts) || c.ts > Date.now() || Date.now() - c.ts > CACHE_TTL || !validCachedResult(c.result) || c.result.refreshedAt !== new Date(c.ts).toISOString()) return null;
+    return { ...c.result, config: { ...c.result.config, adminSheetUrl: getLinkDestination({ url: c.result.config.adminSheetUrl }).href ?? "", requestLinkUrl: getLinkDestination({ url: c.result.config.requestLinkUrl }).href ?? "" }, source: "stale" };
   } catch {
     return null;
   }
 }
 
-function writeCache(result: LoadLinksResult): void {
+function writeCache(result: LoadLinksResult, apiUrl: string, options: DirectoryLoadOptions): void {
   try {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({
-        ts: Date.now(),
-        links: result.links,
-        categories: result.categories,
-        config: result.config,
-        portfolio: result.portfolio,
-      }),
-    );
+    cacheStorage(options)?.setItem(cacheKey(apiUrl), JSON.stringify({ apiUrl, ts: Date.parse(result.refreshedAt ?? ""), result }));
   } catch {
     /* storage unavailable / quota exceeded */
   }
 }
 
-function loadMock(error?: string): LoadLinksResult {
+export function previewLinks(): LoadLinksResult {
   return {
     links: mockLinks.filter((l) => l.isActive),
     categories: [...mockCategories].sort((a, b) => a.sortOrder - b.sortOrder),
     config: DEFAULT_CONFIG,
     portfolio: [],
     source: "mock",
-    error,
   };
 }
 
-export async function loadLinks(): Promise<LoadLinksResult> {
-  if (!API_URL) {
-    return loadMock();
-  }
-
+export async function loadLinks(options: DirectoryLoadOptions = {}): Promise<LoadLinksResult> {
+  const apiUrl = options.apiUrl ?? API_URL;
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  options.signal?.addEventListener("abort", abort, { once: true });
   try {
-    const response = await fetch(API_URL, { method: "GET" });
-    if (!response.ok) throw new Error(`API responded with ${response.status}`);
-
-    const data = (await response.json()) as LinksApiResponse;
-    const links = (data.links ?? []).map(parseLinkRow).filter((l) => l.isActive && l.id);
-    const categories = withFallbackCategories(
-      links,
-      (data.categories ?? []).map(parseCategoryRow).length
-        ? (data.categories ?? []).map(parseCategoryRow)
-        : [...mockCategories],
-    );
-    const config = parseConfigRows(data.config);
-    const portfolio = (data.portfolio ?? []).map(parsePortfolioRow).filter((p) => p.member);
-
-    const result: LoadLinksResult = { links, categories, config, portfolio, source: "live" };
-    writeCache(result);
+    if (!getLinkDestination({ url: apiUrl }).href || options.signal?.aborted) throw new Error();
+    const request = (async () => {
+      const response = await (options.fetcher ?? fetch)(apiUrl, { method: "GET", signal: controller.signal, credentials: "omit" });
+      if (!response.ok || Number(response.headers.get("content-length") ?? 0) > MAX_BYTES) throw new Error();
+      if (!response.body) { const text = await response.text(); if (text.length > MAX_BYTES) throw new Error(); return JSON.parse(text); }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let bytes = 0, text = "";
+      try {
+        for (;;) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          bytes += chunk.value.byteLength;
+          if (bytes > MAX_BYTES) { await reader.cancel(); throw new Error(); }
+          text += decoder.decode(chunk.value, { stream: true });
+        }
+        return JSON.parse(text + decoder.decode());
+      } finally { reader.releaseLock(); }
+    })();
+    const data = await Promise.race([request, new Promise<never>((_, reject) => { timeout = setTimeout(() => { controller.abort(); reject(new Error()); }, REQUEST_TIMEOUT); })]);
+    if (controller.signal.aborted) throw new Error();
+    const result: LoadLinksResult = { ...parsePayload(data), source: "live", refreshedAt: new Date().toISOString() };
+    writeCache(result, apiUrl, options);
     return result;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ...loadMock(message), error: "Unable to load live links. Showing local mock data." };
-  }
+  } catch { throw new Error("Directory source unavailable. No live data could be verified."); }
+  finally { if (timeout) clearTimeout(timeout); options.signal?.removeEventListener("abort", abort); }
 }
 
 export function sortLinks(links: LinkItem[]): LinkItem[] {
@@ -258,7 +293,7 @@ export function sortLinks(links: LinkItem[]): LinkItem[] {
 }
 
 export function filterLinks(links: LinkItem[], filters: LinkFilters): LinkItem[] {
-  const query = filters.query.trim().toLowerCase();
+  const query = filters.query.trim();
 
   return links.filter((link) => {
     if (filters.categoryId !== "all" && link.category !== filters.categoryId) return false;
@@ -268,11 +303,7 @@ export function filterLinks(links: LinkItem[], filters: LinkFilters): LinkItem[]
 
     if (!query) return true;
 
-    const haystack = [link.title, link.description, link.category, link.owner, link.country, link.status, ...link.tags]
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(query);
+    return matchesSearch(query, [link.title, link.description, link.category, link.owner, link.country, link.status, ...link.tags]);
   });
 }
 

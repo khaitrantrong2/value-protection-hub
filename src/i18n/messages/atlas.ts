@@ -1,0 +1,31 @@
+/** UI translations only. Business records are translated through the reviewed source overlay. */
+export const messages = {
+  en: { atlas: {
+    title: "Process Atlas", explore: "Explore", guide: "Process Guide", showPipeline: "Show data pipeline",
+    sourceInfo: "Source info", sourceLive: "Google Sheets · live source", sourceRetained: "Google Sheets · retained copy",
+    sourceDemo: "Bundled demo · not live source", sourceUnavailable: "Source unavailable", sourceLoading: "Loading source",
+    noVersion: "Version not specified", unspecified: "Not specified", pendingApproval: "Pending approval",
+    reported: "Reported", reportedPractice: "Reported practice", reportedControl: "Reported control", proposed: "Proposed",
+    developing: "Developing", inDevelopment: "In development", evidenceToLocate: "Evidence to locate", evidenceLocated: "Evidence located",
+    contents: "Contents", process: "End-to-end process", supporting: "Supporting capabilities", appendix: "Reference appendix",
+    allReferences: "All references", backToMap: "Back to map", print: "Print this chapter",
+    translationNotice: "Business content is shown in its source language where a complete, reviewed translation is not available or is out of date. UI language does not change approval or evidence status.",
+    translatedNotice: "Reviewed translation of the source record. IDs, version, approval and evidence states remain unchanged.",
+    documentStep: "Document sequence", reasonCode: "Change reasons", kpi: "KPI definitions", pipelineStep: "Automation handoffs",
+    settlementRoute: "Settlement routes", escalation: "Escalation", record: "Records & evidence", guidance: "Process guidance",
+  } },
+  vi: { atlas: {
+    title: "Bản đồ quy trình", explore: "Khám phá", guide: "Tài liệu quy trình", showPipeline: "Hiện luồng dữ liệu",
+    sourceInfo: "Thông tin nguồn", sourceLive: "Google Sheets · nguồn trực tiếp", sourceRetained: "Google Sheets · bản đọc gần nhất",
+    sourceDemo: "Bản minh họa đóng gói · không phải nguồn trực tiếp", sourceUnavailable: "Chưa tải được nguồn", sourceLoading: "Đang tải nguồn",
+    noVersion: "Chưa ghi phiên bản", unspecified: "Chưa ghi thông tin", pendingApproval: "Chờ phê duyệt",
+    reported: "Được mô tả", reportedPractice: "Thực hành được mô tả", reportedControl: "Kiểm soát được mô tả", proposed: "Đề xuất",
+    developing: "Đang phát triển", inDevelopment: "Đang phát triển", evidenceToLocate: "Cần tìm bằng chứng", evidenceLocated: "Đã xác định nơi lưu bằng chứng",
+    contents: "Mục lục", process: "Quy trình đầu cuối", supporting: "Quy trình hỗ trợ", appendix: "Phụ lục tham chiếu",
+    allReferences: "Tất cả tham chiếu", backToMap: "Về bản đồ", print: "In chương đang xem",
+    translationNotice: "Nội dung nghiệp vụ giữ nguyên ngôn ngữ nguồn nếu chưa có bản dịch đầy đủ đã được rà soát hoặc bản dịch đã lỗi thời. Ngôn ngữ giao diện không thay đổi trạng thái phê duyệt hay bằng chứng.",
+    translatedNotice: "Bản dịch đã rà soát của nội dung nguồn. Mã định danh, phiên bản, trạng thái phê duyệt và bằng chứng không thay đổi.",
+    documentStep: "Trình tự chứng từ", reasonCode: "Lý do điều chỉnh", kpi: "Định nghĩa KPI", pipelineStep: "Bàn giao automation",
+    settlementRoute: "Hình thức thanh toán / cấn trừ", escalation: "Cơ chế escalation", record: "Hồ sơ & bằng chứng", guidance: "Hướng dẫn quy trình",
+  } },
+} as const;

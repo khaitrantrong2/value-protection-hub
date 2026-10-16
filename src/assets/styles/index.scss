@@ -14,12 +14,12 @@ html {
   background: var(--space-abyss);
   color: var(--color-text-400);
   font-family:
-    "Outfit",
-    "Urbanist",
+    "Be Vietnam Pro",
     -apple-system,
     system-ui,
     sans-serif;
-  letter-spacing: 0.005em;
+  letter-spacing: 0;
+  font-synthesis: none;
   overflow: hidden;
 }
 
@@ -69,6 +69,24 @@ body {
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
 }
+
+/* Shared operational primitives: one focus, surface and control vocabulary across pages. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #d8c4ff;
+  outline-offset: 4px;
+}
+#main-content:focus { outline: none; }
+.skip-link { position: fixed; top: 8px; left: 12px; z-index: 300; transform: translateY(-180%); padding: 12px 18px; background: var(--space-navy); color: var(--color-text-400); border: 1px solid var(--color-card-border-hover); border-radius: var(--radius-md); }
+.skip-link:focus { transform: translateY(0); }
+.vph-button, .vph-icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--color-card-border); border-radius: var(--radius-md); background: var(--color-beige-500); color: var(--color-text-400); font-size: 14px; font-weight: 550; transition: background .18s var(--ease-power2-out), border-color .18s var(--ease-power2-out); }
+.vph-icon-button { min-width: 44px; padding: 8px; }
+.vph-button:hover, .vph-icon-button:hover { background: var(--color-beige-700); border-color: var(--color-card-border-hover); }
+.vph-button--primary { background: var(--grad-cta); border-color: transparent; }
+.vph-button--primary:hover { background: var(--grad-cta); filter: brightness(1.08); }
+.vph-input { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-field-border); border-radius: var(--radius-md); background: var(--color-field-bg); color: var(--color-text-400); font-size: 16px; }
+.vph-input::placeholder { color: var(--color-text-200); }
+.vph-surface { border: 1px solid var(--color-card-border); border-radius: var(--radius-lg); background: var(--color-card-bg); }
+@media (pointer: coarse) { .language-switch button { min-height: 44px; } }
 
 .visually-hidden {
   clip-path: inset(50%) !important;

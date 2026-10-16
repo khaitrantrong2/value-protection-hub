@@ -1,7 +1,7 @@
 # Process Atlas: chỉnh nội dung và kết nối live
 
 Atlas là material business understanding/onboarding, không phải transaction engine,
-approved SOP hoặc kết luận operating effectiveness. Map, Walkthrough và detail panel
+approved SOP hoặc kết luận operating effectiveness. Explore và Process Guide
 đọc cùng một content contract: `src/types/atlas.ts`.
 
 ## Khai/team sửa gì ở đâu?
@@ -13,16 +13,71 @@ approved SOP hoặc kết luận operating effectiveness. Map, Walkthrough và d
 | AtlasReferences | Reason codes, document steps, routes, pipeline, KPI | Group, Title, Body, Applicability |
 | AtlasConfig | Metadata của bản phát hành | ContentVersion, ProcessStatus, EffectiveFrom, UpdatedAt, Subtitle |
 | AtlasGuide | Hướng dẫn ngay trong Sheet | Không được serialize qua API |
+| Translations | Bản dịch theo ID và fingerprint source | Overlay đủ Reviewed + Published + Public; xem [contract](atlas-translations.md) |
 
-Sau khi API đã deploy đúng: sửa và lưu Sheet → **Refresh source** hoặc reload page.
+Sau khi API đã deploy đúng: sửa và lưu Sheet → reload page. Không còn nút Refresh source riêng; API cũ có thể cache ngắn hạn.
 Atlas không dùng server cache/localStorage. Layout, branch geometry, zoom hoặc thay schema
 cần sửa code và deploy frontend; thay wording không cần build lại.
 
-Desktop có **Focus map** để mở board rộng dưới header; source/demo và cảnh báo vẫn hiện.
-Escape đóng detail trước, rồi thoát focus. Màn hình 840px trở xuống dùng linear walkthrough.
+## Explore và Process Guide
+
+Desktop mặc định là board toàn phần chiều cao còn lại dưới header của Hub, không có page
+scroll lồng với canvas. Không cần bật Focus map riêng.
+
+- **Explore** chỉ trình bày flow: business stages 01–08, hai nhánh 05 chạy song song,
+  một cụm Data pipeline nhỏ dưới 02–04 và Master data node cấp input vào cụm đó.
+  Master data vẫn có phạm vi hỗ trợ xuyên suốt 01–08 trong source và Guide; vị trí node
+  không giới hạn scope nghiệp vụ. `Show Data Pipeline` chỉ ẩn/hiện lớp minh họa, không Fit.
+- **Source Info** gom metadata, source/version, status, ngày hiệu lực, thời điểm fetch,
+  và hướng dẫn tương tác. Demo/retained-copy vẫn có badge/cảnh báo rõ bên ngoài.
+  Không còn Go to stage, legend, help footer hoặc thư viện dưới canvas.
+- **Process Guide** là trang đọc riêng với mục lục bên trái và document bên phải: scope,
+  narrative, mini-flow Input → Process → Output, RACI, risks/controls/evidence/limitations,
+  supporting capabilities và provenance. Chọn card mở đúng chapter. Mục Reference appendix
+  giữ đủ các nhóm và record, có tìm kiếm/type filter; không còn modal/side inspector.
+
+Canvas giữ nguyên instance khi đọc Guide và quay lại, nên camera/zoom không bị reset.
+UI hiện chỉ dùng tiếng Anh; nút EN/VI được gỡ cho đến khi có bản dịch nghiệp vụ hoàn chỉnh. Link cũ `?lang=vi` vẫn mở đúng route/filter nhưng dùng giao diện tiếng Anh.
+UI labels có catalog riêng; nội dung thiếu bản dịch được review giữ nguyên source,
+không dịch máy hoặc coi bản EN mặc định là bản nghiệp vụ có thẩm quyền.
+Hidden viewport 0×0 không ghi đè measurement dương cuối cùng; Guide không truyền selection
+vào map phía sau. Fit chỉ chạy lần đầu có viewport hoặc khi người xem yêu cầu. Resize,
+Source Info, pipeline toggle và Guide navigation không tự Fit. Guide dùng mục lục dropdown
+trên màn hình nhỏ; Explore vẫn hỗ trợ pan/zoom trực tiếp.
+
+Keyboard: 1–8 mở chapter; Escape từ Guide quay về Explore. Escape trong Source Info chỉ
+đóng popover và trả focus, không chuyển trang. Trên canvas, arrow keys pan, +/- zoom, F Fit.
+Mục lục và Previous/Next dùng button thật, focus không kéo cuộn trang ngoài.
+
+Reading context có deep link, không đưa camera vào URL:
+
+- `#atlas?mode=guide&stage=04&tab=controls`: chapter 04, mở tại phần controls.
+- `#atlas?mode=guide&stage=05`: document của hai workstreams.
+- `#atlas?mode=guide&stage=04&library=reason-code&ref=R1`: reference appendix tại R1.
+
+Back/Forward khôi phục chapter/section/reference; deep links v3 `mode=story` và `stage=…`
+không có mode vẫn được đọc như Guide. Query IDs/enums được kiểm tra và giới hạn độ dài.
+UI reading state nằm ở `src/types/atlasUi.ts`; content contract `src/types/atlas.ts` và API
+schema version 1 không đổi. Guide navigation/filter không fetch API hoặc ghi Sheet.
+
+### Design references và giới hạn reuse
+
+Giữ Vue/Vite, scoped CSS, fonts và color tokens của Hub. Reuse hướng dẫn, không thêm các
+fork thành runtime dependencies:
+
+- [diagram-design / swimlane](https://github.com/khaitrantrong2/diagram-design/blob/11b08eade8049c441ed3df1895e3b527c26c0fbe/skills/diagram-design/references/type-swimlane.md):
+  phân biệt sequence với supporting dependencies; overview tách khỏi detail.
+- [impeccable / distill](https://github.com/khaitrantrong2/impeccable/blob/cf3d2fa07d3ad1814ac5fbbbb5b2043b795eaef1/.agents/skills/impeccable/reference/distill.md)
+  và [adapt](https://github.com/khaitrantrong2/impeccable/blob/cf3d2fa07d3ad1814ac5fbbbb5b2043b795eaef1/.agents/skills/impeccable/reference/adapt.md):
+  loại bỏ thông tin trùng tầng, Guide responsive riêng thay vì thu nhỏ document desktop.
+- [Vue conditional rendering](https://vuejs.org/guide/essentials/conditional.html#v-if-vs-v-show):
+  Canvas dùng `v-show` để giữ instance/camera; Guide chỉ render khi cần.
+
+Không thêm tilt/Atropos, ScrollTrigger pin hoặc smooth-scroll vào workspace: việc đọc flow,
+camera ổn định và keyboard navigation được ưu tiên. Deck tooling nằm ngoài phạm vi page.
 
 Hai nhánh 05 dùng reference IDs `BRANCH-05A` và `BRANCH-05B`: sửa Title/Body/Applicability
-ở AtlasReferences để Map và Walkthrough cùng cập nhật; không cần sửa paragraph trong Vue.
+ở AtlasReferences để Map và Guide cùng cập nhật; không cần sửa paragraph trong Vue.
 
 Giữ nguyên headers và IDs. Stage IDs là text `01`–`08`, `A`, `B`, không chuyển thành số.
 Danh sách dùng `|`; Pipeline dùng một handoff trên mỗi dòng. Không để phần tử trống/trùng.
@@ -91,20 +146,19 @@ giữ last-good in-memory **với warning**, không ghi là dữ liệu mới.
    canary vào source Sheet publicly viewable.
 5. Cập nhật đúng `VITE_LINKS_API_URL` trên Vercel nếu endpoint đổi, redeploy frontend.
    VITE variables nằm trong client bundle, **không phải secret**.
-6. Smoke test refresh, published empty/error states, navigation, canvas và mobile story
+6. Smoke test refresh, published empty/error states, navigation, canvas và mobile Guide
    trên preview trước merge. Chỉ mark live khi browser đọc API thực thành công.
 
-Read-only check tại thời điểm triển khai bản draft: endpoint trích từ bundle production
-trả Page Not Found; project mở từ Sheet có Code.gs mặc định myFunction(). Vì vậy seed
-Sheet và local tests không chứng minh production integration đã hoạt động.
+Không coi seed Sheet, local tests hoặc build thành công là bằng chứng live integration.
+Kiểm tra deployment và source state thực tế ở browser theo từng release.
 
 ## Verification / rollback
 
 `npm run typecheck`, `npm test`, `npm run build`. API/service fixtures cover privacy filters,
 header parity, edits/uncached refresh, old API, bad URLs/schema/links, timeouts and cancellation.
 Browser gate: 320/840/1024/1440px; min/Fit/medium/max zoom; title inside cards; 05 A/B,
-detail panel, keyboard 1–8/Escape, offscreen Tab order, mobile Next and reduced motion.
-Camera math/lifecycle, reduced-motion branch và request races có test riêng; không coi
+Guide/Source Info/pipeline toggle, keyboard 1–8/Escape, offscreen Tab order, mobile Next and reduced motion.
+Camera math/lifecycle, route/history, workspace mount retention, reduced-motion branch và request races có test riêng; không coi
 synthetic tests là bằng chứng API live hoặc visual verification.
 
 Rollback frontend bằng previous Vercel deployment; rollback API bằng saved deployment

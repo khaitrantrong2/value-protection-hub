@@ -39,6 +39,7 @@ var LINK_COLUMNS = [
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === "atlas") return doGetAtlas_();
+  if (e && e.parameter && e.parameter.action === "translations") return doGetAtlas_(true);
   var sourceID = getSourceSpreadsheetId_();
   var cacheKey = sourceID ? "vph_payload_v1:" + sourceID : "vph_payload_v1";
   // Serve a 60-second server cache so repeat hits skip re-reading the sheet (faster response).
@@ -248,6 +249,54 @@ var ATLAS_COLUMNS = {
   AtlasConfig: ["Key", "Value", "Publication", "Visibility"],
 };
 var ATLAS_PUBLIC_HOSTS = ["standards.auasb.gov.au", "docs.oracle.com", "ifrs.org", "www.ifrs.org", "iso.org", "www.iso.org", "developers.google.com", "gsap.com"];
+var ATLAS_TRANSLATION_COLUMNS = ["EntityType", "EntityID", "Field", "Locale", "Text", "SourceFingerprint", "ReviewStatus", "Publication", "Visibility"];
+var ATLAS_TRANSLATABLE_FIELDS = {
+  stage: ["shortTitle", "title", "businessQuestion", "roleTag", "sipoc.supplier", "sipoc.input", "sipoc.process", "sipoc.output", "sipoc.customer", "raci.accountable", "raci.responsible", "raci.consulted", "raci.informed", "narrative", "caution", "applicability", "pipeline"],
+  control: ["title", "wcgw", "assertions", "frequency", "ownerRole", "limitation"],
+  reference: ["title", "body", "applicability"],
+};
+
+/** Stable across Apps Script/browser JSON property order; identity/state/version are included. */
+function atlasCanonicalRecord_(value) {
+  if (Array.isArray(value)) return "[" + value.map(atlasCanonicalRecord_).join(",") + "]";
+  if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(function (key) { return JSON.stringify(key) + ":" + atlasCanonicalRecord_(value[key]); }).join(",") + "}";
+  return JSON.stringify(value);
+}
+function atlasSourceFingerprint_(entity) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, atlasCanonicalRecord_(entity), Utilities.Charset.UTF_8);
+  return "sha256:" + bytes.map(function (byte) { return ((byte + 256) % 256).toString(16).padStart(2, "0"); }).join("");
+}
+
+/** Optional tab. Only reviewed + public + published overlays of current public source IDs leave the API. */
+function atlasTranslations_(payload) {
+  try {
+    var sheet = getSourceSpreadsheet_().getSheetByName("Translations");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+    if (sheet.getLastRow() > 1001 || sheet.getLastColumn() > 30) return [];
+    var values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+    var headers = values[0].map(function (value) { return String(value).trim(); });
+    if (ATLAS_TRANSLATION_COLUMNS.some(function (column) { return headers.indexOf(column) < 0 || headers.indexOf(column) !== headers.lastIndexOf(column); })) return [];
+    var entities = { stage: payload.stages, control: payload.controls, reference: payload.references };
+    var fingerprints = Object.create(null), rows = [];
+    values.slice(1).forEach(function (cells) {
+      function cell(name) { return cells[headers.indexOf(name)]; }
+      if (cell("Publication") !== "Published" || cell("Visibility") !== "Public" || cell("ReviewStatus") !== "Reviewed") return;
+      var type = cell("EntityType"), entityID = cell("EntityID"), field = cell("Field"), locale = cell("Locale");
+      if (!Object.prototype.hasOwnProperty.call(ATLAS_TRANSLATABLE_FIELDS, type) || ATLAS_TRANSLATABLE_FIELDS[type].indexOf(field) < 0 || ["en", "vi"].indexOf(locale) < 0) return;
+      var entity = entities[type].find(function (item) { return item.id === entityID; });
+      if (!entity) return;
+      var key = type + ":" + entityID;
+      if (!fingerprints[key]) fingerprints[key] = atlasSourceFingerprint_(entity);
+      var fingerprint = atlasText_(cell("SourceFingerprint"), 72, true);
+      if (fingerprint !== fingerprints[key]) return;
+      rows.push({ entityType: type, entityId: entityID, field: field, locale: locale, text: atlasText_(cell("Text"), 12000, true), sourceFingerprint: fingerprint, reviewStatus: "Reviewed", publication: "Published", visibility: "Public" });
+    });
+    return JSON.stringify(rows).length <= 200000 ? rows : [];
+  } catch (error) {
+    // Translation failure never downgrades/hides valid source records or exposes source diagnostics.
+    return [];
+  }
+}
 
 function atlasInvalid_() {
   var error = new Error("Invalid Atlas content");
@@ -448,7 +497,7 @@ function atlasUniqueIDs_(items) {
 }
 
 /** The Atlas route never caches, so a refresh reads the latest publication decisions. */
-function doGetAtlas_() {
+function doGetAtlas_(translationsOnly) {
   try {
     var stages = atlasPublishedRows_("AtlasStages").map(atlasStage_);
     var controls = atlasPublishedRows_("AtlasControls").map(atlasControl_);
@@ -472,6 +521,9 @@ function doGetAtlas_() {
       controls: controls,
       references: references,
     };
+    var translations = atlasTranslations_(payload);
+    if (translations.length && JSON.stringify(payload).length + JSON.stringify(translations).length < 500000) payload.translations = translations;
+    if (translationsOnly) return jsonResponse({ ok: true, translations: payload.translations || [] });
     if (JSON.stringify(payload).length > 500000) atlasInvalid_();
     return jsonResponse({ ok: true, atlas: payload });
   } catch (err) {

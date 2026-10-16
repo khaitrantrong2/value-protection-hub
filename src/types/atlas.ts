@@ -1,3 +1,4 @@
+import type { AtlasTranslation } from "./atlasTranslations";
 /** One editable content contract for the Atlas canvas, story and stage detail. */
 export const ATLAS_STAGE_IDS = ["01", "02", "03", "04", "05", "06", "07", "08", "A", "B"] as const;
 export type AtlasStageId = (typeof ATLAS_STAGE_IDS)[number];
@@ -75,6 +76,8 @@ export interface AtlasPayload {
   stages: AtlasStage[];
   controls: AtlasControl[];
   references: AtlasReference[];
+  /** Optional reviewed overlays; absent on the legacy deployment. Source records stay authoritative. */
+  translations?: AtlasTranslation[];
 }
 
 export type AtlasApiResponse = { ok: true; atlas: AtlasPayload } | { ok: false; error: { code: string; message: string } };

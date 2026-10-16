@@ -6,10 +6,10 @@ import { transform } from "esbuild";
 
 const source = readFileSync(new URL("../src/composables/useAtlasCamera.ts", import.meta.url), "utf8");
 const compiled = await transform(source, { loader: "ts", format: "cjs", target: "es2022" });
-const world = { x: 32, y: 80, width: 3136, height: 820 };
+const world = { x: 32, y: 60, width: 3136, height: 1050 };
 const padding = { top: 24, right: 24, bottom: 104, left: 24 };
 
-function runtime({ width = 1440, height = 640, reduced = true, insets = () => padding } = {}) {
+function runtime({ width = 1440, height = 640, reduced = true, insets = () => padding, bounds = world } = {}) {
   const mounted = [], unmounted = [], watchers = [], frames = new Map(), cancelled = [], observers = [];
   let clock = 0, nextFrame = 1;
   const reducedMotion = { value: reduced }, captured = new Set();
@@ -42,7 +42,7 @@ function runtime({ width = 1440, height = 640, reduced = true, insets = () => pa
     },
   });
   vm.runInContext(compiled.code, context);
-  const camera = context.module.exports.useAtlasCamera({ value: element }, world, insets);
+  const camera = context.module.exports.useAtlasCamera({ value: element }, bounds, insets);
   mounted.forEach((callback) => callback());
   return {
     ...camera, element, frames, cancelled, observers, captured,
@@ -95,7 +95,7 @@ test("Fit keeps the entire declared process world within camera insets", () => {
   }
 });
 
-test("Selection fits at 1440/1024 layout widths after their declared detail panels", () => {
+test("Explicit framing utility respects insets at narrow inspector layout widths", () => {
   // Static geometry acceptance, not a browser measurement of CSS or rendered text.
   for (const [pageWidth, pagePadding, detailWidth] of [[1440, 64, 360], [1024, 48, 320]]) {
     const width = pageWidth - pagePadding - 2 - detailWidth, height = 640;
@@ -107,7 +107,7 @@ test("Selection fits at 1440/1024 layout widths after their declared detail pane
   }
 });
 
-test("Stage 05 frames both parallel branches without clipping at detail widths", () => {
+test("Explicit framing can include both parallel branches when a caller deliberately requests it", () => {
   const selection = { x: 1520, y: 118, width: 428, height: 764 };
   const branches = [{ x: 1584, y: 150, width: 300, height: 220 }, { x: 1584, y: 630, width: 300, height: 220 }];
   for (const [width, height] of [[1014, 640], [654, 640], [654, 460]]) {
@@ -174,16 +174,95 @@ test("Ctrl/Meta wheel normalizes modes and zooms about viewport-local cursor coo
   }
 });
 
-test("Resize measures the current viewport before reframing selection", () => {
+test("Opening and closing an inspector measures its viewport without reframing the camera", () => {
   const view = runtime({ width: 1374 });
-  const selected = { x: 1520, y: 118, width: 428, height: 764 };
-  let resized = 0;
-  view.onResize(() => { resized++; view.focus(selected, false); });
+  Object.assign(view.camera, { x: -320, y: 52, scale: 0.73 });
+  const before = { ...view.camera };
   view.element.clientWidth = 1014;
   view.observers[0].trigger();
-  assert.equal(resized, 1);
   assert.equal(view.viewportSize.width, 1014);
-  inside(view.camera, selected, 1014, 640, padding);
+  assert.deepEqual({ ...view.camera }, before);
+  view.element.clientWidth = 1374;
+  view.observers[0].trigger();
+  assert.deepEqual({ ...view.camera }, before);
+});
+
+test("A hidden canvas preserves its last positive measurement and camera until shown again", () => {
+  const view = runtime();
+  const camera = { ...view.camera }, size = { ...view.viewportSize };
+  view.element.clientWidth = 0;
+  view.element.clientHeight = 0;
+  view.observers[0].trigger();
+  assert.deepEqual({ ...view.viewportSize }, size);
+  assert.deepEqual({ ...view.camera }, camera);
+  view.element.clientWidth = 1100;
+  view.element.clientHeight = 500;
+  view.observers[0].trigger();
+  assert.equal(view.viewportSize.width, 1100);
+  assert.deepEqual({ ...view.camera }, camera);
+});
+
+test("Initial fit waits for the first nonzero viewport and never repeats on resize", () => {
+  const view = runtime({ width: 0, height: 0 });
+  assert.equal(view.camera.scale, 0.3);
+  view.element.clientWidth = 1440;
+  view.element.clientHeight = 640;
+  view.observers[0].trigger();
+  inside(view.camera, world, 1440, 640, padding);
+  const initial = { ...view.camera };
+  view.element.clientWidth = 1000;
+  view.observers[0].trigger();
+  assert.deepEqual({ ...view.camera }, initial);
+});
+
+test("Rendered fit bounds are recomputed only for initial or explicitly requested Fit", () => {
+  const measured = [];
+  const view = runtime({ bounds(size) { measured.push({ ...size }); return world; } });
+  assert.equal(measured.length, 1);
+  view.element.clientWidth = 1000;
+  view.observers[0].trigger();
+  assert.equal(measured.length, 1);
+  view.fit(false);
+  assert.equal(measured.length, 2);
+  assert.equal(measured[1].width, 1000);
+});
+
+test("Selecting an already-visible card never moves or zooms the camera", () => {
+  const view = runtime();
+  Object.assign(view.camera, { x: 100, y: 100, scale: 0.7 });
+  const before = { ...view.camera };
+  view.ensureVisible({ x: 200, y: 100, width: 300, height: 220 });
+  assert.deepEqual({ ...view.camera }, before);
+  assert.equal(view.frames.size, 0);
+});
+
+test("Selecting a hidden card pans only the minimum distance and never changes scale", () => {
+  const view = runtime();
+  Object.assign(view.camera, { x: 0, y: 0, scale: 0.8 });
+  const target = { x: 1700, y: 600, width: 300, height: 220 };
+  view.ensureVisible(target);
+  close(view.camera.x, 1440 - padding.right - 2000 * 0.8, "minimum horizontal pan");
+  close(view.camera.y, 640 - padding.bottom - 820 * 0.8, "minimum vertical pan");
+  close(view.camera.scale, 0.8, "selection preserves zoom");
+  inside(view.camera, target, 1440, 640, padding);
+  const beforeClose = { ...view.camera };
+  view.element.clientWidth = 1800;
+  view.observers[0].trigger();
+  assert.deepEqual({ ...view.camera }, beforeClose);
+});
+
+test("Direct keyboard pan cancels stale animated selection or fit frames", () => {
+  const view = runtime({ reduced: false });
+  view.focus({ x: 1000, y: 300, width: 428, height: 284 });
+  const staleFrame = [...view.frames.values()][0];
+  const before = { ...view.camera };
+  view.panBy(72, -72);
+  const direct = { ...view.camera };
+  close(direct.x, before.x + 72, "keyboard pan x");
+  close(direct.y, before.y - 72, "keyboard pan y");
+  assert.equal(view.frames.size, 0);
+  staleFrame(360);
+  assert.deepEqual({ ...view.camera }, direct);
 });
 
 test("Pointer drag ignores interactive targets and releases capture on end/cancel", () => {

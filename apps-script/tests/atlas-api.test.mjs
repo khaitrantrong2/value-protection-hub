@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
 
 const source = readFileSync(new URL("../Code.gs", import.meta.url), "utf8");
 const contract = readFileSync(new URL("../../src/types/atlas.ts", import.meta.url), "utf8");
@@ -43,7 +46,14 @@ function runtime(initial = {}, options = {}) {
       createTextOutput: (body) => ({ setMimeType: () => ({ body }) }),
     },
     Session: { getScriptTimeZone: () => "UTC" },
-    Utilities: { formatDate: (date) => date.toISOString().slice(0, 10) },
+    Utilities: {
+      formatDate: (date) => date.toISOString().slice(0, 10),
+      DigestAlgorithm: { SHA_256: "SHA-256" }, Charset: { UTF_8: "UTF-8" },
+      computeDigest(algorithm, value, encoding) {
+        assert.equal(algorithm, "SHA-256"); assert.equal(encoding, "UTF-8");
+        return Array.from(createHash("sha256").update(value, "utf8").digest(), byte => byte > 127 ? byte - 256 : byte);
+      },
+    },
   });
   vm.runInContext(source, context);
   return { context, cache, spreadsheet, properties, calls };
@@ -301,4 +311,124 @@ test("Editor/legacy source fallback preserves the original cache key and returns
   assert.equal(cache.has("vph_payload_v1"), true);
   const missing = runtime({}, { active: null });
   assert.throws(() => missing.context.getSourceSpreadsheet_(), { message: "Source spreadsheet is not configured or accessible." });
+});
+
+const translationBuild = await build({ entryPoints: [fileURLToPath(new URL("../../src/services/atlasTranslationService.ts", import.meta.url))], bundle: true, write: false, format: "esm", platform: "node", logLevel: "silent" });
+const translationApi = await import(`data:text/javascript;base64,${Buffer.from(translationBuild.outputFiles[0].text).toString("base64")}`);
+const translationContract = readFileSync(new URL("../../src/types/atlasTranslations.ts", import.meta.url), "utf8");
+
+function withTranslations(rows, headers) {
+  const tables = fixture();
+  const { context } = runtime(tables);
+  tables.Translations = table(headers ?? Array.from(context.ATLAS_TRANSLATION_COLUMNS), rows);
+  return runtime(tables);
+}
+function translationRow(context, overrides = {}) {
+  const entity = atlasResponse(context).atlas.stages[0];
+  return { EntityType: "stage", EntityID: entity.id, Field: "title", Locale: "vi", Text: "Quy trình công khai", SourceFingerprint: context.atlasSourceFingerprint_(entity), ReviewStatus: "Reviewed", ...publication, ...overrides };
+}
+
+test("Optional translation tab is backwards compatible, uncached and independently publication gated", () => {
+  const initial = runtime(fixture());
+  const base = atlasResponse(initial.context);
+  assert.equal(base.ok, true); assert.equal("translations" in base.atlas, false);
+  assert.deepEqual(JSON.parse(initial.context.doGet({ parameter: { action: "translations" } }).body), { ok: true, translations: [] });
+  const row = translationRow(initial.context);
+  const { context, cache } = withTranslations([
+    row,
+    { ...row, Text: "draft-private-marker", Publication: "Draft" },
+    { ...row, Text: "internal-private-marker", Visibility: "Internal" },
+    { ...row, Text: "unreviewed-private-marker", ReviewStatus: "Draft" },
+    { ...row, Text: "case-private-marker", ReviewStatus: "reviewed" },
+    { ...row, Text: "unknown-id-private-marker", EntityID: "UNKNOWN" },
+    { ...row, Text: "unknown-field-private-marker", Field: "url" },
+    { ...row, Text: "unknown-type-private-marker", EntityType: "__proto__" },
+    { ...row, Text: "wrong-locale-private-marker", Locale: "fr" },
+    { ...row, Text: "stale-private-marker", SourceFingerprint: `sha256:${"0".repeat(64)}` },
+  ]);
+  cache.set("vph_payload_v1", JSON.stringify({ links: [{ ID: "legacy" }] }));
+  const response = atlasResponse(context);
+  assert.equal(response.atlas.stages[0].title, base.atlas.stages[0].title);
+  assert.equal(response.atlas.translations.length, 1);
+  assert.equal(response.atlas.translations[0].text, row.Text);
+  assert.doesNotMatch(JSON.stringify(response), /private-marker/);
+  assert.deepEqual(JSON.parse(context.doGet({ parameter: { action: "translations" } }).body).translations, response.atlas.translations);
+  assert.equal(cache.size, 1);
+});
+
+test("Frontend and Apps Script translation allowlists and SHA-256 fingerprints are identical", async () => {
+  const { context } = runtime(fixture());
+  const source = atlasResponse(context).atlas;
+  const match = translationContract.match(/export const ATLAS_TRANSLATABLE_FIELDS = ([\s\S]*?) as const;/);
+  assert.ok(match);
+  const frontendFields = vm.runInNewContext(`(${match[1]})`);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.ATLAS_TRANSLATABLE_FIELDS)), JSON.parse(JSON.stringify(frontendFields)));
+  const header = translationContract.match(/export const ATLAS_TRANSLATION_COLUMNS = (\[[^;]+\]) as const;/);
+  assert.ok(header);
+  assert.deepEqual(Array.from(context.ATLAS_TRANSLATION_COLUMNS), Array.from(vm.runInNewContext(header[1])));
+  for (const entity of [...source.stages, ...source.controls, ...source.references]) {
+    assert.equal(context.atlasCanonicalRecord_(entity), translationApi.canonicalAtlasRecord(entity));
+    assert.equal(context.atlasSourceFingerprint_(entity), await translationApi.atlasSourceFingerprint(entity));
+    const reordered = Object.fromEntries(Object.entries(entity).reverse());
+    assert.equal(context.atlasSourceFingerprint_(entity), await translationApi.atlasSourceFingerprint(reordered));
+  }
+  const unicode = { ...source.stages[0], title: "Đối soát & xác nhận nghĩa vụ — VN / ไทย", narrative: "Unicode \"quoted\"\nnext line" };
+  assert.equal(context.atlasSourceFingerprint_(unicode), await translationApi.atlasSourceFingerprint(unicode));
+  for (const change of [{ contentVersion: "new" }, { practiceState: "proposed" }, { sourceBasis: "new source" }, { title: "new title" }]) assert.notEqual(context.atlasSourceFingerprint_(source.stages[0]), await translationApi.atlasSourceFingerprint({ ...source.stages[0], ...change }));
+});
+
+test("Malformed optional translation headers and text fail closed without invalidating the source Atlas", () => {
+  const initial = runtime(fixture()), row = translationRow(initial.context);
+  const normal = Array.from(initial.context.ATLAS_TRANSLATION_COLUMNS);
+  for (const headers of [normal.filter(value => value !== "Visibility"), [...normal, "Publication"]]) {
+    const response = atlasResponse(withTranslations([row], headers).context);
+    assert.equal(response.ok, true); assert.equal(response.atlas.stages[0].title, "Public process");
+    assert.equal("translations" in response.atlas, false);
+  }
+  for (const text of ["", "bad\u0000text", "x".repeat(12001)]) {
+    const response = atlasResponse(withTranslations([{ ...row, Text: text }]).context);
+    assert.equal(response.ok, true); assert.equal("translations" in response.atlas, false);
+    assert.doesNotMatch(JSON.stringify(response), /bad\\u0000text/);
+  }
+});
+
+test("Serialized complete overlays apply only as whole logical records; malformed arrays and duplicate fields retain source", async () => {
+  const initial = runtime(fixture()), base = atlasResponse(initial.context).atlas;
+  const sourceStage = base.stages[0], columns = Array.from(initial.context.ATLAS_TRANSLATABLE_FIELDS.stage);
+  const rows = columns.flatMap(field => {
+    const value = field.split(".").reduce((item, key) => item?.[key], sourceStage);
+    if (!(typeof value === "string" ? value.trim() : value?.length)) return [];
+    return [translationRow(initial.context, { Field: field, Text: Array.isArray(value) ? JSON.stringify(value.map((_, index) => `Vai trò ${index + 1}`)) : `Bản dịch ${field}` })];
+  });
+  for (const kind of ["complete", "array", "duplicate", "missing"]) {
+    const candidate = structuredClone(rows);
+    if (kind === "array") candidate.find(row => row.Field === "raci.responsible").Text = "not a JSON array";
+    if (kind === "duplicate") candidate.push({ ...candidate[0] });
+    if (kind === "missing") candidate.pop();
+    const response = atlasResponse(withTranslations(candidate).context);
+    assert.equal(response.ok, true);
+    const localized = await translationApi.localizeAtlasPayload(response.atlas, "vi");
+    if (kind === "complete") {
+      assert.equal(localized.data.stages[0].title, "Bản dịch title");
+      assert.equal(localized.translatedKeys.has("stage:01"), true);
+    } else {
+      assert.deepEqual(localized.data.stages[0], sourceStage, kind);
+      assert.equal(localized.translatedKeys.has("stage:01"), false, kind);
+    }
+    assert.equal(localized.data.stages[0].practiceState, sourceStage.practiceState);
+    assert.deepEqual(response.atlas.stages[0], sourceStage);
+  }
+});
+
+test("A source edit invalidates the previous translation fingerprint immediately on the uncached route", () => {
+  const tables = fixture(), initial = runtime(tables), row = translationRow(initial.context);
+  tables.Translations = table(Array.from(initial.context.ATLAS_TRANSLATION_COLUMNS), [row]);
+  const { context } = runtime(tables);
+  assert.equal(atlasResponse(context).atlas.translations.length, 1);
+  tables.AtlasStages[1][tables.AtlasStages[0].indexOf("ContentVersion")] = "next-source-version";
+  const changed = atlasResponse(context);
+  assert.equal(changed.ok, true);
+  assert.equal(changed.atlas.stages[0].contentVersion, "next-source-version");
+  assert.equal("translations" in changed.atlas, false);
+  assert.deepEqual(JSON.parse(context.doGet({ parameter: { action: "translations" } }).body), { ok: true, translations: [] });
 });

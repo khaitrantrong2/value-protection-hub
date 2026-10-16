@@ -1,12 +1,16 @@
-import { computed, reactive, ref } from "vue";
-import type { CategoryId, CountryCode, Criticality, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
-import type { CrewMember } from "../data/crew";
+import { computed, reactive, ref, watch } from "vue";
+import type { CategoryId, CountryCode, Criticality, DirectoryQuickView, DirectorySource, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
+import { filterVaultQuickView } from "../services/vaultFilters";
+import { crew, type CrewMember } from "../data/crew";
 import type { PortfolioRow } from "../data/memberPortfolios";
+import { isAtlasHash } from "./useAtlasRouteState";
+import { parseHubHash, serializeHubHash, type HubRoute, type HubView } from "./hubRoute";
 import {
   computeStats,
   filterLinks,
   loadLinks,
   readCachedLinks,
+  previewLinks,
   sortLinks,
   type LoadLinksResult,
 } from "../services/linkService";
@@ -14,51 +18,112 @@ import {
 const links = ref<LinkItem[]>([]);
 const categories = ref<Awaited<ReturnType<typeof loadLinks>>["categories"]>([]);
 const config = ref<Awaited<ReturnType<typeof loadLinks>>["config"] | null>(null);
-const source = ref<"live" | "mock" | null>(null);
+const source = ref<DirectorySource | null>(null);
+const refreshedAt = ref<string | undefined>(undefined);
 const error = ref<string | undefined>(undefined);
 const isLoading = ref(true);
 const portfolioRows = ref<PortfolioRow[]>([]);
 
+const initialRoute = parseHubHash(window.location.hash);
 const filters = reactive({
-  query: "",
+  query: initialRoute.query,
   categoryId: "all" as CategoryId | "all",
-  country: "all" as CountryCode | "all",
-  status: "all" as LinkStatus | "all",
-  criticality: "all" as Criticality | "all",
+  country: initialRoute.country as CountryCode | "all",
+  status: initialRoute.status as LinkStatus | "all",
+  criticality: initialRoute.criticality as Criticality | "all",
 });
 
-const scope = ref<Scope>("all");
-const viewMode = ref<ViewMode>("compact");
+const scope = ref<Scope>(initialRoute.scope);
+const viewMode = ref<ViewMode>(initialRoute.viewMode);
+const directoryQuickView = ref<DirectoryQuickView>(initialRoute.quickView);
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
-const view = ref<"home" | "sector" | "crew" | "member" | "atlas">(window.location.hash === "#atlas" ? "atlas" : "home");
-const selectedMember = ref<CrewMember | null>(null);
+const view = ref<HubView>(isAtlasHash(window.location.hash) ? "atlas" : initialRoute.view);
+const selectedMember = ref<CrewMember | null>(crew.find((member) => member.id === initialRoute.memberId && member.active !== false) ?? null);
+let syncingRoute = false;
+
+// Shared navigation state lives for the app lifetime, including hash links and browser history.
+function syncHubView() {
+  syncingRoute = true;
+  const state = parseHubHash(window.location.hash);
+  view.value = isAtlasHash(window.location.hash) ? "atlas" : state.view;
+  if (state.view === "sector") {
+    scope.value = state.scope;
+    filters.query = state.query;
+    filters.country = state.country;
+    filters.status = state.status;
+    filters.criticality = state.criticality;
+    viewMode.value = state.viewMode;
+    directoryQuickView.value = state.quickView;
+    criticalOnly.value = false;
+  }
+  if (state.view === "member") selectedMember.value = crew.find((member) => member.id === state.memberId && member.active !== false) ?? null;
+  syncingRoute = false;
+}
+window.addEventListener("hashchange", syncHubView);
+window.addEventListener("popstate", syncHubView);
+
+function routeState(nextView = view.value): HubRoute {
+  return { view: nextView, scope: scope.value, country: filters.country, status: filters.status, criticality: criticalOnly.value ? "High" : filters.criticality, query: filters.query, viewMode: viewMode.value, quickView: directoryQuickView.value, memberId: selectedMember.value?.id ?? "" };
+}
+function writeRoute(nextView: HubView, replace = false) {
+  const hash = serializeHubHash(routeState(nextView));
+  view.value = nextView;
+  if (window.location.hash !== hash) window.history[replace ? "replaceState" : "pushState"](window.history.state, "", window.location.pathname + window.location.search + hash);
+}
+watch([() => filters.query, () => filters.country, () => filters.status, () => filters.criticality, scope, viewMode, criticalOnly, directoryQuickView], () => {
+  if (!syncingRoute && view.value === "sector") writeRoute("sector", true);
+}, { flush: "sync" });
 
 const RECENT_WINDOW_DAYS = 30;
 
 let hasLoaded = false;
+let hasVerifiedSnapshot = false;
+let requestGeneration = 0;
+let pendingRequest: AbortController | null = null;
 
 function applyResult(result: LoadLinksResult) {
   links.value = sortLinks(result.links);
   categories.value = result.categories;
   config.value = result.config;
   source.value = result.source;
+  refreshedAt.value = result.refreshedAt;
   error.value = result.error;
   portfolioRows.value = result.portfolio;
 }
 
 async function fetchLinks() {
-  // Stale-while-revalidate: paint cached data instantly, then refresh in the background.
-  const cached = readCachedLinks();
-  if (cached) {
-    applyResult(cached);
-    isLoading.value = false;
-  } else {
-    isLoading.value = true;
+  const generation = ++requestGeneration;
+  pendingRequest?.abort();
+  const controller = new AbortController();
+  pendingRequest = controller;
+  if (!hasVerifiedSnapshot && source.value !== "mock") {
+    const cached = readCachedLinks();
+    if (cached) { applyResult(cached); hasVerifiedSnapshot = true; }
   }
-  const result = await loadLinks();
-  applyResult(result);
-  isLoading.value = false;
+  if (source.value === "mock") {
+    links.value = []; categories.value = []; portfolioRows.value = []; config.value = null;
+    refreshedAt.value = undefined; source.value = "unavailable"; hasVerifiedSnapshot = false;
+  }
+  isLoading.value = true;
+  error.value = undefined;
+  try {
+    const result = await loadLinks({ signal: controller.signal });
+    if (generation !== requestGeneration) return;
+    applyResult(result);
+    hasVerifiedSnapshot = true;
+  } catch {
+    if (generation !== requestGeneration) return;
+    source.value = hasVerifiedSnapshot ? "stale" : "unavailable";
+    error.value = hasVerifiedSnapshot ? "directory.staleWarning" : "directory.unavailableWarning";
+  } finally {
+    if (generation === requestGeneration) { isLoading.value = false; pendingRequest = null; }
+  }
+}
+
+function previewDirectory() {
+  ++requestGeneration; pendingRequest?.abort(); pendingRequest = null;
+  applyResult(previewLinks()); hasVerifiedSnapshot = false; isLoading.value = false;
 }
 
 /** Diacritic-insensitive, word-order-independent key: "Hung Tran Vu" and "Tran Vu Hung" → same. */
@@ -91,16 +156,14 @@ export function useLinks() {
   }
 
   /** Links after search + facet filters (country/status/criticality) but NOT scope. Drives counts + scope. */
-  const baseLinks = computed(() => filterLinks(links.value, { ...filters, categoryId: "all" }));
+  const baseLinks = computed(() => filterVaultQuickView(filterLinks(links.value, { ...filters, categoryId: "all" }), directoryQuickView.value));
 
-  const maxDate = computed(() => links.value.reduce((max, l) => Math.max(max, parseDate(l.lastUpdated)), 0));
-
-  const recentCutoff = computed(() => maxDate.value - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const recentCutoff = computed(() => Date.now() - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
   const criticalLinks = computed(() => baseLinks.value.filter((l) => l.criticality === "High"));
 
   const recentLinks = computed(() =>
-    [...baseLinks.value].sort((a, b) => parseDate(b.lastUpdated) - parseDate(a.lastUpdated)),
+    baseLinks.value.filter((link) => parseDate(link.lastUpdated) >= recentCutoff.value).sort((a, b) => parseDate(b.lastUpdated) - parseDate(a.lastUpdated)),
   );
 
   const recentCount = computed(() => baseLinks.value.filter((l) => parseDate(l.lastUpdated) >= recentCutoff.value).length);
@@ -111,16 +174,23 @@ export function useLinks() {
     return map;
   });
 
-  /** The links shown in the center workspace for the current scope + toggles. */
-  const workspaceLinks = computed(() => {
+  function scopedLinks(candidates: LinkItem[]): LinkItem[] {
     let result: LinkItem[];
-    if (scope.value === "all") result = baseLinks.value;
-    else if (scope.value === "critical") result = criticalLinks.value;
-    else if (scope.value === "recent") result = recentLinks.value;
-    else result = baseLinks.value.filter((l) => l.category === scope.value);
-
+    if (scope.value === "all") result = candidates;
+    else if (scope.value === "critical") result = candidates.filter((link) => link.criticality === "High");
+    else if (scope.value === "recent") result = candidates.filter((link) => parseDate(link.lastUpdated) >= recentCutoff.value).sort((a, b) => parseDate(b.lastUpdated) - parseDate(a.lastUpdated));
+    else result = candidates.filter((link) => link.category === scope.value);
     if (criticalOnly.value) result = result.filter((l) => l.criticality === "High");
     return result;
+  }
+
+  /** The links shown in the center workspace for the current scope + toggles. */
+  const workspaceLinks = computed(() => scopedLinks(baseLinks.value));
+  const countryCounts = computed(() => {
+    const candidates = scopedLinks(filterVaultQuickView(filterLinks(links.value, { ...filters, country: "all", categoryId: "all" }), directoryQuickView.value));
+    const counts = new Map<string, number>([["all", candidates.length]]);
+    for (const link of candidates) counts.set(link.country, (counts.get(link.country) ?? 0) + 1);
+    return counts;
   });
 
   const scopeLabel = computed(() => {
@@ -150,6 +220,7 @@ export function useLinks() {
       filters.status !== "all" ||
       filters.criticality !== "all" ||
       criticalOnly.value ||
+      directoryQuickView.value !== "all" ||
       scope.value !== "all",
   );
 
@@ -161,6 +232,7 @@ export function useLinks() {
     filters.criticality = "all";
     criticalOnly.value = false;
     scope.value = "all";
+    directoryQuickView.value = "all";
   }
 
   function selectScope(next: Scope) {
@@ -168,40 +240,43 @@ export function useLinks() {
   }
 
   function openSector(next: Scope) {
-    clearAtlasHash();
+    syncingRoute = true;
+    clearFilters();
     scope.value = next;
-    criticalOnly.value = false;
-    filters.query = "";
-    view.value = "sector";
-    window.scrollTo({ top: 0, behavior: "auto" });
+    syncingRoute = false;
+    writeRoute("sector");
   }
 
   function goHome() {
-    clearAtlasHash();
-    view.value = "home";
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    writeRoute("home");
   }
 
   function openCrew() {
-    clearAtlasHash();
-    view.value = "crew";
-    window.scrollTo({ top: 0, behavior: "auto" });
+    writeRoute("crew");
   }
 
   function openMember(member: CrewMember) {
-    clearAtlasHash();
     selectedMember.value = member;
-    view.value = "member";
-    window.scrollTo({ top: 0, behavior: "auto" });
+    writeRoute("member");
   }
-
-  function clearAtlasHash() {
-    if (window.location.hash === "#atlas") window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  function openMemberById(id: string): boolean {
+    const member = crew.find((candidate) => candidate.id === id && candidate.active !== false);
+    if (!member) return false;
+    openMember(member); return true;
   }
+  function openStart() { writeRoute("start"); }
 
-  function openAtlas() {
-    view.value = "atlas";
-    window.history.replaceState(null, "", "#atlas");
+  function openAtlas(stageId?: string) {
+    if (stageId && /^(?:0[1-8]|A|B)$/.test(stageId)) {
+      view.value = "atlas";
+      const hash = `#atlas?mode=guide&stage=${stageId}`;
+      if (window.location.hash !== hash) window.history.pushState(window.history.state, "", window.location.pathname + window.location.search + hash);
+      // Atlas owns its query state; notify its existing listener instead of duplicating that state.
+      if (typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("hashchange"));
+      return;
+    }
+    if (isAtlasHash(window.location.hash)) { view.value = "atlas"; return; }
+    writeRoute("atlas");
   }
 
   return {
@@ -211,17 +286,21 @@ export function useLinks() {
     goHome,
     openCrew,
     openMember,
+    openMemberById,
     openAtlas,
+    openStart,
     memberScope,
     links,
     categories,
     config,
     source,
+    refreshedAt,
     error,
     isLoading,
     filters,
     scope,
     viewMode,
+    directoryQuickView,
     criticalOnly,
     paletteOpen,
     baseLinks,
@@ -234,9 +313,12 @@ export function useLinks() {
     activeCategory,
     stats,
     availableCountries,
+    countryCounts,
     hasActiveFilters,
     clearFilters,
     selectScope,
     refresh: fetchLinks,
+    refreshLinks: fetchLinks,
+    previewDirectory,
   };
 }
