@@ -42,6 +42,14 @@ test("Native selects, text inputs and editable content retain their own keyboard
   }
 });
 
+test("Interactive scope inspectors and fleet buttons keep keyboard events within their fixed-camera workspace", () => {
+  for (const marker of ["[data-hub-inspector]", "[data-protector-fleet]"]) for (const key of ["Escape", "0", "1", "8"]) {
+    const r = runtime();
+    const event = r.key(key, { tagName: "BUTTON", isContentEditable: false, closest: selector => selector.includes(marker) ? {} : null });
+    assert.deepEqual(r.calls, []); assert.equal(event.defaultPrevented, false);
+  }
+});
+
 test("Unmodified page shortcuts still work and retain existing Atlas, palette and modifier guards", () => {
   const sector = runtime(); assert.equal(sector.key("3").defaultPrevented, true); assert.deepEqual(sector.calls, ["sector-3"]);
   const home = runtime(); assert.equal(home.key("Escape").defaultPrevented, true); assert.deepEqual(home.calls, ["home"]);

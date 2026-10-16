@@ -13,6 +13,7 @@ async function load(path) {
 }
 const hubRoute = await load("../src/composables/hubRoute.ts");
 const service = await load("../src/services/linkService.ts");
+const vaultFilters = await load("../src/services/vaultFilters.ts");
 const member = { id: "ice", name: "Ice", aliases: ["Ruchinan Narongphongphan"], role: "Value Protector", roleShort: "TH", rank: "guardian", active: true };
 const inactive = { ...member, id: "inactive", active: false };
 const link = (id) => ({ id, title: id, description: "Claimback process", url: "https://example.test/asset", owner: "Ice", category: "ar-collection", country: "TH", status: "Active", tags: [], accessNote: "", criticality: "High", sortOrder: 1, isActive: true, lastUpdated: "2026-10-16" });
@@ -41,6 +42,7 @@ function runtime(t, options = {}) {
       if (name === "./useAtlasRouteState") return { isAtlasHash: (hash) => /^#atlas(?:\?|$)/.test(hash) };
       if (name === "./hubRoute") return hubRoute;
       if (name === "../data/crew") return { crew: [member, inactive] };
+      if (name === "../services/vaultFilters") return vaultFilters;
       if (name === "../services/linkService") return { ...service,
         readCachedLinks: () => options.cached ?? null,
         previewLinks: () => ({ ...payload("sample"), portfolio: [], source: "mock", refreshedAt: undefined }),
@@ -133,4 +135,30 @@ test("Filter changes replace the Directory URL without adding keystrokes to hist
   assert.equal(r.location.hash, before); assert.equal(r.location.search, "?lang=vi");
   r.api.clearFilters(); assert.equal(r.location.hash, "#directory"); assert.equal(r.api.hasActiveFilters.value, false);
   r.requests[0].resolve(payload()); await settle();
+});
+
+test("Quick views combine with country, source category, search and priority without changing source classifications", async (t) => {
+  const r = runtime(t, { url: "https://hub.test/vph?lang=vi#directory?type=project-workspace&country=TH" });
+  const assets = [
+    { ...link("development-th"), category: "project-workspace", tags: ["Automation"] },
+    { ...link("development-vn"), category: "project-workspace", country: "VN", criticality: "Low" },
+    { ...link("review-th"), category: "review-cockpits" },
+    { ...link("review-analytics"), category: "review-cockpits", tags: ["Analytics"], criticality: "Low" },
+  ];
+  r.requests[0].resolve({ ...payload(), links: assets }); await settle();
+  assert.equal(r.api.directoryQuickView.value, "project-workspace");
+  assert.equal(r.api.viewMode.value, "compact");
+  assert.deepEqual(Array.from(r.api.workspaceLinks.value, item => item.id), ["development-th"]);
+  assert.equal(r.api.countryCounts.value.get("VN"), 1); assert.equal(r.api.countryCounts.value.get("all"), 2);
+  r.api.directoryQuickView.value = "review-cockpits";
+  assert.deepEqual(Array.from(r.api.workspaceLinks.value, item => item.id), ["review-analytics", "review-th"]);
+  r.api.directoryQuickView.value = "analytics-automation"; r.api.scope.value = "review-cockpits";
+  assert.deepEqual(Array.from(r.api.workspaceLinks.value, item => item.id), ["review-analytics"]);
+  r.api.filters.criticality = "High";
+  assert.equal(r.api.workspaceLinks.value.length, 0);
+  r.api.filters.criticality = "all"; r.api.filters.query = "missing";
+  assert.equal(r.api.workspaceLinks.value.length, 0);
+  assert.match(r.location.hash, /type=analytics-automation/);
+  assert.equal(r.api.links.value.find(item => item.id === "development-th").category, "project-workspace");
+  r.api.clearFilters(); assert.equal(r.api.directoryQuickView.value, "all"); assert.equal(r.location.hash, "#directory");
 });

@@ -2,14 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
-import { transform } from "esbuild";
+import { build, transform } from "esbuild";
+import { fileURLToPath } from "node:url";
 
 const source = readFileSync(new URL("../src/composables/useAtlasRouteState.ts", import.meta.url), "utf8");
 const compiled = await transform(source, { loader: "ts", format: "cjs", target: "es2022" });
 const linksCompiled = await transform(readFileSync(new URL("../src/composables/useLinks.ts", import.meta.url), "utf8"), { loader: "ts", format: "cjs", target: "es2022" });
 const hubCompiled = await transform(readFileSync(new URL("../src/composables/hubRoute.ts", import.meta.url), "utf8"), { loader: "ts", format: "cjs", target: "es2022" });
-const hubContext = vm.createContext({ module: { exports: {} }, URLSearchParams, require: () => ({ CATEGORY_IDS: ["ar-collection"] }) });
+const hubContext = vm.createContext({ module: { exports: {} }, URLSearchParams, require: () => ({ CATEGORY_IDS: ["ar-collection"], DIRECTORY_QUICK_VIEWS: ["all", "ar-trackers", "netsuite-links", "analytics-automation", "review-cockpits", "project-workspace", "process-documents"] }) });
 vm.runInContext(hubCompiled.code, hubContext);
+const vaultBuild = await build({ entryPoints: [fileURLToPath(new URL("../src/services/vaultFilters.ts", import.meta.url))], bundle: true, write: false, format: "esm", platform: "node", logLevel: "silent" });
+const vaultFilters = await import(`data:text/javascript;base64,${Buffer.from(vaultBuild.outputFiles[0].text).toString("base64")}`);
 
 function runtime(initialHash = "#atlas") {
   const mounted = [], unmounted = [], listeners = new Map(), calls = [];
@@ -62,6 +65,7 @@ function runtime(initialHash = "#atlas") {
           if (name === "./useAtlasRouteState") return api;
           if (name === "./hubRoute") return hubContext.module.exports;
           if (name === "../data/crew") return { crew: [] };
+          if (name === "../services/vaultFilters") return vaultFilters;
           if (name === "../services/linkService") return {
             loadLinks: async () => ({ links: [], categories: [], config: {}, source: "live", portfolio: [] }),
             readCachedLinks: () => null, sortLinks: (links) => links,

@@ -3,7 +3,6 @@ import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, watch } fro
 import Starfield from "./components/Starfield.vue";
 import AppHeader from "./components/AppHeader.vue";
 import CommandHero from "./components/CommandHero.vue";
-import MissionStrip from "./components/MissionStrip.vue";
 import CommandPalette from "./components/CommandPalette.vue";
 import { useLinks } from "./composables/useLinks";
 import { sectors } from "./data/sectors";
@@ -43,7 +42,7 @@ function isTyping(target: EventTarget | null): boolean {
 function onKeydown(e: KeyboardEvent) {
   // Native dialogs own Escape and their focused controls; page shortcuts must not navigate underneath them.
   const target = e.target as HTMLElement | null;
-  if (target?.closest?.("dialog[open]")) return;
+  if (target?.closest?.("dialog[open], [data-hub-inspector], [data-protector-fleet]")) return;
   if (view.value === "atlas" || e.defaultPrevented || paletteOpen.value || isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
 
   // 1–8 → jump straight to that sector
@@ -77,7 +76,6 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", onKeydown); stopLo
     <main id="main-content" class="app-main" tabindex="-1">
       <div v-if="view === 'home'" class="app-view vph-scroll">
         <CommandHero />
-        <MissionStrip />
       </div>
       <StartHere v-else-if="view === 'start'" />
       <AtlasView v-else-if="view === 'atlas'" :data="atlasData" :source="atlasSource" :is-loading="atlasLoading" :error="atlasError" :refreshed-at="atlasRefreshedAt" @refresh="refreshAtlas" @preview="previewAtlasDraft" />
@@ -108,7 +106,7 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", onKeydown); stopLo
 
 .app-view {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
 }
 </style>

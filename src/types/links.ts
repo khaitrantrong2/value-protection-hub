@@ -111,6 +111,9 @@ export interface LinkFilters {
 
 export type ViewMode = "compact" | "cards";
 
+export const DIRECTORY_QUICK_VIEWS = ["all", "ar-trackers", "netsuite-links", "analytics-automation", "review-cockpits", "project-workspace", "process-documents"] as const;
+export type DirectoryQuickView = (typeof DIRECTORY_QUICK_VIEWS)[number];
+
 /** Special (non-category) selections in the Category Navigator. */
 export type SpecialScope = "all" | "critical" | "recent";
 

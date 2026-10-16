@@ -28,6 +28,7 @@ const { messages: crewMessages } = await loadModule("../src/i18n/messages/crew.t
 const { messages: directoryMessages } = await loadModule("../src/i18n/messages/directory.ts");
 const { crew } = await loadModule("../src/data/crew.ts");
 const sectorModule = await loadModule("../src/data/sectors.ts");
+const galaxyModule = await loadModule("../src/data/galaxy.ts");
 const search = await loadModule("../src/services/search.ts");
 const safety = await loadModule("../src/services/linkSafety.ts");
 const focusScope = await loadModule("../src/services/focusScope.ts");
@@ -48,16 +49,21 @@ function runtime() {
   const scope = Vue.effectScope();
   const stubs = {
     vue: { ...Vue, onMounted: callback => mounted.push(callback), onBeforeUnmount: callback => disposed.push(callback) },
-    "../i18n": { useLocale: () => ({ locale, t, setLocale: value => locale.value = value }) },
+    "../i18n": { useLocale: () => ({ locale, t, text: (en, vi) => locale.value === 'vi' ? vi : en, setLocale: value => locale.value = value }) },
     "../i18n/messages/crew": { messages: crewMessages }, "../i18n/messages/shell": { messages: shellMessages },
-    "../data/crew": { crew }, "../data/sectors": sectorModule, "../services/search": search, "../services/linkSafety": safety,
+    "../data/crew": { crew }, "../data/sectors": sectorModule, "../data/galaxy": galaxyModule, "../services/search": search, "../services/linkSafety": safety,
     "../services/focusScope": focusScope,
     "../composables/useLinks": { useLinks: () => state }, "../composables/useReducedMotion": { useReducedMotion: () => ({ prefersReducedMotion: Vue.ref(true) }) },
-    "../motion": { gsap: { context: () => ({ revert() {} }) }, VPH_EASE: "none" },
+    "../motion": { gsap: { context: () => ({ revert() {} }), fromTo: () => ({ kill() {} }) }, VPH_EASE: "none" },
     "./Icon.vue": Vue.defineComponent({ setup: () => () => Vue.h("i") }), "./UniverseStage.vue": Vue.defineComponent({ setup: () => () => Vue.h("div", "universe") }), "./StarfighterIcon.vue": Vue.defineComponent({ setup: () => () => Vue.h("i") }),
+    "./GalaxyPlanet.vue": Vue.defineComponent({ setup: () => () => Vue.h('i', { 'data-planet-art': true }) }),
+    "./GalaxyVaultInspector.vue": Vue.defineComponent({ props: ['planet', 'resources', 'source', 'loading'], setup: props => () => Vue.h('aside', { 'data-vault-inspector': props.planet.id }, props.resources.map(link => link.title).join(' · ')) }),
+    "./ProtectorFleet.vue": Vue.defineComponent({ props: ['members', 'selectedId', 'paused', 'variant'], setup: props => () => Vue.h('div', { 'data-fleet': props.variant }, props.members.map(member => Vue.h('button', { 'data-protector-id': member.id }, member.name))) }),
+    "./MemberScopePanel.vue": Vue.defineComponent({ props: ['member'], setup: props => () => Vue.h('aside', { 'data-member-inspector': props.member.id }, props.member.name) }),
   };
+  class FakeElement {}
   function component(name, mode) {
-    const context = vm.createContext({ module: { exports: {} }, URL, document, window: { open: (...args) => destinations.push(args) }, requestAnimationFrame: () => 1, cancelAnimationFrame() {}, require(path) { assert.ok(stubs[path], `Unexpected import ${path}`); return stubs[path]; } });
+    const context = vm.createContext({ module: { exports: {} }, URL, HTMLElement: FakeElement, document, window: { open: (...args) => destinations.push(args) }, requestAnimationFrame: () => 1, cancelAnimationFrame() {}, require(path) { assert.ok(stubs[path], `Unexpected import ${path}`); return stubs[path]; } });
     vm.runInContext(compiled[name][mode], context);
     return context.module.exports.default;
   }
@@ -85,7 +91,7 @@ test("Header exposes all five destinations, language choice and current Team sta
   } finally { app.stop(); }
 });
 
-test("Start here preserves financial distinctions and routes auditor/onboarding/daily work appropriately", async () => {
+test("Start here keeps three distinct routes and merges responsibilities without duplicating glossary or ownership blocks", async () => {
   const app = runtime();
   try {
     const page = app.setup("StartHere");
@@ -95,28 +101,29 @@ test("Start here preserves financial distinctions and routes auditor/onboarding/
       app.locale.value = lang;
       const html = await app.render("StartHere");
       assert.equal((html.match(/<h1>/g) || []).length, 1);
-      assert.equal((html.match(/<dt>/g) || []).length, 4);
-      assert.match(html, lang === "en" ? /Settled does not always mean cash collected/ : /Tất toán không mặc định là đã thu tiền/);
+      assert.equal((html.match(/<dt>/g) || []).length, 0);
+      assert.doesNotMatch(html, /Who owns this\?|Ai phụ trách\?|A shared vocabulary|Thống nhất cách hiểu/);
+      assert.match(html, lang === "en" ? /Explore Team &amp; Responsibilities/ : /Khám phá đội ngũ &amp; trách nhiệm/);
     }
   } finally { app.stop(); }
 });
 
-test("Home separates external Drive search from Hub navigation and labels demo/stale source honestly", async () => {
+test("Home removes duplicate launch CTAs while labeling demo/stale source honestly", async () => {
   const app = runtime();
   try {
     const home = app.setup("CommandHero");
-    home.driveQuery.value = "  June + CN & AR  ";
-    home.searchDrive();
-    assert.deepEqual(app.destinations, [["https://drive.google.com/drive/search?q=June%20%2B%20CN%20%26%20AR", "_blank", "noopener"]]);
-    home.scanVaults();
-    assert.deepEqual(app.navigation, [["sector", "all"]]);
     app.state.source.value = "mock";
     assert.equal(home.sourceLabel.value, "Demo · not live");
     app.state.source.value = "stale";
     assert.equal(home.sourceLabel.value, "Retained source · refresh failed");
     app.locale.value = "vi";
     assert.equal(home.sourceLabel.value, "Dữ liệu giữ lại · làm mới thất bại");
-    assert.doesNotMatch(await app.render("CommandHero"), /SYSTEM ONLINE/);
+    const html = await app.render("CommandHero");
+    assert.doesNotMatch(html, /SYSTEM ONLINE|Understand the process|Meet the team|Tìm trên Google Drive|hero__actions|hero__hub-search/);
+    assert.match(html, /Value Protection Universe/);
+    assert.equal((html.match(/<h1>/g) || []).length, 1);
+    assert.deepEqual(app.destinations, []);
+    assert.deepEqual(app.navigation, []);
   } finally { app.stop(); }
 });
 
@@ -169,21 +176,58 @@ test("Search keyboard skips disabled results, activates one eligible result and 
   } finally { app.stop(); }
 });
 
-test("Universe handled Enter suppresses native button activation after arrow navigation", () => {
+test("Universe planet keyboard navigation moves actual focus without navigating or moving the camera", () => {
   const app = runtime();
   try {
     const universe = app.setup("UniverseStage");
-    const focusedShip = Vue.markRaw({ tagName: "BUTTON" });
+    const focusedPlanet = Vue.markRaw({ tagName: "BUTTON", matches: selector => selector === '.galaxy__planet' });
     const focused = [];
-    universe.stageRef.value = Vue.markRaw({ contains: target => target === focusedShip, querySelectorAll: () => sectorModule.sectors.map((_, index) => ({ focus: options => focused.push([index, options]) })) });
-    universe.hoveredIndex.value = 0;
-    universe.onKeydown(keyEvent("ArrowRight", focusedShip));
+    const buttons = [focusedPlanet, ...galaxyModule.vaultPlanets.slice(1).map((_, index) => ({ focus: options => focused.push([index + 1, options]) }))];
+    universe.stageRef.value = Vue.markRaw({ querySelectorAll: () => buttons });
+    universe.onKeydown(keyEvent("ArrowRight", focusedPlanet));
     assert.equal(focused.at(-1)[0], 1);
     assert.equal(focused.at(-1)[1].preventScroll, true);
-    const enter = keyEvent("Enter", focusedShip);
+    const enter = keyEvent("Enter", focusedPlanet);
     universe.onKeydown(enter);
-    assert.equal(enter.defaultPrevented, true, "Prevent native click on the originally focused ship");
-    assert.deepEqual(app.navigation, [["sector", sectorModule.sectors[1].categoryId]]);
+    assert.equal(enter.defaultPrevented, false, "Native button activation inspects the correctly focused planet once");
+    assert.deepEqual(app.navigation, []);
+  } finally { app.stop(); }
+});
+
+test("Universe depicts vaults as ten planets and all active people as ships, never a commander core", async () => {
+  const app = runtime();
+  try {
+    for (const lang of ['en', 'vi']) {
+      app.locale.value = lang;
+      const html = await app.render('UniverseStage');
+      assert.equal((html.match(/data-planet="/g) || []).length, 10);
+      assert.equal((html.match(/data-protector-id="/g) || []).length, 17);
+      assert.match(html, /Intrepid · Value Protection Core/);
+      assert.doesNotMatch(html, /Commander|One commander|ALPHA-01|data-protector-id="andriani"|stage__commander/);
+      assert.match(html, /<select/);
+    }
+  } finally { app.stop(); }
+});
+
+test("Selecting a planet or ship opens only its inspector; Escape closes without route or camera changes", async () => {
+  const app = runtime();
+  try {
+    app.state.links.value = [{ ...asset('one', 'https://example.com/one'), isActive: true, sortOrder: 1 }];
+    const universe = app.setup('UniverseStage');
+    await universe.inspectPlanet(galaxyModule.vaultPlanets[0]);
+    assert.equal(universe.selectedPlanet.value.id, 'claimback-trackers');
+    assert.equal(universe.resources.value.length, 1);
+    assert.equal(universe.selectedMember.value, null);
+    assert.deepEqual(app.navigation, []);
+    universe.inspectMember(crew.find(member => member.id === 'khai'));
+    assert.equal(universe.selectedPlanet.value, null);
+    assert.equal(universe.selectedMember.value.id, 'khai');
+    const escape = keyEvent('Escape', {}, { stopPropagation() { this.stopped = true; } });
+    universe.onKeydown(escape);
+    assert.equal(escape.defaultPrevented, true);
+    assert.equal(escape.stopped, true);
+    assert.equal(universe.selectedMember.value, null);
+    assert.deepEqual(app.navigation, []);
   } finally { app.stop(); }
 });
 
@@ -209,6 +253,25 @@ test("Search source refresh repairs an invalid active result and locale switchin
     await Vue.nextTick();
     palette.activate(palette.results.value[0]);
     assert.equal(app.destinations.length, 0);
+  } finally { app.stop(); }
+});
+
+test("Compact Home explorer offers every active protector as well as vaults without navigation or camera changes", async () => {
+  const app = runtime();
+  try {
+    const universe = app.setup('UniverseStage');
+    universe.chooseVault({ target: { value: 'crew:hue' } });
+    assert.equal(universe.selectedMember.value.id, 'hue');
+    assert.equal(universe.selectedPlanet.value, null);
+    assert.deepEqual(app.navigation, []);
+    universe.chooseVault({ target: { value: 'crew:andriani' } });
+    assert.equal(universe.selectedMember.value.id, 'hue', 'Inactive or unknown identities do not select');
+    universe.chooseVault({ target: { value: 'ar-collection' } });
+    await Vue.nextTick();
+    assert.equal(universe.selectedPlanet.value.id, 'ar-collection');
+    assert.equal(universe.selectedMember.value, null);
+    const html = await app.render('UniverseStage');
+    assert.equal((html.match(/value="crew:/g) || []).length, 17);
   } finally { app.stop(); }
 });
 

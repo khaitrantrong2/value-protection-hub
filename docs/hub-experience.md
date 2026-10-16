@@ -12,7 +12,7 @@ No runtime machine translation or auto-review. See [translation contract](atlas-
 
 **Presentation is not a reporting line.** Crew groups describe collaboration functions
 and market coverage, not an organizational hierarchy. All active people use the same
-card. Lead responsibilities remain visible without a central hero, command wording or
+ship. Lead responsibilities remain visible without a central hero, command wording or
 clearance badge. Inactive identities are retained in source but hidden from active roster.
 
 **Portfolio counts are not performance.** Distinguish unique brand names, published scope
@@ -41,11 +41,53 @@ English UI default is not an authoritative-language declaration.
 
 - Five destinations remain available on desktop and native mobile menu.
 - Search groups routes, processes, assets and people; accent folding and curated finance synonyms improve discovery without duplicating records.
-- Directory Cards/List and filters remain usable on narrow screens; filter URL state is shareable. Crew/profile filters are retained in-session only.
+- Directory defaults to a semantic six-column table with sticky headings. Cards remain optional, compact and share the same safe destination actions. Mobile rows expand locally; filter URL state is shareable. Crew/profile filters are retained in-session only.
 - Native dialogs contain focus and restore it when closed. Page shortcuts ignore inputs, selects, editable content and open dialogs. Skip link, visible focus and reduced motion are preserved.
 - Source states distinguish live, retained/stale, unavailable and explicit demo. Original timestamps survive failed refreshes; late responses cannot overwrite newer requests.
 - Missing/blocked/invalid destinations have no Open. Session-link warnings do not claim access was checked; copy success/failure is visible.
 - Explore retains its canvas through Guide navigation. Locale, source popover and pipeline visibility do not reframe it.
+
+## Galaxy and fleet meaning
+
+Intrepid is the central protected planet; ten source categories are vault planets; each
+active team member is a ship. Home is the system map, Crew is the fleet explorer,
+Directory is the working library and Atlas is the business process. Do not reuse ships
+as category icons or imply that a lead is the central body everyone reports to.
+
+Vault scope owners come from published resource Owner values. Brand portfolio assignments
+do not establish ownership of a category vault. Empty/unavailable source is not proof
+of no responsibility or no resources. Movement, vessel type and location encode no rank,
+performance, control effectiveness or financial risk.
+
+Selection only highlights a target and opens a non-modal inspector; camera does not pan,
+zoom or Fit. Portfolio scrolling is contained within its panel. Only hovered, focused
+or selected ships pause; other ships retain their time-based speed. Labels remain upright.
+Pause, reduced-motion and hidden-tab cleanup are supported. Tiny Crew maps become an
+internally scrollable static picker; small Home maps use one grouped planet/person
+selector and decorative fleet, avoiding overlapping moving touch targets.
+
+## Quick views are not a new source taxonomy
+
+`type=review-cockpits` is operational/performance review; `type=project-workspace` is
+development. They are distinct exact-category views. Neither automatically belongs to
+Analytics & Automation. That view requires an exact normalized analytics/automation tag
+from the explicit allowlist in `src/services/vaultFilters.ts`; title substrings do not
+qualify. AR Trackers uses the AR category or explicit AR tags, not all claimback files.
+Country/type/source-category/search/status/priority are AND-combined. Country counts
+reflect the other active filters and keep all six markets visible even at zero.
+
+Existing Sheet categories and API records are not rewritten. New `type` URL values are
+allowlisted; unknown values fall back to All. `mode=cards` is explicit; no mode or legacy
+`mode=compact` uses the table. Clear filters also clears the quick view.
+
+## Typography
+
+The local Outfit/Urbanist subsets lack several Vietnamese glyphs. UI uses pinned
+`@fontsource/be-vietnam-pro@5.3.0` at four weights with self-hosted Vietnamese/Latin
+subsets and its OFL license. Logo artwork is unchanged. Verify names and financial
+wording in both languages; do not treat a computed font-family string alone as glyph proof.
+[Fontsource package](https://fontsource.org/fonts/be-vietnam-pro/use),
+[upstream license](https://github.com/google/fonts/blob/main/ofl/bevietnampro/OFL.txt).
 
 ## Selective repository reuse
 

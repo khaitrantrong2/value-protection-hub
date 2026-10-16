@@ -4,6 +4,7 @@ import type { AtlasPayload, AtlasReference, AtlasReferenceGroup, AtlasStageId } 
 import type { AtlasInspectorTab, AtlasLibraryGroup } from "../../types/atlasUi";
 import AtlasGuideStage from "./AtlasGuideStage.vue";
 import AtlasGuideReferences from "./AtlasGuideReferences.vue";
+import ProcessGlossary from "./ProcessGlossary.vue";
 import Icon from "../Icon.vue";
 import { useLocale } from "../../i18n";
 const { t, text } = useLocale();
@@ -69,6 +70,7 @@ onMounted(focusDocument);
           <AtlasGuideReferences v-else-if="referenceGroup !== null" :references="data.references" :stages="data.stages" :group="referenceGroup" :group-names="groupNames" :reference-id="referenceId" @group="emit('references', $event)" @stage="emit('stage', $event)" />
           <div v-else class="guide-no-chapter"><h2 id="atlas-guide-title" tabindex="-1">{{ text("No published chapter", "Chưa có chương được xuất bản") }}</h2><p>{{ text("Choose another chapter or refresh the process source.", "Chọn chương khác hoặc tải lại nguồn nội dung.") }}</p></div>
           <footer v-if="referenceGroup === null && selected" class="guide-chapter-navigation"><template v-if="selected.kind === 'chapter'"><button type="button" :disabled="!previous" @click="previous && emit('stage', previous.id)"><span>← {{ text("Previous chapter", "Chương trước") }}</span><strong>{{ previous ? `${previous.id} · ${previous.shortTitle}` : text('Start of process', 'Bắt đầu quy trình') }}</strong></button><button type="button" :disabled="!next" @click="next && emit('stage', next.id)"><span>{{ text("Next chapter", "Chương tiếp") }} →</span><strong>{{ next ? `${next.id} · ${next.shortTitle}` : text('End of business flow', 'Kết thúc luồng nghiệp vụ') }}</strong></button></template><div v-else-if="supportedChapters.length" class="guide-return-chapters"><p>{{ text("Return to a supported business stage", "Về giai đoạn nghiệp vụ được hỗ trợ") }}</p><button v-for="stage in supportedChapters" :key="stage.id" type="button" @click="emit('stage', stage.id)">{{ stage.id }} · {{ stage.shortTitle }}<Icon name="arrowRight" :size="14" /></button></div></footer>
+          <ProcessGlossary />
         </div>
       </div>
     </div>

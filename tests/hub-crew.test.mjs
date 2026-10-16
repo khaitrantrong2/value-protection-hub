@@ -80,7 +80,7 @@ function runtime(source = "live", scope = []) {
   const stubs = {
     vue: Vue,
     "../data/crew": { crew }, "../data/crewDirectory": helpers,
-    "../i18n": { useLocale: () => ({ locale, t: translator(locale) }) },
+    "../i18n": { useLocale: () => ({ locale, t: translator(locale), text: (en, vi) => locale.value === 'vi' ? vi : en }) },
     "../i18n/messages/crew": { messages },
     "../composables/useLinks": { useLinks: () => state },
     "../composables/useCrewDirectory": { useCrewDirectory: () => filters, useMemberPortfolioFilters: () => portfolioFilters },
@@ -88,6 +88,8 @@ function runtime(source = "live", scope = []) {
     "./CrewSourceNotice.vue": Vue.defineComponent({ setup: () => () => Vue.h("div", "source status") }),
     "./MemberPortfolio.vue": Vue.defineComponent({ props: ["rows"], setup: props => () => Vue.h("div", `${props.rows.length} published rows`) }),
     "./CrewMemberCard.vue": Vue.defineComponent({ props: ["member"], setup: props => () => Vue.h("button", { "data-crew-member": props.member.id }, props.member.name) }),
+    "./ProtectorFleet.vue": Vue.defineComponent({ props: ["members"], setup: props => () => Vue.h("div", props.members.map(member => Vue.h("button", { "data-crew-member": member.id }, member.name))) }),
+    "./MemberScopePanel.vue": Vue.defineComponent({ setup: () => () => Vue.h('aside') }),
   };
   function component(name) {
     const context = vm.createContext({ module: { exports: {} }, Intl, Date, require(path) { assert.ok(stubs[path], `Unexpected ${path}`); return stubs[path]; } });
@@ -106,7 +108,7 @@ test("Both language catalogs cover the same UI keys and every published role pro
   }
 });
 
-test("Team-first view renders all active teammates with the same card component, not a featured leader", async () => {
+test("Team fleet renders all active teammates with the same ship component, not a featured leader", async () => {
   const app = runtime();
   const html = await app.render("CrewView");
   assert.equal((html.match(/data-crew-member=/g) || []).length, 17);

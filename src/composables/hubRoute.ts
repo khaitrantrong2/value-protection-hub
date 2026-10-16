@@ -1,4 +1,4 @@
-import { CATEGORY_IDS, type CountryCode, type Criticality, type LinkStatus, type Scope, type ViewMode } from "../types/links";
+import { CATEGORY_IDS, DIRECTORY_QUICK_VIEWS, type CountryCode, type Criticality, type DirectoryQuickView, type LinkStatus, type Scope, type ViewMode } from "../types/links";
 
 export type HubView = "home" | "sector" | "crew" | "member" | "atlas" | "start";
 export interface HubRoute {
@@ -9,9 +9,10 @@ export interface HubRoute {
   criticality: Criticality | "all";
   query: string;
   viewMode: ViewMode;
+  quickView: DirectoryQuickView;
   memberId: string;
 }
-const defaults = (): HubRoute => ({ view: "home", scope: "all", country: "all", status: "all", criticality: "all", query: "", viewMode: "cards", memberId: "" });
+const defaults = (): HubRoute => ({ view: "home", scope: "all", country: "all", status: "all", criticality: "all", query: "", viewMode: "compact", quickView: "all", memberId: "" });
 const countries = ["VN", "TH", "SG", "MY", "PH", "ID", "Regional"];
 const statuses = ["Active", "Review", "Blocked", "Archived"];
 const criticalities = ["High", "Medium", "Low"];
@@ -38,7 +39,9 @@ export function parseHubHash(hash: string): HubRoute {
   const criticality = params.get("criticality") ?? "all";
   if (criticalities.includes(criticality)) state.criticality = criticality as Criticality;
   state.query = (params.get("q") ?? "").slice(0, 200);
-  state.viewMode = params.get("mode") === "compact" ? "compact" : "cards";
+  state.viewMode = params.get("mode") === "cards" ? "cards" : "compact";
+  const quickView = params.get("type") ?? "all";
+  if (DIRECTORY_QUICK_VIEWS.includes(quickView as DirectoryQuickView)) state.quickView = quickView as DirectoryQuickView;
   return state;
 }
 
@@ -53,6 +56,7 @@ export function serializeHubHash(state: HubRoute): string {
   if (state.status !== "all") params.set("status", state.status);
   if (state.criticality !== "all") params.set("criticality", state.criticality);
   if (state.query) params.set("q", state.query.slice(0, 200));
-  if (state.viewMode === "compact") params.set("mode", "compact");
+  if (state.viewMode === "cards") params.set("mode", "cards");
+  if (state.quickView && state.quickView !== "all" && DIRECTORY_QUICK_VIEWS.includes(state.quickView)) params.set("type", state.quickView);
   return `#directory${params.size ? `?${params}` : ""}`;
 }

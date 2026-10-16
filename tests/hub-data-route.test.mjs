@@ -79,6 +79,8 @@ test("Hub routes restore view, stable member and allowlisted Directory filters w
   const { parseHubHash, serializeHubHash } = await load("../src/composables/hubRoute.ts");
   const route = parseHubHash("#directory?scope=ar-collection&country=TH&status=Review&q=thu%20ti%E1%BB%81n&mode=compact");
   assert.equal(route.view, "sector"); assert.equal(route.scope, "ar-collection"); assert.equal(route.country, "TH"); assert.equal(route.query, "thu tiền");
+  assert.equal(route.viewMode, "compact");
+  assert.equal(parseHubHash("#directory").viewMode, "compact");
   assert.equal(parseHubHash("#member?id=ice").memberId, "ice");
   assert.equal(parseHubHash("#start").view, "start");
   assert.equal(parseHubHash("#crew").view, "crew");

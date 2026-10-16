@@ -1,548 +1,153 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
-import { RING_GEOMETRY, sectors, type Sector } from "../data/sectors";
-import { useLinks } from "../composables/useLinks";
-import { useReducedMotion } from "../composables/useReducedMotion";
-import StarfighterIcon from "./StarfighterIcon.vue";
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
+import { gsap, VPH_EASE } from '../motion';
+import { crew, type CrewMember } from '../data/crew';
+import { vaultPlanets, vaultResources, type VaultPlanet } from '../data/galaxy';
+import { useLinks } from '../composables/useLinks';
+import { useReducedMotion } from '../composables/useReducedMotion';
 import { useLocale } from '../i18n';
+import GalaxyPlanet from './GalaxyPlanet.vue';
+import GalaxyVaultInspector from './GalaxyVaultInspector.vue';
+import ProtectorFleet from './ProtectorFleet.vue';
+import MemberScopePanel from './MemberScopePanel.vue';
 
-const { openSector, paletteOpen } = useLinks();
-const { t } = useLocale();
+const { links, source, isLoading, openSector, paletteOpen } = useLinks();
+const { t, text } = useLocale();
 const { prefersReducedMotion } = useReducedMotion();
-
 const stageRef = ref<HTMLElement | null>(null);
-const hoveredIndex = ref<number | null>(null);
+const selectedPlanet = ref<VaultPlanet | null>(null);
+const selectedMember = ref<CrewMember | null>(null);
+const paused = ref(false);
+const activeCrew = crew.filter(member => member.active !== false);
+const resources = computed(() => selectedPlanet.value ? vaultResources(links.value, selectedPlanet.value.id) : []);
+let returnTarget: HTMLElement | null = null;
+let focusTween: ReturnType<typeof gsap.fromTo> | undefined;
+let focusedSphere: HTMLElement | null = null;
 
-const hoveredSector = computed(() => (hoveredIndex.value === null ? null : sectors[hoveredIndex.value]));
-const hoveredShip = computed(() => (hoveredIndex.value === null ? null : ships[hoveredIndex.value]));
-
-interface ShipState {
-  x: number;
-  y: number;
-  scale: number;
-  opacity: number;
-  z: number;
-  front: boolean;
-  rot: number;
+function resetFocusTween() {
+  focusTween?.kill();
+  focusTween = undefined;
+  focusedSphere?.style.removeProperty('transform');
+  focusedSphere = null;
 }
 
-const angles = sectors.map((s) => s.ang);
-const ships = reactive<ShipState[]>(
-  sectors.map(() => ({ x: 0, y: 0, scale: 1, opacity: 1, z: 10, front: true, rot: 0 })),
-);
-
-let size = { w: 0, h: 0 };
-let frameId = 0;
-let running = false;
-let resizeObserver: ResizeObserver | null = null;
-
-function measure() {
-  const el = stageRef.value;
-  if (!el) return;
-  size = { w: el.clientWidth, h: el.clientHeight };
+function rememberTrigger() {
+  const active = document.activeElement;
+  returnTarget = active instanceof HTMLElement && stageRef.value?.contains(active) ? active : null;
 }
-
-function positionShips() {
-  const cx = size.w * 0.5;
-  const cy = size.h * 0.46;
-  for (let i = 0; i < sectors.length; i++) {
-    const s = sectors[i];
-    const ring = RING_GEOMETRY[s.ring];
-    const rx = ring.rx * size.w;
-    const ry = ring.ry * size.h;
-    const a = angles[i];
-    const depth = (Math.sin(a) + 1) / 2; // 0 = behind planet (top), 1 = front (bottom)
-    ships[i].x = cx + rx * Math.cos(a);
-    ships[i].y = cy + ry * Math.sin(a);
-    ships[i].scale = 0.7 + depth * 0.4;
-    ships[i].opacity = 0.5 + depth * 0.5;
-    ships[i].front = depth > 0.42;
-    ships[i].z = ships[i].front ? 20 : 6;
-    // Bank the craft along the orbit tangent so it flies nose-first (SVG nose points up by default).
-    const dir = Math.sign(s.spd) || 1;
-    const dx = -rx * Math.sin(a) * dir;
-    const dy = ry * Math.cos(a) * dir;
-    ships[i].rot = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+async function inspectPlanet(planet: VaultPlanet) {
+  rememberTrigger();
+  resetFocusTween();
+  selectedMember.value = null;
+  selectedPlanet.value = planet;
+  if (prefersReducedMotion.value) return;
+  await nextTick();
+  const sphere = stageRef.value?.querySelector<HTMLElement>(`[data-planet="${planet.id}"] .galaxy__planet-body`);
+  if (sphere) {
+    focusedSphere = sphere;
+    focusTween = gsap.fromTo(sphere, { scale: .94 }, { scale: 1.08, duration: .5, ease: VPH_EASE, clearProps: 'transform' });
   }
 }
-
-function tick() {
-  if (!running) return;
-  if (hoveredIndex.value === null) {
-    for (let i = 0; i < angles.length; i++) angles[i] += sectors[i].spd;
-  } else {
-    // keep the fleet drifting slowly, but ease the hovered ship almost to a stop
-    for (let i = 0; i < angles.length; i++) angles[i] += sectors[i].spd * (i === hoveredIndex.value ? 0.06 : 0.4);
-  }
-  positionShips();
-  frameId = requestAnimationFrame(tick);
+function inspectMember(member: CrewMember) {
+  rememberTrigger();
+  resetFocusTween();
+  selectedPlanet.value = null;
+  selectedMember.value = member;
 }
-
-function launch(s: Sector) {
-  openSector(s.categoryId);
+function closeInspector() {
+  resetFocusTween();
+  selectedPlanet.value = null;
+  selectedMember.value = null;
+  returnTarget?.focus({ preventScroll: true });
 }
-
-function onKeydown(e: KeyboardEvent) {
-  if (e.defaultPrevented || paletteOpen.value || !stageRef.value?.contains(e.target as Node)) return;
-  const t = e.target as HTMLElement | null;
-  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-  const n = sectors.length;
-  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-    e.preventDefault();
-    hoveredIndex.value = hoveredIndex.value === null ? 0 : (hoveredIndex.value + 1) % n;
-  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-    e.preventDefault();
-    hoveredIndex.value = hoveredIndex.value === null ? n - 1 : (hoveredIndex.value - 1 + n) % n;
-  } else if (e.key === "Enter" && hoveredIndex.value !== null) {
-    e.preventDefault();
-    launch(sectors[hoveredIndex.value]);
+function chooseVault(event: Event) {
+  const id = (event.target as HTMLSelectElement).value;
+  if (id.startsWith('crew:')) {
+    const member = activeCrew.find(candidate => candidate.id === id.slice(5));
+    if (member) inspectMember(member);
+    return;
   }
-  if (e.key.startsWith('Arrow') && hoveredIndex.value !== null) {
-    stageRef.value?.querySelectorAll<HTMLButtonElement>('.stage__ship')[hoveredIndex.value]?.focus({ preventScroll: true });
+  const planet = vaultPlanets.find(candidate => candidate.id === id);
+  if (planet) void inspectPlanet(planet);
+}
+function onKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented || paletteOpen.value) return;
+  if (event.key === 'Escape' && (selectedPlanet.value || selectedMember.value)) {
+    event.preventDefault(); event.stopPropagation(); closeInspector(); return;
+  }
+  const target = event.target as HTMLElement | null;
+  if (!target?.matches('.galaxy__planet')) return;
+  const buttons = Array.from(stageRef.value?.querySelectorAll<HTMLButtonElement>('.galaxy__planet') ?? []);
+  const index = buttons.indexOf(target as HTMLButtonElement);
+  const direction = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 0;
+  if (direction) {
+    event.preventDefault();
+    buttons[(index + direction + buttons.length) % buttons.length]?.focus({ preventScroll: true });
   }
 }
-
-function syncMotion() {
-  running = !prefersReducedMotion.value && !document.hidden;
-  cancelAnimationFrame(frameId);
-  if (running) frameId = requestAnimationFrame(tick);
-}
-watch(prefersReducedMotion, syncMotion);
-
-onMounted(() => {
-  measure();
-  positionShips();
-  window.addEventListener("keydown", onKeydown);
-  document.addEventListener('visibilitychange', syncMotion);
-  resizeObserver = new ResizeObserver(() => {
-    measure();
-    positionShips();
-  });
-  if (stageRef.value) resizeObserver.observe(stageRef.value);
-
-  if (!prefersReducedMotion.value) {
-    running = true;
-    frameId = requestAnimationFrame(tick);
-  }
-});
-
-onBeforeUnmount(() => {
-  running = false;
-  cancelAnimationFrame(frameId);
-  resizeObserver?.disconnect();
-  window.removeEventListener("keydown", onKeydown);
-  document.removeEventListener('visibilitychange', syncMotion);
-});
+onBeforeUnmount(resetFocusTween);
 </script>
 
 <template>
-  <div ref="stageRef" class="stage" role="navigation" :aria-label="t('shell.exploreAreas')">
-    <!-- ambient planet glow -->
-    <div class="stage__glow" aria-hidden="true"></div>
-
-    <!-- orbit rings -->
-    <svg class="stage__orbits" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <ellipse
-        v-for="(ring, r) in RING_GEOMETRY"
-        :key="r"
-        cx="50"
-        :cy="46"
-        :rx="ring.rx * 100"
-        :ry="ring.ry * 100"
-        class="stage__orbit"
-      />
-    </svg>
-
-    <!-- glowing wireframe planet -->
-    <div class="stage__planet" aria-hidden="true">
-      <div class="stage__planet-core"></div>
-      <img class="stage__planet-mark" src="/brand/intrepid-mark.png" alt="" aria-hidden="true" />
-      <svg class="stage__globe" viewBox="0 0 200 200">
-        <defs>
-          <radialGradient id="planetFill" cx="42%" cy="38%" r="70%">
-            <stop offset="0%" stop-color="#e6d9ff" stop-opacity="0.6" />
-            <stop offset="45%" stop-color="#7c3aed" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="#1c0f45" stop-opacity="0.05" />
-          </radialGradient>
-        </defs>
-        <circle cx="100" cy="100" r="82" fill="url(#planetFill)" stroke="rgba(183,148,246,.6)" stroke-width="1" />
-        <g class="stage__wire">
-          <ellipse cx="100" cy="100" rx="82" ry="26" />
-          <ellipse cx="100" cy="100" rx="82" ry="52" />
-          <ellipse cx="100" cy="100" rx="82" ry="74" />
-          <ellipse cx="100" cy="100" rx="26" ry="82" />
-          <ellipse cx="100" cy="100" rx="52" ry="82" />
-          <ellipse cx="100" cy="100" rx="74" ry="82" />
-        </g>
+  <section ref="stageRef" class="galaxy" :aria-label="text('Intrepid Value Protection system map', 'Bản đồ hệ Value Protection của Intrepid')" @keydown="onKeydown">
+    <div class="galaxy__toolbar">
+      <span class="galaxy__map-label">{{ text('INTREPID SYSTEM', 'HỆ INTREPID') }}</span>
+      <button type="button" class="galaxy__motion" :aria-pressed="paused" :disabled="prefersReducedMotion" @click="paused = !paused"><span aria-hidden="true">{{ paused || prefersReducedMotion ? '▷' : 'Ⅱ' }}</span>{{ prefersReducedMotion ? text('Reduced motion', 'Giảm chuyển động') : paused ? text('Resume fleet', 'Cho tàu di chuyển') : text('Pause fleet', 'Dừng chuyển động') }}</button>
+    </div>
+    <label class="galaxy__mobile-select"><span>{{ text('Explore vaults & protectors', 'Khám phá vault & protector') }}</span><select :value="selectedPlanet?.id ?? (selectedMember ? 'crew:' + selectedMember.id : '')" @change="chooseVault"><option value="" disabled>{{ text('Select a planet or protector', 'Chọn hành tinh hoặc protector') }}</option><optgroup :label="text('Resource vaults', 'Hành tinh tài nguyên')"><option v-for="planet in vaultPlanets" :key="planet.id" :value="planet.id">{{ t('shell.categories.' + planet.id) }}</option></optgroup><optgroup :label="text('Value Protectors', 'Đội ngũ Value Protector')"><option v-for="member in activeCrew" :key="member.id" :value="'crew:' + member.id">{{ member.name }} · {{ member.country || member.market }}</option></optgroup></select></label>
+    <div class="galaxy__space">
+      <div class="galaxy__nebula" aria-hidden="true"></div>
+      <svg class="galaxy__orbits" viewBox="0 0 1200 600" preserveAspectRatio="none" aria-hidden="true">
+        <g transform="rotate(-15 540 300)"><ellipse cx="540" cy="300" rx="195" ry="124"/><ellipse cx="540" cy="300" rx="331" ry="198"/><ellipse cx="540" cy="300" rx="487" ry="255"/><ellipse cx="540" cy="300" rx="540" ry="292" stroke-dasharray="2 9"/></g>
+        <path d="M75 505 1105 70M90 76 1110 516" stroke-dasharray="2 12" opacity=".28"/>
       </svg>
-    </div>
-
-    <!-- fleet -->
-    <button
-      v-for="(s, i) in sectors"
-      :key="s.slug"
-      class="stage__ship"
-      :class="{ 'is-hovered': hoveredIndex === i }"
-      :style="{
-        transform: `translate(${ships[i].x}px, ${ships[i].y}px) translate(-50%, -50%) scale(${ships[i].scale})`,
-        opacity: ships[i].opacity,
-        zIndex: ships[i].z,
-        color: s.accent,
-      }"
-      :aria-label="t('shell.categories.' + s.categoryId)"
-      @mouseenter="hoveredIndex = i"
-      @mouseleave="hoveredIndex = null"
-      @focus="hoveredIndex = i"
-      @blur="hoveredIndex = null"
-      @click="launch(s)"
-    >
-      <span class="stage__ship-glow"></span>
-      <span class="stage__ship-craft" :style="{ transform: `rotate(${ships[i].rot}deg)` }">
-        <StarfighterIcon :arch="s.arch" />
-      </span>
-      <span class="stage__ship-label">{{ t('shell.categories.' + s.categoryId) }}</span>
-    </button>
-
-    <!-- hover tooltip -->
-    <div
-      v-if="hoveredSector && hoveredShip"
-      class="stage__tip"
-      :style="{
-        transform: `translate(${hoveredShip.x}px, ${hoveredShip.y - 78}px) translate(-50%, -100%)`,
-      }"
-    >
-      <div class="stage__tip-head">
-        <span class="stage__tip-dot" :style="{ background: hoveredSector.accent }"></span>
-        <span class="stage__tip-name">{{ t('shell.categories.' + hoveredSector.categoryId) }}</span>
-        <span class="stage__tip-arch">{{ hoveredSector.archLabel }}</span>
+      <div class="galaxy__core" aria-label="Intrepid · Value Protection Core">
+        <span class="galaxy__core-halo" aria-hidden="true"></span>
+        <GalaxyPlanet id="intrepid-core" color="#AE8DF0" surface="terrain" />
+        <div class="galaxy__core-identity"><img src="/brand/intrepid-mark.png" alt="" /><strong>INTREPID</strong><span>VALUE PROTECTION CORE</span></div>
       </div>
-      <p class="stage__tip-body">{{ t('shell.findAsset') }}</p>
-      <div class="stage__tip-foot">
-        <span>SECTOR {{ hoveredSector.code }}</span>
-        <span :style="{ color: hoveredSector.accent }">{{ t('shell.open') }} →</span>
-      </div>
+      <button v-for="planet in vaultPlanets" :key="planet.id" type="button" class="galaxy__planet" :class="{ 'is-selected': selectedPlanet?.id === planet.id }" :style="{ left: planet.x + '%', top: planet.y + '%', '--planet-size': planet.size + 'px', '--planet-accent': planet.color }" :data-planet="planet.id" :aria-label="text('Inspect vault: ', 'Xem vault: ') + t('shell.categories.' + planet.id)" :aria-expanded="selectedPlanet?.id === planet.id" @click="inspectPlanet(planet)">
+        <span class="galaxy__planet-body"><GalaxyPlanet :id="planet.id" :color="planet.color" :surface="planet.surface" :rings="planet.rings" /></span>
+        <span class="galaxy__planet-label">{{ t('shell.categories.' + planet.id) }}</span>
+        <span class="galaxy__planet-state" aria-hidden="true">{{ selectedPlanet?.id === planet.id ? text('EXPLORING', 'ĐANG KHÁM PHÁ') : 'VAULT' }}</span>
+      </button>
+      <ProtectorFleet :members="activeCrew" :selected-id="selectedMember?.id" :paused="paused" variant="home" @select="inspectMember" />
     </div>
-
-    <!-- Shared team identity, not an individual spotlight. -->
-    <div class="stage__commander" aria-hidden="true">
-      <div class="stage__platform">
-        <span class="stage__platform-ring"></span>
-        <span class="stage__platform-ring stage__platform-ring--gold"></span>
-        <span class="stage__platform-core"></span>
-      </div>
-      <div class="stage__commander-name">Intrepid · Value Protection</div>
-      <div class="stage__commander-role mono">VN · TH · SG · MY · PH · ID</div>
-    </div>
-  </div>
+    <div class="galaxy__legend" aria-hidden="true"><span><i class="galaxy__legend-planet"></i>{{ text('Planets · resource vaults', 'Hành tinh · kho tài nguyên') }}</span><span><i class="galaxy__legend-ship">⌁</i>{{ text('Ships · Value Protectors', 'Chiến hạm · Value Protectors') }}</span></div>
+    <GalaxyVaultInspector v-if="selectedPlanet" :key="selectedPlanet.id" :planet="selectedPlanet" :resources="resources" :source="source" :loading="isLoading" @close="closeInspector" @open="openSector(selectedPlanet.id)" />
+    <MemberScopePanel v-else-if="selectedMember" :member="selectedMember" @close="closeInspector" />
+  </section>
 </template>
 
 <style lang="scss" scoped>
-.stage {
-  position: relative;
-  width: 100%;
-  height: min(72vh, 620px);
-  min-height: 400px;
-}
-
-.stage__glow {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  width: min(60%, 420px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(168, 132, 246, 0.16), rgba(124, 58, 237, 0.04) 46%, transparent 66%);
-  animation: stage-pulse 7s var(--ease-power2-in) infinite;
-  pointer-events: none;
-}
-
-.stage__orbits {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 4;
-  overflow: visible;
-  filter: drop-shadow(0 0 4px rgba(183, 148, 246, 0.45));
-}
-
-.stage__orbit {
-  fill: none;
-  stroke: rgba(183, 148, 246, 0.32);
-  stroke-width: 0.28;
-  vector-effect: non-scaling-stroke;
-}
-
-.stage__planet {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  width: min(46%, 320px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  z-index: 12;
-  pointer-events: none;
-}
-
-.stage__planet-core {
-  position: absolute;
-  left: 42%;
-  top: 40%;
-  width: 46%;
-  height: 46%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, #ffffff 0%, #d9c2ff 24%, #9b6dff 46%, rgba(124, 58, 237, 0.25) 66%, transparent 74%);
-  filter: blur(3px);
-  animation: stage-pulse 5s var(--ease-power2-in) infinite;
-}
-
-.stage__planet-mark {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 42%;
-  height: auto;
-  transform: translate(-50%, -50%);
-  opacity: 0.5;
-  mix-blend-mode: screen;
-  filter: drop-shadow(0 0 10px rgba(183, 148, 246, 0.7));
-  pointer-events: none;
-}
-
-.stage__globe {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  animation: stage-spin 44s linear infinite;
-}
-
-.stage__wire ellipse {
-  fill: none;
-  stroke: rgba(168, 132, 246, 0.28);
-  stroke-width: 0.7;
-}
-
-.stage__ship {
-  position: absolute;
-  left: 0;
-  top: 0;
-  will-change: transform;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  transition:
-    opacity 0.2s ease,
-    filter 0.2s ease;
-
-  &.is-hovered {
-    filter: drop-shadow(0 0 10px currentColor);
-  }
-
-  &:hover .stage__ship-label,
-  &:focus-visible .stage__ship-label,
-  &.is-hovered .stage__ship-label {
-    opacity: 1;
-  }
-}
-
-.stage__ship-glow {
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 60%, currentColor, transparent 66%);
-  opacity: 0.22;
-  filter: blur(4px);
-  pointer-events: none;
-}
-
-.stage__ship-craft {
-  display: grid;
-  place-items: center;
-  will-change: transform;
-}
-
-.stage__ship-label {
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  color: #efe8ff;
-  white-space: nowrap;
-  text-shadow:
-    0 1px 6px #070311,
-    0 0 10px rgba(4, 7, 26, 0.9);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.stage__tip {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 80;
-  width: 244px;
-  pointer-events: none;
-  border-radius: 16px;
-  border: 1px solid rgba(168, 132, 246, 0.35);
-  background: linear-gradient(180deg, rgba(24, 12, 54, 0.97), rgba(16, 8, 36, 0.97));
-  backdrop-filter: blur(8px);
-  box-shadow: 0 24px 60px -24px #000;
-  padding: 14px 16px;
-}
-
-.stage__tip-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-bottom: 8px;
-}
-
-.stage__tip-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
-}
-
-.stage__tip-name {
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.stage__tip-arch {
-  margin-left: auto;
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: var(--color-text-200);
-}
-
-.stage__tip-body {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: #b8acd8;
-  margin: 0 0 11px;
-}
-
-.stage__tip-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  color: var(--color-text-200);
-  border-top: 1px solid var(--color-command-border);
-  padding-top: 9px;
-}
-
-.stage__commander {
-  position: absolute;
-  left: clamp(-4px, 1vw, 18px);
-  bottom: 0;
-  z-index: 45;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  pointer-events: none;
-}
-
-.stage__commander-model {
-  width: 148px;
-  height: 176px;
-  margin-bottom: -10px;
-  pointer-events: none;
-}
-
-.stage__platform {
-  position: relative;
-  width: 150px;
-  height: 34px;
-}
-
-.stage__platform-ring {
-  position: absolute;
-  left: 50%;
-  top: 6px;
-  transform: translateX(-50%);
-  width: 150px;
-  height: 22px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(168, 132, 246, 0.32), rgba(168, 132, 246, 0.05) 70%, transparent);
-  border: 1px solid rgba(168, 132, 246, 0.4);
-
-  &--gold {
-    top: 12px;
-    height: 18px;
-    background: none;
-    border-color: rgba(245, 197, 66, 0.26);
-  }
-}
-
-.stage__platform-core {
-  position: absolute;
-  left: 50%;
-  top: 2px;
-  transform: translateX(-50%);
-  width: 92px;
-  height: 12px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(168, 132, 246, 0.5), transparent);
-  filter: blur(1px);
-}
-
-.stage__commander-name {
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: -0.01em;
-}
-
-.stage__commander-role {
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  color: var(--color-text-200);
-}
-
-@keyframes stage-pulse {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.04);
-  }
-}
-
-@keyframes stage-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 920px) {
-  .stage {
-    height: 46vh;
-    min-height: 320px;
-  }
-  .stage__commander {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stage__glow,
-  .stage__planet-core,
-  .stage__globe {
-    animation: none;
-  }
-}
+.galaxy { isolation:isolate; position:relative; width:100%; flex:1; min-height:450px; overflow:hidden; border-top:1px solid rgba(189,162,231,.13); border-bottom:1px solid rgba(189,162,231,.09); background:radial-gradient(ellipse at 40% 47%,rgba(48,24,82,.22),transparent 61%),linear-gradient(160deg,rgba(10,7,25,.45),rgba(9,10,26,.2)); }
+.galaxy__toolbar { position:absolute; top:12px; left:20px; right:16px; z-index:22; display:flex; align-items:center; justify-content:space-between; gap:16px; pointer-events:none; }
+.galaxy__map-label { font-size:9px; letter-spacing:.2em; color:var(--color-text-200); }
+.galaxy__motion { pointer-events:auto; display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:5px 9px; border:1px solid rgba(189,162,231,.2); border-radius:5px; background:rgba(14,10,31,.74); font-size:10px; color:var(--color-text-300); cursor:pointer; }
+.galaxy__motion>span { font-size:13px; }.galaxy__motion:disabled { cursor:default; opacity:.75; }
+.galaxy__space { position:absolute; inset:0; }
+.galaxy__space :deep(.protector-fleet) { z-index:6; }
+.galaxy__nebula { position:absolute; width:75%; height:70%; left:10%; top:10%; transform:rotate(-22deg); pointer-events:none; background:radial-gradient(ellipse at 40% 50%,rgba(116,66,158,.12),transparent 58%),radial-gradient(ellipse at 80% 50%,rgba(72,97,143,.1),transparent 54%); }
+.galaxy__orbits { position:absolute; inset:3% 5%; width:90%; height:94%; pointer-events:none; overflow:visible; fill:none; stroke:rgba(173,146,219,.21); stroke-width:.8; }
+.galaxy__orbits ellipse:nth-child(2) { stroke:rgba(206,191,237,.16); }.galaxy__orbits ellipse:nth-child(3) { stroke:rgba(171,154,216,.12); }
+.galaxy__core { position:absolute; left:46%; top:51%; width:clamp(132px,14vw,190px); aspect-ratio:1; transform:translate(-50%,-50%); pointer-events:none; z-index:3; }
+.galaxy__core-halo { position:absolute; inset:-24%; border-radius:50%; background:radial-gradient(circle,rgba(173,123,241,.12),transparent 65%); box-shadow:inset 0 0 0 1px rgba(199,177,239,.04); }
+.galaxy__core-identity { position:absolute; inset:28% 0 auto; display:flex; flex-direction:column; align-items:center; text-shadow:0 1px 10px #080614; }
+.galaxy__core-identity img { width:25%; aspect-ratio:1; object-fit:contain; opacity:.93; margin-bottom:5px; }
+.galaxy__core-identity strong { font-size:clamp(12px,1.3vw,18px); letter-spacing:.16em; color:#faf5ff; }
+.galaxy__core-identity>span { font-size:6px; letter-spacing:.13em; margin-top:4px; color:#e0d4f2; }
+.galaxy__planet { position:absolute; z-index:8; display:flex; flex-direction:column; align-items:center; width:148px; padding:0; border:0; border-radius:10px; background:transparent; color:var(--color-text-400); cursor:pointer; transform:translate(-50%,-50%); }
+.galaxy__planet-body { width:var(--planet-size); height:var(--planet-size); display:block; transform-origin:center; transition:transform .45s cubic-bezier(.2,.7,.2,1),filter .45s cubic-bezier(.2,.7,.2,1); filter:drop-shadow(0 0 8px rgba(189,162,231,.12)); }
+.galaxy__planet-label { display:block; padding:0 4px; max-width:148px; font-size:12px; line-height:1.35; font-weight:500; text-align:center; text-wrap:balance; text-shadow:0 2px 8px #070512,0 0 16px #070512; transition:color .3s; }
+.galaxy__planet-state { display:block; margin-top:4px; font-size:7px; line-height:1.2; letter-spacing:.2em; color:#9286aa; }
+.galaxy__planet:hover .galaxy__planet-body,.galaxy__planet:focus-visible .galaxy__planet-body,.galaxy__planet.is-selected .galaxy__planet-body { transform:scale(1.08); filter:drop-shadow(0 0 14px rgba(198,163,255,.48)); }
+.galaxy__planet:hover .galaxy__planet-label,.galaxy__planet.is-selected .galaxy__planet-label { color:#e8d194; }
+.galaxy__planet.is-selected .galaxy__planet-state { color:#d7bc76; }.galaxy__planet:focus-visible { outline:1px solid #e3c779; outline-offset:6px; }
+.galaxy__legend { position:absolute; bottom:13px; left:20px; right:20px; display:flex; flex-wrap:wrap; gap:16px; pointer-events:none; z-index:21; }
+.galaxy__legend>span { display:flex; align-items:center; gap:6px; color:var(--color-text-200); font-size:10px; }.galaxy__legend i { display:inline-block; font-style:normal; color:#bca1e5; }.galaxy__legend-planet { width:7px; height:7px; border:1px solid #c8b3e7; border-radius:50%; }.galaxy__legend-ship { font-size:19px; line-height:10px; }
+.galaxy__mobile-select { display:none; }
+@media(max-width:1024px) { .galaxy__planet { width:122px; }.galaxy__planet-label { font-size:11px; max-width:122px; }.galaxy__planet-body { width:calc(var(--planet-size) * .9); height:calc(var(--planet-size) * .9); } }
+@media(max-width:700px) { .galaxy { min-height:430px; }.galaxy__toolbar { top:12px; left:12px; right:12px; }.galaxy__map-label { font-size:8px; }.galaxy__motion { min-height:40px; }.galaxy__planet { width:100px; }.galaxy__planet-label { max-width:100px; font-size:10px; }.galaxy__planet-body { width:calc(var(--planet-size) * .78); height:calc(var(--planet-size) * .78); }.galaxy__legend { left:12px; gap:8px 14px; }.galaxy__legend>span { font-size:9px; } }
+@media(max-width:540px) { .galaxy { min-height:420px; }.galaxy__planet { display:none; }.galaxy__core { left:50%; top:52%; width:185px; }.galaxy__core-identity strong { font-size:16px; }.galaxy__mobile-select { position:absolute; top:60px; left:14px; right:14px; display:flex; flex-direction:column; gap:5px; z-index:23; }.galaxy__mobile-select>span { font-size:10px; color:var(--color-text-200); }.galaxy__mobile-select select { width:100%; min-height:44px; padding:8px 10px; border:1px solid rgba(194,168,237,.3); border-radius:6px; background:#171027; color:var(--color-text-400); font-size:14px; }.galaxy__space { top:90px; bottom:30px; }.galaxy__legend { bottom:10px; justify-content:center; }.galaxy__core-identity>span { font-size:6px; } }
+@media(prefers-reduced-motion:reduce) { .galaxy__planet-body,.galaxy__planet-label { transition:none; } }
 </style>

@@ -7,10 +7,10 @@ catalogs, keyboard navigation and reduced-motion support.
 
 ## Destinations
 
-- **Universe** — category navigation and Hub search; external Google Drive search is a separate, explicit action.
-- **Start here** — entry paths for business understanding, onboarding and daily work.
-- **Directory** — Cards/List, search, country/category/status/criticality filters and truthful source/link states.
-- **Team** — equal-weight cards by collaboration function/market; published portfolio discovery, not an inferred org chart.
+- **Universe** — Intrepid at the core, ten resource-vault planets and a fleet of real Value Protectors; selected scope opens without moving the camera.
+- **Start here** — three compact flight paths for business understanding, team/responsibilities and daily work; vocabulary lives in the Process Guide.
+- **Directory** — table by default, optional compact cards, search, country/type/category/status/priority filters and truthful source/link states.
+- **Team** — equal-weight protector ships, search/market/function discovery and internally scrollable portfolio panels; not an inferred org chart.
 - **Process Atlas** — Explore canvas and a separate document-style Process Guide reading the same records.
 
 ## Run and verify
@@ -60,7 +60,8 @@ the authoritative business text.
 
 Examples: `/?lang=vi#crew`, `/#member?id=khai`,
 `/#directory?country=VN&q=accrual`, `/#atlas?mode=guide&stage=04&tab=controls`.
-Directory filters are shareable; Crew filters persist in-session, not in the URL.
+Directory filters (including allowlisted `type`) are shareable; Crew filters persist in-session, not in the URL.
+Table is the default; `mode=cards` selects cards, and legacy `mode=compact` links remain valid.
 Ctrl/⌘K opens search. Escape closes a modal before any underlying page shortcut.
 
 ## Deployment and rollback
@@ -83,6 +84,12 @@ and content with Sheet version history. Do not delete legacy tabs to roll back.
 - No external translation service. Incomplete/stale translations retain source and disclose fallback.
 - Reported practice, located evidence and published text do not establish approval or operating effectiveness. Correction/write-off is not cash collection.
 
-Universe currently uses CSS/SVG and scoped GSAP; the legacy Three.js scene is not
-mounted. Team, Directory and Atlas route components load on demand. No new tilt,
-smooth-scroll or scroll-pinning behavior is introduced into the process workspace.
+Universe and Crew use CSS/SVG and scoped GSAP; the legacy Three.js scene is not mounted.
+Ships are people, planets are vaults. Only hovered/focused/selected ships pause; camera
+and other ships are unaffected. Pause/reduced-motion and compact-screen selectors keep
+discovery accessible. Team, Directory and Atlas route components load on demand.
+No new tilt, smooth-scroll or scroll-pinning is introduced into the process workspace.
+
+UI text uses pinned self-hosted Be Vietnam Pro 5.3.0 at weights 400/500/600/700, including
+Vietnamese and Latin subsets. No Google Fonts request is made at runtime. Original logo
+assets remain unchanged. Font copyright/license is shipped in `public/fonts/OFL-BeVietnamPro.txt`.

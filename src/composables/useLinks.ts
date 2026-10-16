@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from "vue";
-import type { CategoryId, CountryCode, Criticality, DirectorySource, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
+import type { CategoryId, CountryCode, Criticality, DirectoryQuickView, DirectorySource, LinkItem, LinkStatus, Scope, ViewMode } from "../types/links";
+import { filterVaultQuickView } from "../services/vaultFilters";
 import { crew, type CrewMember } from "../data/crew";
 import type { PortfolioRow } from "../data/memberPortfolios";
 import { isAtlasHash } from "./useAtlasRouteState";
@@ -34,6 +35,7 @@ const filters = reactive({
 
 const scope = ref<Scope>(initialRoute.scope);
 const viewMode = ref<ViewMode>(initialRoute.viewMode);
+const directoryQuickView = ref<DirectoryQuickView>(initialRoute.quickView);
 const criticalOnly = ref(false);
 const paletteOpen = ref(false);
 const view = ref<HubView>(isAtlasHash(window.location.hash) ? "atlas" : initialRoute.view);
@@ -52,6 +54,7 @@ function syncHubView() {
     filters.status = state.status;
     filters.criticality = state.criticality;
     viewMode.value = state.viewMode;
+    directoryQuickView.value = state.quickView;
     criticalOnly.value = false;
   }
   if (state.view === "member") selectedMember.value = crew.find((member) => member.id === state.memberId && member.active !== false) ?? null;
@@ -61,14 +64,14 @@ window.addEventListener("hashchange", syncHubView);
 window.addEventListener("popstate", syncHubView);
 
 function routeState(nextView = view.value): HubRoute {
-  return { view: nextView, scope: scope.value, country: filters.country, status: filters.status, criticality: criticalOnly.value ? "High" : filters.criticality, query: filters.query, viewMode: viewMode.value, memberId: selectedMember.value?.id ?? "" };
+  return { view: nextView, scope: scope.value, country: filters.country, status: filters.status, criticality: criticalOnly.value ? "High" : filters.criticality, query: filters.query, viewMode: viewMode.value, quickView: directoryQuickView.value, memberId: selectedMember.value?.id ?? "" };
 }
 function writeRoute(nextView: HubView, replace = false) {
   const hash = serializeHubHash(routeState(nextView));
   view.value = nextView;
   if (window.location.hash !== hash) window.history[replace ? "replaceState" : "pushState"](window.history.state, "", window.location.pathname + window.location.search + hash);
 }
-watch([() => filters.query, () => filters.country, () => filters.status, () => filters.criticality, scope, viewMode, criticalOnly], () => {
+watch([() => filters.query, () => filters.country, () => filters.status, () => filters.criticality, scope, viewMode, criticalOnly, directoryQuickView], () => {
   if (!syncingRoute && view.value === "sector") writeRoute("sector", true);
 }, { flush: "sync" });
 
@@ -153,7 +156,7 @@ export function useLinks() {
   }
 
   /** Links after search + facet filters (country/status/criticality) but NOT scope. Drives counts + scope. */
-  const baseLinks = computed(() => filterLinks(links.value, { ...filters, categoryId: "all" }));
+  const baseLinks = computed(() => filterVaultQuickView(filterLinks(links.value, { ...filters, categoryId: "all" }), directoryQuickView.value));
 
   const recentCutoff = computed(() => Date.now() - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
@@ -171,16 +174,23 @@ export function useLinks() {
     return map;
   });
 
-  /** The links shown in the center workspace for the current scope + toggles. */
-  const workspaceLinks = computed(() => {
+  function scopedLinks(candidates: LinkItem[]): LinkItem[] {
     let result: LinkItem[];
-    if (scope.value === "all") result = baseLinks.value;
-    else if (scope.value === "critical") result = criticalLinks.value;
-    else if (scope.value === "recent") result = recentLinks.value;
-    else result = baseLinks.value.filter((l) => l.category === scope.value);
-
+    if (scope.value === "all") result = candidates;
+    else if (scope.value === "critical") result = candidates.filter((link) => link.criticality === "High");
+    else if (scope.value === "recent") result = candidates.filter((link) => parseDate(link.lastUpdated) >= recentCutoff.value).sort((a, b) => parseDate(b.lastUpdated) - parseDate(a.lastUpdated));
+    else result = candidates.filter((link) => link.category === scope.value);
     if (criticalOnly.value) result = result.filter((l) => l.criticality === "High");
     return result;
+  }
+
+  /** The links shown in the center workspace for the current scope + toggles. */
+  const workspaceLinks = computed(() => scopedLinks(baseLinks.value));
+  const countryCounts = computed(() => {
+    const candidates = scopedLinks(filterVaultQuickView(filterLinks(links.value, { ...filters, country: "all", categoryId: "all" }), directoryQuickView.value));
+    const counts = new Map<string, number>([["all", candidates.length]]);
+    for (const link of candidates) counts.set(link.country, (counts.get(link.country) ?? 0) + 1);
+    return counts;
   });
 
   const scopeLabel = computed(() => {
@@ -210,6 +220,7 @@ export function useLinks() {
       filters.status !== "all" ||
       filters.criticality !== "all" ||
       criticalOnly.value ||
+      directoryQuickView.value !== "all" ||
       scope.value !== "all",
   );
 
@@ -221,6 +232,7 @@ export function useLinks() {
     filters.criticality = "all";
     criticalOnly.value = false;
     scope.value = "all";
+    directoryQuickView.value = "all";
   }
 
   function selectScope(next: Scope) {
@@ -288,6 +300,7 @@ export function useLinks() {
     filters,
     scope,
     viewMode,
+    directoryQuickView,
     criticalOnly,
     paletteOpen,
     baseLinks,
@@ -300,6 +313,7 @@ export function useLinks() {
     activeCategory,
     stats,
     availableCountries,
+    countryCounts,
     hasActiveFilters,
     clearFilters,
     selectScope,

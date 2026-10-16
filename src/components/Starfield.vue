@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useReducedMotion } from "../composables/useReducedMotion";
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -65,24 +65,29 @@ function loop() {
   frameId = requestAnimationFrame(loop);
 }
 
+function syncMotion() {
+  cancelAnimationFrame(frameId);
+  running = !!ctx && !prefersReducedMotion.value && !document.hidden;
+  draw();
+  if (running) frameId = requestAnimationFrame(loop);
+}
+watch(prefersReducedMotion, syncMotion);
+
 onMounted(() => {
   const canvas = canvasRef.value;
   if (!canvas) return;
   ctx = canvas.getContext("2d");
   resize();
   window.addEventListener("resize", resize, { passive: true });
-  if (prefersReducedMotion.value) {
-    draw();
-  } else {
-    running = true;
-    frameId = requestAnimationFrame(loop);
-  }
+  document.addEventListener('visibilitychange', syncMotion);
+  syncMotion();
 });
 
 onBeforeUnmount(() => {
   running = false;
   cancelAnimationFrame(frameId);
   window.removeEventListener("resize", resize);
+  document.removeEventListener('visibilitychange', syncMotion);
 });
 </script>
 
