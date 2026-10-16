@@ -1,5 +1,6 @@
 export type LinkStatus = "Active" | "Review" | "Blocked" | "Archived";
 export type Criticality = "High" | "Medium" | "Low";
+export type DirectorySource = "live" | "stale" | "unavailable" | "mock";
 export type CountryCode = "VN" | "SG" | "MY" | "ID" | "PH" | "TH" | "Regional";
 
 export const CATEGORY_IDS = [

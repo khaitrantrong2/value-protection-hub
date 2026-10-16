@@ -2,12 +2,22 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import type { AtlasPayload } from "../../types/atlas";
 import Icon from "../Icon.vue";
+import { useLocale } from "../../i18n";
+const { t, text } = useLocale();
 
 const props = defineProps<{ source: "live" | "demo" | "unavailable"; meta?: AtlasPayload["meta"]; error?: string; refreshedAt?: string; isLoading: boolean }>();
 const emit = defineEmits<{ refresh: [] }>();
 const details = ref<HTMLDetailsElement | null>(null);
 const summary = ref<HTMLElement | null>(null);
-const label = computed(() => props.source === "live" ? props.error ? "Google Sheets · retained copy" : "Google Sheets · live source" : props.source === "demo" ? "Bundled demo · not live source" : props.isLoading ? "Loading source" : "Source unavailable");
+const label = computed(() => props.source === "live" ? props.error ? t("atlas.sourceRetained") : t("atlas.sourceLive") : props.source === "demo" ? t("atlas.sourceDemo") : props.isLoading ? t("atlas.sourceLoading") : t("atlas.sourceUnavailable"));
+const errorLabel = computed(() => {
+  if (!props.error) return "";
+  if (props.source === "demo") return text("This is the bundled draft, not the latest Google Sheet content. Refresh to retry the live source.", "Đây là bản nháp đóng gói, không phải nội dung Google Sheet mới nhất. Tải lại để thử nguồn trực tiếp.");
+  if (props.error.includes("chưa hỗ trợ Atlas")) return text("The source API does not yet support Atlas. Update the Apps Script deployment.", "API nguồn chưa hỗ trợ Atlas. Cần cập nhật bản triển khai Apps Script.");
+  if (props.error.includes("không hợp lệ")) return text("The published source or API configuration is invalid. Ask the source owner to review it.", "Nguồn xuất bản hoặc cấu hình API không hợp lệ. Nhờ chủ nguồn kiểm tra lại.");
+  if (props.error.includes("hết thời gian")) return text("The source request timed out. Try refreshing again.", "Yêu cầu tải nguồn hết thời gian. Hãy tải lại.");
+  return text("The source could not be refreshed. Check the connection and try again.", "Chưa tải lại được nguồn. Kiểm tra kết nối và thử lại.");
+});
 function close() { if (details.value) details.value.open = false; summary.value?.focus({ preventScroll: true }); }
 function outside(event: PointerEvent) { if (details.value?.open && !details.value.contains(event.target as Node)) details.value.open = false; }
 onMounted(() => window.addEventListener("pointerdown", outside));
@@ -16,15 +26,16 @@ onBeforeUnmount(() => window.removeEventListener("pointerdown", outside));
 
 <template>
   <details ref="details" class="atlas-source-info" @keydown.esc.stop.prevent="close">
-    <summary ref="summary" :aria-label="`Source Info: ${label}`"><span aria-hidden="true">ⓘ</span><span class="source-info-text">Source Info</span><span v-if="source !== 'live' || error" class="source-signal" aria-hidden="true">!</span></summary>
-    <section class="atlas-source-popover" aria-label="Source and map information" data-lenis-prevent>
-      <header><h2>Source Info</h2><button type="button" aria-label="Close Source Info" @click="close"><Icon name="close" :size="16" /></button></header>
+    <summary ref="summary" :aria-label="`${t('atlas.sourceInfo')}: ${label}`"><span aria-hidden="true">ⓘ</span><span class="source-info-text">{{ t("atlas.sourceInfo") }}</span><span v-if="source !== 'live' || error" class="source-signal" aria-hidden="true">!</span></summary>
+    <section class="atlas-source-popover" :aria-label="text('Source and map information', 'Thông tin nguồn và bản đồ')" data-lenis-prevent>
+      <header><h2>{{ t("atlas.sourceInfo") }}</h2><button type="button" :aria-label="text('Close Source Info', 'Đóng thông tin nguồn')" @click="close"><Icon name="close" :size="16" /></button></header>
       <p class="source-label" role="status">{{ label }}</p>
-      <dl><dt>Publication</dt><dd>{{ meta?.processStatus || 'Draft' }}</dd><dt>Content version</dt><dd>{{ meta?.contentVersion || 'D0' }}</dd><dt>Effective from</dt><dd>{{ meta?.effectiveFrom || 'Pending approval' }}</dd><dt>Content updated</dt><dd>{{ meta?.updatedAt || 'Not specified' }}</dd><dt>Fetched</dt><dd>{{ refreshedAt || 'No live-source fetch timestamp' }}</dd></dl>
-      <p v-if="error" class="source-warning" role="alert">{{ error }}</p>
-      <p class="source-limit">Reported practice is process-owner context, not tested operating effectiveness or an approved SOP.</p>
-      <details class="atlas-map-help"><summary>Map controls & notation</summary><p>Drag / scroll to pan. Ctrl/⌘ + scroll or +/− to zoom. Fit restores the overview. Click a stage to read its guide.</p><p>Arrow keys pan; F fits; 1–8 opens the chapter guide. Dashed arrow: rework. Data lane connectors show supporting dependencies, not extra business stages.</p></details>
-      <button type="button" class="source-refresh" :disabled="isLoading" @click="emit('refresh')"><Icon name="clock" :size="16" />{{ isLoading ? 'Loading source…' : 'Refresh source' }}</button>
+      <dl><dt>{{ text("Publication", "Trạng thái xuất bản") }}</dt><dd>{{ meta?.processStatus || text('Draft', 'Bản nháp') }}</dd><dt>{{ text("Content version", "Phiên bản nội dung") }}</dt><dd>{{ meta?.contentVersion || 'D0' }}</dd><dt>{{ text("Effective from", "Hiệu lực từ") }}</dt><dd>{{ meta?.effectiveFrom || t('atlas.pendingApproval') }}</dd><dt>{{ text("Content updated", "Nội dung cập nhật") }}</dt><dd>{{ meta?.updatedAt || t('atlas.unspecified') }}</dd><dt>{{ text("Fetched", "Tải nguồn lúc") }}</dt><dd>{{ refreshedAt || text('No live-source fetch timestamp', 'Chưa có thời điểm tải nguồn trực tiếp') }}</dd></dl>
+      <p v-if="error" class="source-warning" role="alert">{{ errorLabel }}</p>
+      <p class="source-language-note">{{ t("atlas.translationNotice") }}</p>
+      <p class="source-limit">{{ text("Reported practice is process-owner context, not tested operating effectiveness or an approved SOP.", "Thực tế được xác nhận là thông tin từ chủ quy trình, không phải kết luận kiểm tra tính hữu hiệu vận hành hay SOP đã phê duyệt.") }}</p>
+      <details class="atlas-map-help"><summary>{{ text("Map controls & notation", "Thao tác & ký hiệu bản đồ") }}</summary><p>{{ text("Drag / scroll to pan. Ctrl/⌘ + scroll or +/− to zoom. Fit restores the overview. Click a stage to read its guide.", "Kéo / cuộn để di chuyển. Ctrl/⌘ + cuộn hoặc +/− để phóng to, thu nhỏ. Vừa khung đưa về tổng quan. Chọn một giai đoạn để đọc tài liệu.") }}</p><p>{{ text("Arrow keys pan; F fits; 1–8 opens the chapter guide. Dashed arrow: rework. Data lane connectors show supporting dependencies, not extra business stages.", "Phím mũi tên để di chuyển; F để vừa khung; 1–8 để mở chương. Mũi tên nét đứt: xử lý lại. Đường nối luồng dữ liệu thể hiện quan hệ hỗ trợ, không phải giai đoạn nghiệp vụ bổ sung.") }}</p></details>
+      <button type="button" class="source-refresh" :disabled="isLoading" @click="emit('refresh')"><Icon name="clock" :size="16" />{{ isLoading ? text('Loading source…', 'Đang tải nguồn…') : text('Refresh source', 'Tải lại nguồn') }}</button>
     </section>
   </details>
 </template>

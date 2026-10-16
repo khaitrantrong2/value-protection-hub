@@ -1,608 +1,88 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { crew, type CrewMember } from "../data/crew";
+import { crew, type CrewGroup, type CrewMember } from "../data/crew";
+import { CREW_FUNCTIONS, CREW_MARKETS, matchesCrew } from "../data/crewDirectory";
 import { useLinks } from "../composables/useLinks";
+import { useCrewDirectory } from "../composables/useCrewDirectory";
+import { useLocale } from "../i18n";
+import { messages } from "../i18n/messages/crew";
+import CrewMemberCard from "./CrewMemberCard.vue";
+import CrewSourceNotice from "./CrewSourceNotice.vue";
+import Icon from "./Icon.vue";
 
-const { openMember } = useLinks();
-
-/** Only members on active duty appear in the formation (reassigned crew are kept in data but hidden). */
-const roster = computed(() => crew.filter((m) => m.active !== false));
-
-const commander = computed(() => roster.value.find((m) => m.rank === "commander") ?? null);
-const leads = computed(() => roster.value.filter((m) => m.rank === "lead"));
-const guardians = computed(() => roster.value.filter((m) => m.rank === "guardian"));
-const cadets = computed(() => roster.value.filter((m) => m.rank === "cadet"));
-
-const COUNTRY_NAME: Record<string, string> = {
-  TH: "Thailand",
-  VN: "Vietnam",
-  SG: "Singapore",
-  MY: "Malaysia",
-  PH: "Philippines",
-  ID: "Indonesia",
-};
-
-interface Pod {
-  code: string;
-  name: string;
-  members: CrewMember[];
+const { openMember, memberScope, source } = useLinks();
+const { t } = useLocale();
+const filters = useCrewDirectory();
+const roster = crew.filter(member => member.active !== false);
+const scopes = computed(() => new Map(roster.map(member => [member.id, memberScope(member)])));
+function searchCopy(member: CrewMember) {
+  const key = member.profileKey as keyof typeof messages.en.crew.profiles;
+  return [messages.en.crew.profiles[key], messages.vi.crew.profiles[key]].flatMap(profile => Object.values(profile || {})).join(" ");
 }
-
-function podsFor(codes: string[]): Pod[] {
-  return codes
-    .map((code) => ({
-      code,
-      name: COUNTRY_NAME[code] ?? code,
-      members: guardians.value.filter((g) => g.country === code),
-    }))
-    .filter((p) => p.members.length > 0);
-}
-
-// Geographic two-row arrangement: the big twin markets up top, the rest below.
-const podsTop = computed(() => podsFor(["TH", "VN"]));
-const podsBottom = computed(() => podsFor(["SG", "MY", "PH", "ID"]));
-
-function open(m: CrewMember) {
-  openMember(m);
-}
+const visible = computed(() => roster.filter(member => matchesCrew(member, filters.query, filters.market, filters.function, scopes.value.get(member.id) || [], searchCopy(member))));
+const groupOrder: CrewGroup[] = ["regional", "market", "flex"];
+const groups = computed(() => groupOrder.map(id => ({ id, members: visible.value.filter(member => member.group === id) })).filter(group => group.members.length));
+function resetFilters() { filters.query = ""; filters.market = "all"; filters.function = "all"; }
+const hasFilters = computed(() => !!filters.query || filters.market !== "all" || filters.function !== "all");
+const hasSource = computed(() => source.value === "live" || source.value === "stale");
 </script>
 
 <template>
   <section class="crewpage">
     <div class="crewpage__scroll vph-scroll">
-      <header class="crewpage__header">
-        <p class="crewpage__eyebrow mono">INTREPID UNIVERSE</p>
-        <h1 class="crewpage__title">Value Protection Crew</h1>
-        <p class="crewpage__lead">
-          One commander at the core, the control &amp; data leads who power the engine, and the market guardians
-          holding every sector line. Select a protector to open their portfolio.
-        </p>
-      </header>
-
-      <div class="crewpage__spine">
-        <!-- Control & Data leads (HQ row) -->
-        <div class="tier">
-          <span class="tier__label mono">CONTROL · DATA · AR</span>
-          <div class="leads-row">
-            <button
-              v-for="m in leads"
-              :key="m.name"
-              type="button"
-              class="crew-card crew-card--lead"
-              :style="{ '--accent': m.accent }"
-              @click="open(m)"
-            >
-              <div class="crew-card__avatar">
-                <span class="crew-card__halo"></span>
-                <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
-                <span class="crew-card__rank"></span>
-              </div>
-              <div class="crew-card__name">{{ m.name }}</div>
-              <div class="crew-card__role mono">{{ m.roleShort }}</div>
-              <p class="crew-card__blurb">{{ m.blurb }}</p>
-              <div class="crew-card__meta mono"><span>{{ m.station }}</span><span>{{ m.clearance }}</span></div>
-            </button>
+      <div class="crewpage__content">
+        <header class="crewpage__header"><p class="crewpage__eyebrow mono">{{ t('crew.eyebrow') }}</p><h1>{{ t('crew.title') }}</h1><p>{{ t('crew.intro') }}</p></header>
+        <div class="crew-discovery">
+          <div class="crew-filters">
+            <label class="crew-filters__search"><span>{{ t('crew.search') }}</span><span class="crew-search-input"><Icon name="search" :size="18" /><input v-model="filters.query" type="search" maxlength="200" :placeholder="t('crew.searchPlaceholder')" autocomplete="off"></span></label>
+            <label><span>{{ t('crew.market') }}</span><select v-model="filters.market"><option value="all">{{ t('crew.allMarkets') }}</option><option v-for="market in CREW_MARKETS" :key="market" :value="market">{{ t('crew.markets.' + market) }}</option></select></label>
+            <label><span>{{ t('crew.function') }}</span><select v-model="filters.function"><option value="all">{{ t('crew.allFunctions') }}</option><option v-for="role in CREW_FUNCTIONS" :key="role" :value="role">{{ t('crew.functions.' + role) }}</option></select></label>
           </div>
+          <div class="crew-filter-result"><p role="status" aria-live="polite">{{ t('crew.result', { count: visible.length, total: roster.length }) }}</p><button v-if="hasFilters" type="button" @click="resetFilters"><Icon name="close" :size="14" />{{ t('crew.reset') }}</button></div>
         </div>
-
-        <!-- Commander — the core everyone orbits -->
-        <div v-if="commander" class="tier tier--commander">
-          <span class="tier__label mono">COMMANDER</span>
-          <div class="commander-wrap">
-            <button
-              type="button"
-              class="hero-card"
-              :style="{ '--accent': commander.accent }"
-              @click="open(commander)"
-            >
-              <div class="hero-card__avatar">
-                <span class="hero-card__halo"></span>
-                <span class="hero-card__ring"></span>
-                <span class="hero-card__body"><span class="hero-card__visor">{{ commander.name.charAt(0) }}</span></span>
-                <span class="hero-card__star">★</span>
-              </div>
-              <div class="hero-card__name">{{ commander.name }}</div>
-              <div class="hero-card__role mono">{{ commander.roleShort }} · {{ commander.clearance }}</div>
-              <p class="hero-card__blurb">{{ commander.blurb }}</p>
-              <div class="hero-card__station mono">{{ commander.station }}</div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Market guardians, grouped into country pods -->
-        <div class="tier">
-          <span class="tier__label mono">MARKET GUARDIANS</span>
-
-          <div class="pods">
-            <div v-for="pod in podsTop" :key="pod.code" class="pod">
-              <div class="pod__head mono"><span class="pod__code">{{ pod.code }}</span>{{ pod.name }}</div>
-              <div class="pod__cards">
-                <button
-                  v-for="m in pod.members"
-                  :key="m.name"
-                  type="button"
-                  class="crew-card"
-                  :style="{ '--accent': m.accent }"
-                  @click="open(m)"
-                >
-                  <div class="crew-card__avatar">
-                    <span class="crew-card__halo"></span>
-                    <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
-                    <span class="crew-card__rank"></span>
-                  </div>
-                  <div class="crew-card__name">{{ m.name }}</div>
-                  <div class="crew-card__role mono">{{ m.roleShort }}</div>
-                  <div class="crew-card__meta mono"><span>{{ m.market }}</span><span>{{ m.clearance }}</span></div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="pods">
-            <div v-for="pod in podsBottom" :key="pod.code" class="pod">
-              <div class="pod__head mono"><span class="pod__code">{{ pod.code }}</span>{{ pod.name }}</div>
-              <div class="pod__cards">
-                <button
-                  v-for="m in pod.members"
-                  :key="m.name"
-                  type="button"
-                  class="crew-card"
-                  :style="{ '--accent': m.accent }"
-                  @click="open(m)"
-                >
-                  <div class="crew-card__avatar">
-                    <span class="crew-card__halo"></span>
-                    <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
-                    <span class="crew-card__rank"></span>
-                  </div>
-                  <div class="crew-card__name">{{ m.name }}</div>
-                  <div class="crew-card__role mono">{{ m.roleShort }}</div>
-                  <div class="crew-card__meta mono"><span>{{ m.market }}</span><span>{{ m.clearance }}</span></div>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Flex support -->
-        <div v-if="cadets.length" class="tier tier--cadet">
-          <span class="tier__label mono">FLEX SUPPORT</span>
-          <div class="tier__row">
-            <button
-              v-for="m in cadets"
-              :key="m.name"
-              type="button"
-              class="crew-card crew-card--cadet"
-              :style="{ '--accent': m.accent }"
-              @click="open(m)"
-            >
-              <div class="crew-card__avatar">
-                <span class="crew-card__halo"></span>
-                <span class="crew-card__body"><span class="crew-card__visor">{{ m.name.charAt(0) }}</span></span>
-                <span class="crew-card__rank crew-card__rank--cadet"></span>
-              </div>
-              <div class="crew-card__name">{{ m.name }}</div>
-              <div class="crew-card__role mono">{{ m.roleShort }}</div>
-              <p class="crew-card__blurb">{{ m.blurb }}</p>
-            </button>
-          </div>
-        </div>
+        <CrewSourceNotice />
+        <p class="crew-boundary">{{ t('crew.boundary') }}</p>
+        <div v-if="!visible.length" class="crew-empty"><h2>{{ t('crew.noMatch') }}</h2><p>{{ t('crew.noMatchBody') }}</p><button type="button" @click="resetFilters">{{ t('crew.reset') }}</button></div>
+        <section v-for="group in groups" :key="group.id" class="crew-group" :aria-labelledby="'crew-group-' + group.id">
+          <header class="crew-group__header"><div><h2 :id="'crew-group-' + group.id">{{ t('crew.groups.' + group.id) }}<span>{{ group.members.length }}</span></h2><p>{{ t('crew.groupNotes.' + group.id) }}</p></div></header>
+          <div class="crew-grid"><CrewMemberCard v-for="member in group.members" :key="member.id" :member="member" :scope-count="hasSource ? scopes.get(member.id)?.length : undefined" @open="openMember" /></div>
+        </section>
+        <footer class="crew-footer">{{ t('crew.rosterSource') }}</footer>
       </div>
     </div>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.crewpage {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  overflow: hidden;
-}
-
-.crewpage__scroll {
-  height: 100%;
-  overflow-y: auto;
-  padding: clamp(24px, 4vh, 48px) clamp(20px, 4vw, 52px) 80px;
-}
-
-.crewpage__header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.crewpage__eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.28em;
-  color: var(--color-cyan-400);
-}
-
-.crewpage__title {
-  font-size: clamp(34px, 5vw, 56px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 12px 0 14px;
-}
-
-.crewpage__lead {
-  font-size: 15px;
-  color: var(--color-text-200);
-  max-width: 64ch;
-  margin: 0 auto;
-  text-wrap: pretty;
-}
-
-.crewpage__spine {
-  position: relative;
-  max-width: 1160px;
-  margin: 0 auto;
-  padding-top: 20px;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 60px;
-    left: 50%;
-    width: 1px;
-    transform: translateX(-50%);
-    background: linear-gradient(180deg, transparent, rgba(183, 148, 246, 0.4) 10%, rgba(183, 148, 246, 0.12) 88%, transparent);
-    pointer-events: none;
-  }
-}
-
-.tier {
-  position: relative;
-  margin-bottom: 46px;
-}
-
-.tier--commander {
-  margin-bottom: 52px;
-}
-
-.tier__label {
-  display: block;
-  text-align: center;
-  font-size: 10px;
-  letter-spacing: 0.28em;
-  color: var(--color-text-300);
-  margin-bottom: 22px;
-  position: relative;
-  z-index: 1;
-
-  &::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: -10px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    transform: translateX(-50%);
-    background: var(--color-cyan-400);
-    box-shadow: 0 0 10px var(--color-cyan-400);
-  }
-}
-
-.tier__row {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-/* HQ leads row — 4 across on desktop, 2×2 on tablet, stacked on phones */
-.leads-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(12px, 1.6vw, 20px);
-  max-width: 1040px;
-  margin: 0 auto;
-
-  @media (max-width: 940px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width: 560px;
-  }
-  @media (max-width: 520px) {
-    grid-template-columns: minmax(0, 1fr);
-    max-width: 320px;
-  }
-}
-
-/* Commander, centered under the leads */
-.commander-wrap {
-  display: flex;
-  justify-content: center;
-}
-
-/* Country pods — two geographic rows */
-.pods {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  gap: clamp(20px, 3vw, 44px);
-
-  & + .pods {
-    margin-top: 30px;
-  }
-}
-
-.pod {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.pod__head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--color-text-200);
-}
-
-.pod__code {
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  color: var(--color-cyan-400);
-  padding: 2px 8px;
-  border: 1px solid color-mix(in srgb, var(--color-cyan-400) 40%, transparent);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-cyan-400) 10%, transparent);
-}
-
-.pod__cards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-}
-
-/* ---- Cards (buttons) ---- */
-.hero-card,
-.crew-card {
-  border: 1px solid var(--color-card-border);
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  text-align: center;
-}
-
-.hero-card {
-  width: min(420px, 92vw);
-  padding: 30px 26px 24px;
-  border-radius: var(--radius-xl);
-  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
-  background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 62%),
-    linear-gradient(180deg, rgba(46, 26, 100, 0.6), rgba(18, 9, 42, 0.4));
-  box-shadow:
-    0 30px 70px -30px rgba(0, 0, 0, 0.9),
-    inset 0 1px 0 rgba(183, 148, 246, 0.14);
-  transition:
-    transform 0.24s var(--ease-power2-out),
-    border-color 0.24s var(--ease-power2-out),
-    box-shadow 0.24s var(--ease-power2-out);
-
-  @include hover {
-    &:hover {
-      transform: translateY(-5px);
-      border-color: color-mix(in srgb, var(--accent) 70%, transparent);
-      box-shadow:
-        0 36px 80px -30px rgba(0, 0, 0, 0.95),
-        0 0 30px -6px color-mix(in srgb, var(--accent) 45%, transparent);
-    }
-  }
-}
-
-.hero-card__avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 16px;
-}
-
-.hero-card__halo {
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 50%, transparent), transparent 66%);
-  opacity: 0.7;
-}
-
-.hero-card__ring {
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-}
-
-.hero-card__body {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 98px;
-  height: 98px;
-  border-radius: 34px 34px 40px 40px;
-  border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%),
-    rgba(21, 10, 48, 0.7);
-}
-
-.hero-card__visor {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 42% 36%, color-mix(in srgb, var(--accent) 62%, #fff 12%), #1a0f3a 78%);
-  color: #fff;
-  font-family: "Outfit", sans-serif;
-  font-weight: 700;
-  font-size: 28px;
-}
-
-.hero-card__star {
-  position: absolute;
-  right: 12px;
-  bottom: 8px;
-  font-size: 16px;
-  color: var(--color-orange-400);
-  filter: drop-shadow(0 0 6px var(--color-orange-400));
-}
-
-.hero-card__name {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.hero-card__role {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: var(--accent);
-  margin-top: 4px;
-}
-
-.hero-card__blurb {
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--color-text-200);
-  margin: 12px auto 12px;
-  max-width: 42ch;
-}
-
-.hero-card__station {
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  color: var(--color-text-300);
-}
-
-.crew-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 24px 16px 18px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(46, 26, 100, 0.4), rgba(18, 9, 42, 0.2));
-  box-shadow: inset 0 1px 0 rgba(183, 148, 246, 0.1);
-  transition:
-    transform 0.22s var(--ease-power2-out),
-    border-color 0.22s var(--ease-power2-out),
-    box-shadow 0.22s var(--ease-power2-out);
-
-  @include hover {
-    &:hover {
-      transform: translateY(-4px);
-      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-      box-shadow: 0 0 26px -8px color-mix(in srgb, var(--accent) 55%, transparent);
-    }
-  }
-}
-
-/* Guardians inside pods — uniform, compact */
-.pod__cards .crew-card {
-  width: 152px;
-  padding: 20px 12px 16px;
-}
-
-.crew-card--lead {
-  width: auto;
-}
-
-.crew-card--cadet {
-  width: min(300px, 90vw);
-}
-
-.crew-card__avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 78px;
-  height: 78px;
-  margin-bottom: 10px;
-}
-
-.crew-card__halo {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 42%, transparent), transparent 68%);
-  opacity: 0.55;
-}
-
-.crew-card__body {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 66px;
-  height: 66px;
-  border-radius: 24px 24px 28px 28px;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
-    rgba(21, 10, 48, 0.7);
-}
-
-.crew-card__visor {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 42% 36%, color-mix(in srgb, var(--accent) 60%, #fff 10%), #1a0f3a 78%);
-  color: #fff;
-  font-family: "Outfit", sans-serif;
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.crew-card__rank {
-  position: absolute;
-  bottom: 4px;
-  right: 8px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid var(--space-navy);
-  background: var(--accent);
-
-  &--cadet {
-    opacity: 0.6;
-  }
-}
-
-.crew-card__name {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.crew-card__role {
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-}
-
-.crew-card__blurb {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--color-text-200);
-  margin: 8px 0 10px;
-}
-
-.crew-card__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  color: var(--color-text-200);
-  margin-top: auto;
-}
+<style scoped>
+.crewpage { position: relative; z-index: 1; height: 100%; min-height: 0; overflow: hidden; }
+.crewpage__scroll { height: 100%; overflow-y: auto; padding: 32px clamp(16px,4vw,52px) 64px; }
+.crewpage__content { max-width: 1220px; margin: 0 auto; }
+.crewpage__header { margin-bottom: 20px; max-width: 800px; }
+.crewpage__eyebrow { font-size: 11px; letter-spacing: .14em; color: var(--color-cyan-400); }
+h1 { margin: 10px 0 12px; font-size: clamp(30px,4vw,44px); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; text-wrap: balance; }
+.crewpage__header>p:last-child { font-size: 15px; color: var(--color-text-300); line-height: 1.7; max-width: 65ch; }
+.crew-discovery { border: 1px solid var(--color-card-border); border-radius: var(--radius-md); background: var(--space-deep); padding: 16px; margin-bottom: 12px; }
+.crew-filters { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(160px,.7fr) minmax(190px,.8fr); gap: 16px; }
+label { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+label>span:first-child { font-size: 12px; color: var(--color-text-300); }
+.crew-search-input { display: flex; align-items: center; gap: 10px; border: 1px solid var(--color-card-border); background: var(--space-navy); border-radius: 6px; padding-left: 12px; color: var(--color-text-300); }
+input,select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-card-border); border-radius: 6px; background: var(--space-navy); color: var(--color-text-400); font: inherit; font-size: 14px; }
+input { border: none; background: transparent; }
+input::placeholder { color: var(--color-text-300); opacity: .8; }
+.crew-filter-result { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 32px; margin-top: 8px; color: var(--color-text-300); font-size: 12px; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-card-border); border-radius: 6px; background: var(--space-navy); color: var(--color-text-400); font: inherit; font-size: 12px; cursor: pointer; }
+button:hover { border-color: var(--color-card-border-hover); background: var(--color-command-bg-soft); }
+button:focus-visible,input:focus-visible,select:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 3px; }
+.crew-boundary { margin-top: 12px; color: var(--color-text-300); font-size: 12px; line-height: 1.65; max-width: 90ch; }
+.crew-group { margin-top: 32px; }
+.crew-group__header { margin-bottom: 16px; }
+h2 { display: flex; align-items: baseline; gap: 12px; font-weight: 500; font-size: 22px; line-height: 1.4; }
+h2>span { color: var(--color-text-300); font-size: 12px; font-variant-numeric: tabular-nums; }
+.crew-group__header p { margin-top: 8px; color: var(--color-text-300); font-size: 13px; line-height: 1.6; max-width: 75ch; }
+.crew-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.crew-empty { padding: 32px 0; }
+.crew-empty p { margin: 12px 0 20px; color: var(--color-text-300); font-size: 14px; line-height: 1.7; max-width: 65ch; }
+.crew-footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--color-card-border); color: var(--color-text-300); font-size: 12px; line-height: 1.7; }
+@media(max-width:1000px) { .crew-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .crew-filters { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .crew-filters__search { grid-column: 1/-1; } }
+@media(max-width:540px) { .crewpage__scroll { padding-top: 24px; } .crew-discovery { padding: 16px; } .crew-grid,.crew-filters { grid-template-columns: minmax(0,1fr); } .crew-filters__search { grid-column: auto; } input,select { font-size: 16px; } h2 { font-size: 20px; } .crew-group { margin-top: 28px; } }
 </style>

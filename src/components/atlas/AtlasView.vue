@@ -6,10 +6,28 @@ import AtlasCanvas from "./AtlasCanvas.vue";
 import AtlasProcessGuide from "./AtlasProcessGuide.vue";
 import AtlasSourceInfo from "./AtlasSourceInfo.vue";
 import Icon from "../Icon.vue";
+import { useLocale } from "../../i18n";
+import { localizeAtlasPayload } from "../../services/atlasTranslationService";
 import { useAtlasRouteState } from "../../composables/useAtlasRouteState";
 
 const props = defineProps<{ data: AtlasPayload | null; source: "live" | "demo" | "unavailable"; isLoading: boolean; error?: string; refreshedAt?: string }>();
 const emit = defineEmits<{ refresh: []; preview: [] }>();
+const { t, text, locale } = useLocale();
+const localizedData = ref<AtlasPayload | null>(null);
+const translatedKeys = ref(new Set<string>());
+let translationRevision = 0;
+watch(() => [props.data, locale.value] as const, async ([source, language]) => {
+  const revision = ++translationRevision;
+  localizedData.value = source;
+  translatedKeys.value = new Set();
+  if (!source?.translations?.length) return;
+  try {
+    const result = await localizeAtlasPayload(source, language);
+    if (revision !== translationRevision) return;
+    localizedData.value = result.data;
+    translatedKeys.value = result.translatedKeys;
+  } catch { /* Source content remains visible if Web Crypto or the optional overlay fails. */ }
+}, { immediate: true });
 const route = useAtlasRouteState();
 const { state } = route;
 const canvas = ref<InstanceType<typeof AtlasCanvas> | null>(null);
@@ -18,7 +36,7 @@ const showDataPipeline = ref(true);
 let mapOrigin: HTMLElement | null = null;
 const chapters = computed(() => props.data?.stages.filter(stage => stage.kind === "chapter").sort((a,b) => a.order - b.order) ?? []);
 const guideMode = computed(() => state.mode === "guide");
-const sourceLabel = computed(() => props.source === "live" ? props.error ? "Google Sheets source · retained copy" : "Google Sheets source" : props.source === "demo" ? "Demo content · not live source" : "Source unavailable");
+const sourceLabel = computed(() => props.source === "live" ? props.error ? t("atlas.sourceRetained") : t("atlas.sourceLive") : props.source === "demo" ? t("atlas.sourceDemo") : t("atlas.sourceUnavailable"));
 const version = computed(() => props.data?.meta.contentVersion || "D0");
 const guideStageId = computed(() => state.stageId ?? state.chapterId);
 
@@ -49,21 +67,21 @@ watch(() => props.data, () => { if (props.data && state.stageId && !props.data.s
 </script>
 
 <template>
-  <section class="atlas-view" aria-label="Value Protection Process Atlas" @keydown="keydown">
+  <section class="atlas-view" :aria-label="t('atlas.title')" @keydown="keydown">
     <header class="atlas-toolbar">
-      <div class="atlas-title"><h1>Process Atlas</h1><span v-if="source === 'demo'" class="atlas-data-badge" role="status">Demo · not live</span><span v-else-if="source === 'live' && error" class="atlas-data-badge" role="status">Retained copy</span></div>
+      <div class="atlas-title"><h1>{{ t("atlas.title") }}</h1><span v-if="source === 'demo'" class="atlas-data-badge" role="status">{{ text("Demo · not live", "Minh họa · không trực tiếp") }}</span><span v-else-if="source === 'live' && error" class="atlas-data-badge" role="status">{{ text("Retained copy", "Bản đọc gần nhất") }}</span></div>
       <div class="atlas-toolbar-actions">
-        <nav class="atlas-view-modes" aria-label="Atlas pages"><button ref="exploreButton" type="button" :aria-pressed="!guideMode" @click="returnToMap"><Icon name="project" :size="16" />Explore</button><button type="button" :aria-pressed="guideMode" @click="openGuide()"><Icon name="template" :size="16" />Process Guide</button></nav>
-        <label v-show="!guideMode" class="atlas-data-toggle"><input v-model="showDataPipeline" type="checkbox"><span>Show Data Pipeline</span></label>
+        <nav class="atlas-view-modes" :aria-label="text('Atlas pages', 'Chế độ xem quy trình')"><button ref="exploreButton" type="button" :aria-pressed="!guideMode" @click="returnToMap"><Icon name="project" :size="16" />{{ t("atlas.explore") }}</button><button type="button" :aria-pressed="guideMode" @click="openGuide()"><Icon name="template" :size="16" />{{ t("atlas.guide") }}</button></nav>
+        <label v-show="!guideMode" class="atlas-data-toggle"><input v-model="showDataPipeline" type="checkbox"><span>{{ t("atlas.showPipeline") }}</span></label>
         <AtlasSourceInfo :source="source" :meta="data?.meta" :error="error" :refreshed-at="refreshedAt" :is-loading="isLoading" @refresh="emit('refresh')" />
       </div>
     </header>
-    <p v-if="error" class="atlas-source-warning" role="alert">{{ source === 'live' ? 'Showing the last successful source copy.' : source === 'demo' ? 'Bundled draft, not the live source.' : 'The process source could not be loaded.' }} <span>Details in Source Info.</span></p>
-    <div v-if="isLoading && !data" class="atlas-loading" aria-busy="true"><p>Loading the process source…</p><div v-for="index in 4" :key="index"></div></div>
-    <div v-else-if="!data || !chapters.length" class="atlas-empty"><h2>No process content available</h2><p>Check the configured source or published content, then refresh. No control conclusion is inferred from this empty state.</p><button type="button" @click="emit('refresh')">Try again</button><button v-if="source === 'unavailable'" type="button" @click="emit('preview')">Preview bundled draft · not live</button></div>
+    <p v-if="error" class="atlas-source-warning" role="alert">{{ source === 'live' ? text('Showing the last successful source copy.', 'Đang giữ bản đọc nguồn thành công gần nhất.') : source === 'demo' ? text('Bundled draft, not the live source.', 'Bản nháp đóng gói, không phải nguồn trực tiếp.') : text('The process source could not be loaded.', 'Chưa tải được nguồn nội dung quy trình.') }} <span>{{ text("Details in Source Info.", "Xem chi tiết trong Thông tin nguồn.") }}</span></p>
+    <div v-if="isLoading && !data" class="atlas-loading" aria-busy="true"><p>{{ text("Loading the process source…", "Đang tải nội dung quy trình…") }}</p><div v-for="index in 4" :key="index"></div></div>
+    <div v-else-if="!data || !chapters.length" class="atlas-empty"><h2>{{ text("No process content available", "Chưa có nội dung quy trình") }}</h2><p>{{ text("Check the configured source or published content, then refresh. No control conclusion is inferred from this empty state.", "Kiểm tra nguồn đã cấu hình hoặc nội dung đã xuất bản, rồi tải lại. Trạng thái trống không thể hiện kết luận về kiểm soát.") }}</p><button type="button" @click="emit('refresh')">{{ text("Try again", "Thử lại") }}</button><button v-if="source === 'unavailable'" type="button" @click="emit('preview')">{{ text("Preview bundled draft · not live", "Xem bản nháp đóng gói · không trực tiếp") }}</button></div>
     <div v-else class="atlas-workspace" :class="{ 'is-guide': guideMode }">
-      <div v-show="!guideMode" class="atlas-canvas-slot"><AtlasCanvas ref="canvas" :stages="data.stages" :references="data.references" :selected-id="null" :active="!guideMode" :show-data-pipeline="showDataPipeline" @select="openGuide" @fit="canvas?.fit()" /></div>
-      <AtlasProcessGuide v-if="guideMode" :data="data" :stage-id="guideStageId" :active-tab="state.inspectorTab" :reference-group="state.libraryGroup" :reference-id="state.referenceId" :source-label="sourceLabel" :source-warning="error" :version="version" @stage="route.setGuideStage" @reference="openReference" @references="openReferences" @map="returnToMap" />
+      <div v-show="!guideMode" class="atlas-canvas-slot"><AtlasCanvas ref="canvas" :stages="(localizedData || data).stages" :references="(localizedData || data).references" :selected-id="null" :active="!guideMode" :show-data-pipeline="showDataPipeline" @select="openGuide" @fit="canvas?.fit()" /></div>
+      <AtlasProcessGuide v-if="guideMode" :data="localizedData || data" :translated-keys="translatedKeys" :stage-id="guideStageId" :active-tab="state.inspectorTab" :reference-group="state.libraryGroup" :reference-id="state.referenceId" :source-label="sourceLabel" :source-warning="error ? text('The last refresh did not complete. Check Source info and retry.', 'Lần tải nguồn gần nhất chưa hoàn tất. Xem Thông tin nguồn và thử lại.') : undefined" :version="version" @stage="route.setGuideStage" @reference="openReference" @references="openReferences" @map="returnToMap" />
     </div>
   </section>
 </template>
@@ -95,4 +113,13 @@ button:focus-visible,input:focus-visible { outline: 2px solid var(--color-orange
 @media(max-width:1100px) { .atlas-view { padding: 12px 16px; } .atlas-toolbar-actions { gap: 12px; } }
 @media(max-width:840px) { .atlas-toolbar { flex-wrap: wrap; gap: 8px; } .atlas-toolbar-actions { flex: 1; flex-wrap: wrap; justify-content: flex-start; gap: 8px 12px; } .atlas-data-toggle { order: 3; } h1 { font-size: 20px; } }
 @media(max-width:540px) { .atlas-view { padding: 10px; } .atlas-title { width: 100%; } .atlas-toolbar-actions { width: 100%; } .atlas-toolbar-actions :deep(.atlas-source-info) { margin-left: auto; } .atlas-view-modes button { font-size: 12px; padding: 8px; gap: 6px; } .atlas-data-toggle { width: 100%; min-height: 32px; } }
+</style>
+
+<style>
+@media print {
+  @page { size: A4; margin: 16mm; }
+  html,body,#app,.app-shell,.app-main { height: auto !important; overflow: visible !important; background: #fff !important; }
+  .hdr,.starfield,.atlas-toolbar,.atlas-canvas-slot,.atlas-source-warning { display: none !important; }
+  .atlas-view,.atlas-workspace { display: block !important; height: auto !important; overflow: visible !important; padding: 0 !important; border: 0 !important; }
+}
 </style>

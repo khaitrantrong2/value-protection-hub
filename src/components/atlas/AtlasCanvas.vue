@@ -3,10 +3,12 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { AtlasStage, AtlasStageId, AtlasReference } from "../../types/atlas";
 import { useAtlasCamera, type AtlasBounds } from "../../composables/useAtlasCamera";
 import AtlasStatus from "./AtlasStatus.vue";
+import { useLocale } from "../../i18n";
 import { ATLAS_SEQUENCE_EDGES, atlasOverviewBounds, buildAtlasNodes, buildSupportCapabilities, projectAtlasNodes, projectSupportCapabilities } from "./atlasTopology";
 
 const props = withDefaults(defineProps<{ stages: AtlasStage[]; references: AtlasReference[]; selectedId: AtlasStageId | null; selectionKey?: string | null; showDataPipeline?: boolean; active?: boolean }>(), { showDataPipeline: true, active: true });
 const emit = defineEmits<{ select: [id: AtlasStageId, nodeKey?: string]; fit: [] }>();
+const { text } = useLocale();
 const viewport = ref<HTMLElement | null>(null);
 const miniature = ref<SVGSVGElement | null>(null);
 const { camera, viewportSize, dragging, fit: fitCamera, ensureVisible, panBy, measureViewport, stopMotion, zoom, wheel, pointerDown, pointerMove, pointerUp, centerAt } =
@@ -16,7 +18,8 @@ const capabilities = computed(() => props.showDataPipeline ? buildSupportCapabil
 const compact = computed(() => camera.scale < 0.52);
 const micro = computed(() => camera.scale < 0.25);
 const detailed = computed(() => camera.scale >= 0.9);
-const microLabels: Record<string, string> = { "01": "Terms", "02": "Inputs", "03": "Engine", "04": "Review", "05A": "Acctg", "05B": "Brand", "06": "Billing", "07": "Settle", "08": "Close" };
+const microLabels = computed<Record<string, string>>(() => ({ "01": text("Terms", "H.đồng"), "02": text("Inputs", "Đ.vào"), "03": "Engine", "04": text("Review", "Soát"), "05A": text("Acctg", "K.toán"), "05B": "Brand", "06": "Billing", "07": text("Settle", "T.toán"), "08": text("Close", "Xong") }));
+const compactLabels = computed<Record<string, string>>(() => ({ "01": text("Contract", "Hợp đồng"), "02": text("Inputs", "Đầu vào"), "03": "Engine", "04": text("VP review", "VP rà soát"), "05A": text("Accounting", "Hạch toán"), "05B": text("Brand confirmation", "Brand xác nhận"), "06": text("Billing", "Lập billing"), "07": text("Settle", "Tất toán"), "08": text("Completion", "Hoàn tất") }));
 const screenNodes = computed(() => projectAtlasNodes(nodes.value, camera));
 const supportProjection = computed(() => projectSupportCapabilities(capabilities.value, camera,
   Math.max(...screenNodes.value.map(node => node.cy + node.screenHeight / 2))));
@@ -121,7 +124,7 @@ defineExpose({ fit, ensureSelectionVisible });
 
 <template>
   <div class="atlas-map-wrap">
-    <div ref="viewport" class="atlas-map" :class="{ 'is-dragging': dragging, 'is-compact': compact, 'is-micro': micro, 'is-detailed': detailed }" tabindex="0" role="region" aria-label="Process map. Drag or scroll to pan. Control plus scroll to zoom. Arrow keys pan, F fits the map."
+    <div ref="viewport" class="atlas-map" :class="{ 'is-dragging': dragging, 'is-compact': compact, 'is-micro': micro, 'is-detailed': detailed }" tabindex="0" role="region" :aria-label="text('Process map. Drag or scroll to pan. Control plus scroll to zoom. Arrow keys pan, F fits the map.', 'Bản đồ quy trình. Kéo hoặc cuộn để di chuyển. Control và cuộn để phóng to. Phím mũi tên để di chuyển, F để vừa khung.')"
       data-lenis-prevent @wheel="wheel" @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="pointerUp" @keydown="keydown">
       <svg class="atlas-paths" :viewBox="`0 0 ${viewportSize.width || 1} ${viewportSize.height || 1}`" aria-hidden="true">
         <defs><marker id="atlas-path-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L7 4 L1 7" /></marker></defs>
@@ -131,18 +134,18 @@ defineExpose({ fit, ensureSelectionVisible });
       </svg>
       <button v-for="node in screenNodes" :key="node.key" type="button" class="atlas-node" :class="{ 'is-selected': selectedId === node.stage.id && (!selectionKey || selectionKey === node.key), 'is-accounting': node.key === '05A', 'is-supported': supportedIds.includes(node.stage.id) }" :style="nodeStyle(node)"
         :data-atlas-node-stage="node.stage.id" :data-atlas-node-key="node.key" :title="`${node.branch}: ${node.title}`" :aria-label="`${node.branch}: ${node.title}. ${node.body}`" :aria-pressed="selectedId === node.stage.id && (!selectionKey || selectionKey === node.key)" :tabindex="nodeVisible(node) ? 0 : -1" @click="emit('select', node.stage.id, node.key)">
-        <span class="atlas-node-index">{{ node.branch }}<AtlasStatus v-if="camera.scale >= 0.3" :state="node.stage.practiceState" compact /></span><strong>{{ micro ? microLabels[node.key] : compact ? node.short : node.title }}</strong>
+        <span class="atlas-node-index">{{ node.branch }}<AtlasStatus v-if="camera.scale >= 0.3" :state="node.stage.practiceState" compact /></span><strong>{{ micro ? microLabels[node.key] : compact ? compactLabels[node.key] : node.title }}</strong>
         <span v-if="detailed" class="atlas-node-question">{{ node.body }}</span>
         <span v-if="detailed" class="atlas-node-role">{{ node.role }}</span>
       </button>
       <button v-for="capability in screenCapabilities" :key="capability.key" type="button" class="atlas-capability" :class="{ 'is-master': capability.key === 'B', 'is-selected': selectedId === capability.stage.id, 'is-linked': !!selectedId && capability.stage.supports.includes(selectedId) }" :style="nodeStyle(capability)"
-        :data-atlas-node-stage="capability.stage.id" :data-atlas-node-key="capability.key" :aria-label="`${capability.stage.shortTitle}. Supports stages ${capability.stage.supports.join(', ')}. Open supporting process detail.`" :aria-pressed="selectedId === capability.stage.id" :tabindex="capabilityVisible(capability) ? 0 : -1" @click="emit('select', capability.stage.id, capability.key)">
+        :data-atlas-node-stage="capability.stage.id" :data-atlas-node-key="capability.key" :aria-label="text(`${capability.stage.shortTitle}. Supports stages ${capability.stage.supports.join(', ')}. Open supporting process detail.`, `${capability.stage.shortTitle}. Hỗ trợ giai đoạn ${capability.stage.supports.join(', ')}. Mở chi tiết quy trình hỗ trợ.`)" :aria-pressed="selectedId === capability.stage.id" :tabindex="capabilityVisible(capability) ? 0 : -1" @click="emit('select', capability.stage.id, capability.key)">
         <strong>{{ capability.stage.shortTitle }}</strong>
       </button>
     </div>
     <div class="atlas-map-foot">
-      <div class="atlas-map-tools"><button type="button" aria-label="Zoom out" @click="zoom(1 / 1.2)">−</button><span aria-live="polite">{{ Math.round(camera.scale * 100) }}%</span><button type="button" aria-label="Zoom in" @click="zoom(1.2)">+</button><button type="button" @click="emit('fit')">Fit</button></div>
-      <button type="button" class="atlas-minimap" aria-label="Move map to clicked location; press Enter to fit" @click="minimapClick">
+      <div class="atlas-map-tools"><button type="button" :aria-label="text('Zoom out', 'Thu nhỏ')" @click="zoom(1 / 1.2)">−</button><span aria-live="polite">{{ Math.round(camera.scale * 100) }}%</span><button type="button" :aria-label="text('Zoom in', 'Phóng to')" @click="zoom(1.2)">+</button><button type="button" @click="emit('fit')">{{ text('Fit', 'Vừa khung') }}</button></div>
+      <button type="button" class="atlas-minimap" :aria-label="text('Move map to clicked location; press Enter to fit', 'Di chuyển tới vị trí được chọn; nhấn Enter để vừa khung')" @click="minimapClick">
         <svg ref="miniature" viewBox="0 0 3200 640" preserveAspectRatio="none" aria-hidden="true"><rect v-for="node in [...nodes, ...capabilities]" :key="node.key" :x="node.x" :y="node.y" :width="node.width" :height="node.height" rx="12" :class="{ 'is-selected': selectedId === node.stage.id }" /><rect class="atlas-mini-window" v-bind="miniWindow" /></svg>
       </button>
     </div>

@@ -1,438 +1,63 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useLinks } from "../composables/useLinks";
+import { useLocale } from "../i18n";
+import CrewSourceNotice from "./CrewSourceNotice.vue";
+import MemberPortfolio from "./MemberPortfolio.vue";
+import Icon from "./Icon.vue";
 
-const { selectedMember, openCrew, memberScope } = useLinks();
-
+const { selectedMember, openCrew, memberScope, source, isLoading } = useLinks();
+const { t } = useLocale();
 const member = computed(() => selectedMember.value);
-
-const scope = computed(() => (member.value ? memberScope(member.value) : []));
-const hasScope = computed(() => scope.value.length > 0);
-const isLeadership = computed(() => {
-  const r = member.value?.rank;
-  return r === "commander" || r === "lead";
-});
-
-const stats = computed(() => {
-  const rows = scope.value;
-  const platforms = new Set<string>();
-  rows.forEach((r) => r.platforms.forEach((p) => platforms.add(p)));
-  return {
-    brands: rows.length,
-    exceptional: rows.filter((r) => /exceptional/i.test(r.complexity)).length,
-    platforms: platforms.size,
-  };
-});
+const scope = computed(() => member.value ? memberScope(member.value) : []);
+const emptyTitle = computed(() => isLoading.value ? "loading" : source.value === "stale" ? "staleEmptyTitle" : source.value === "live" ? "emptyTitle" : "unavailableTitle");
+const emptyBody = computed(() => source.value === "stale" ? "staleEmptyBody" : source.value === "live" ? "emptyBody" : source.value === "mock" ? "demoEmpty" : "unavailableBody");
 </script>
 
 <template>
   <section class="member">
-    <div class="member__scroll vph-scroll">
-      <nav class="member__crumb mono">
-        <button type="button" @click="openCrew">Crew</button>
-        <span>›</span>
-        <span class="member__crumb-here">{{ member?.name || "Value Protector" }}</span>
-      </nav>
-
+    <div class="member__scroll vph-scroll"><div class="member__content">
+      <nav class="member__breadcrumb" :aria-label="t('crew.member.back')"><button type="button" @click="openCrew"><Icon name="chevronRight" :size="16" class="member__back-icon" />{{ t('crew.member.back') }}</button><span v-if="member" aria-hidden="true">/</span><span v-if="member">{{ member.name }}</span></nav>
       <template v-if="member">
-        <header class="member__header" :style="{ '--accent': member.accent }">
-          <span class="member__blob"></span>
-          <div class="member__avatar">
-            <span class="member__halo"></span>
-            <span class="member__body"><span class="member__visor">{{ member.name.charAt(0) }}</span></span>
-          </div>
-          <div class="member__id">
-            <p class="member__role mono">{{ member.roleShort }} · {{ member.clearance }}</p>
-            <h1 class="member__name">{{ member.name }}</h1>
-            <p class="member__blurb">{{ member.blurb }}</p>
-            <div class="member__tags mono">
-              <span>{{ member.station }}</span>
-              <span class="member__sep">·</span>
-              <span>{{ member.market }}</span>
-            </div>
-          </div>
-          <div v-if="hasScope" class="member__stats">
-            <div class="member__stat"><div class="member__stat-num mono">{{ stats.brands }}</div><div class="member__stat-label mono">BRANDS</div></div>
-            <div class="member__stat"><div class="member__stat-num member__stat-num--exc mono">{{ stats.exceptional }}</div><div class="member__stat-label mono">EXCEPTIONAL</div></div>
-            <div class="member__stat"><div class="member__stat-num mono">{{ stats.platforms }}</div><div class="member__stat-label mono">PLATFORMS</div></div>
-          </div>
+        <header class="member__header" :style="{ '--member-accent': member.accent }">
+          <div class="member__avatar" aria-hidden="true">{{ member.name.charAt(0) }}</div>
+          <div class="member__identity"><p class="member__eyebrow mono">{{ t('crew.member.eyebrow') }}</p><h1>{{ member.name }}</h1><p class="member__role">{{ t('crew.profiles.' + member.profileKey + '.role') }}</p><p class="member__summary">{{ t('crew.profiles.' + member.profileKey + '.summary') }}</p><div class="member__labels"><span><Icon name="globe" :size="15" />{{ t('crew.markets.' + (member.country || member.market)) }}</span><span>{{ t('crew.functions.' + member.function) }}</span></div></div>
         </header>
-
-        <div v-if="!hasScope" class="member__leadnote">
-          <span class="member__leadnote-eyebrow mono">{{ isLeadership ? member.roleShort : "NO ASSIGNED SCOPE" }}</span>
-          <p v-if="member.scopeNote">{{ member.scopeNote }}</p>
-          <p v-else-if="isLeadership">
-            {{ member.name }} oversees value protection across all markets and does not carry an individual brand
-            portfolio — the market guardians hold the assigned claimback scope.
-          </p>
-          <p v-else>
-            No claimback scope is assigned to {{ member.name }} yet — rows appear here once added to the Portfolio sheet
-            (the Member column must match this protector's name or alias).
-          </p>
-        </div>
-
-        <template v-else>
-          <div class="member__section-head">
-            <span class="member__rule"></span>
-            <span class="member__section-label mono">ASSIGNED SCOPE · CLAIMBACK PORTFOLIO</span>
-            <span class="member__rule"></span>
-          </div>
-
-          <div class="member__table-wrap">
-          <table class="member__table">
-            <thead>
-              <tr>
-                <th>Country</th>
-                <th>Brand</th>
-                <th>Class</th>
-                <th>Complexity</th>
-                <th>In-Scope Platforms</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, i) in scope" :key="i">
-                <td class="member__td-country mono">{{ row.country }}</td>
-                <td class="member__td-brand">{{ row.brand }}</td>
-                <td>{{ row.class }}</td>
-                <td>
-                  <span class="member__stream" :class="/exceptional/i.test(row.complexity) ? 'is-exc' : 'is-std'">{{ row.complexity }}</span>
-                </td>
-                <td>
-                  <span class="member__plats">
-                    <span v-for="p in row.platforms" :key="p" class="member__plat mono">{{ p }}</span>
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-          <p class="member__note mono">Live from the Portfolio sheet · {{ scope.length }} brands in scope.</p>
-        </template>
+        <CrewSourceNotice />
+        <MemberPortfolio v-if="scope.length" :key="member.id" :rows="scope" :member-id="member.id" />
+        <div v-else class="member__empty" :aria-busy="isLoading"><h2>{{ t('crew.member.' + emptyTitle) }}</h2><template v-if="!isLoading"><p>{{ t('crew.member.' + emptyBody) }}</p><p v-if="member.group === 'regional' && source === 'live'">{{ t('crew.member.emptyRegional') }}</p></template><div v-else class="member__skeleton" aria-hidden="true"><span></span><span></span><span></span></div></div>
+        <p class="member__boundary">{{ t('crew.boundary') }}</p>
       </template>
-
-      <p v-else class="member__empty">No protector selected. Return to the crew formation.</p>
-    </div>
+      <div v-else class="member__empty"><h1>{{ t('crew.member.noSelection') }}</h1><p>{{ t('crew.member.noSelectionBody') }}</p><button type="button" @click="openCrew">{{ t('crew.member.back') }}</button></div>
+    </div></div>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.member {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  overflow: hidden;
-}
-
-.member__scroll {
-  height: 100%;
-  overflow-y: auto;
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: clamp(16px, 2.5vh, 28px) clamp(20px, 4vw, 52px) 64px;
-}
-
-.member__crumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--color-text-200);
-  margin-bottom: 18px;
-
-  button {
-    background: none;
-    border: none;
-    color: var(--color-cyan-400);
-    cursor: pointer;
-    font: inherit;
-
-    @include hover {
-      &:hover {
-        color: #fff;
-      }
-    }
-  }
-}
-
-.member__crumb-here {
-  color: var(--color-text-300);
-}
-
-.member__header {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: clamp(20px, 2.4vw, 30px) clamp(22px, 2.6vw, 34px);
-  border-radius: var(--radius-xl);
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
-  background:
-    radial-gradient(120% 90% at 12% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
-    linear-gradient(135deg, rgba(42, 24, 92, 0.55), rgba(21, 10, 48, 0.32));
-  margin-bottom: 30px;
-
-  @media (max-width: 760px) {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-  }
-}
-
-.member__blob {
-  position: absolute;
-  right: -60px;
-  top: -70px;
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent), transparent 66%);
-  opacity: 0.14;
-  pointer-events: none;
-}
-
-.member__avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 104px;
-  height: 104px;
-  flex: none;
-}
-
-.member__halo {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 46%, transparent), transparent 66%);
-  opacity: 0.7;
-}
-
-.member__body {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 88px;
-  height: 88px;
-  border-radius: 30px 30px 36px 36px;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%),
-    rgba(21, 10, 48, 0.7);
-}
-
-.member__visor {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 42% 36%, color-mix(in srgb, var(--accent) 62%, #fff 12%), #1a0f3a 78%);
-  color: #fff;
-  font-family: "Outfit", sans-serif;
-  font-weight: 700;
-  font-size: 26px;
-}
-
-.member__id {
-  flex: 1;
-  min-width: 0;
-}
-
-.member__role {
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  color: var(--accent);
-}
-
-.member__name {
-  font-size: clamp(26px, 3.4vw, 40px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  margin: 6px 0 8px;
-}
-
-.member__blurb {
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--color-text-200);
-  max-width: 64ch;
-}
-
-.member__tags {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: var(--color-text-300);
-  margin-top: 12px;
-}
-
-.member__sep {
-  opacity: 0.5;
-}
-
-.member__stats {
-  display: flex;
-  gap: 12px;
-  flex: none;
-}
-
-.member__stat {
-  text-align: center;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--color-command-border);
-  background: rgba(21, 10, 48, 0.4);
-}
-
-.member__stat-num {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-cyan-400);
-  line-height: 1;
-
-  &--exc {
-    color: var(--color-orange-400);
-  }
-}
-
-.member__stat-label {
-  font-size: 8.5px;
-  letter-spacing: 0.14em;
-  color: var(--color-text-200);
-  margin-top: 6px;
-}
-
-.member__leadnote {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-card-border);
-  background: linear-gradient(180deg, rgba(42, 24, 92, 0.3), rgba(21, 10, 48, 0.14));
-  padding: 22px 24px;
-
-  p {
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--color-text-200);
-    margin-top: 8px;
-    max-width: 70ch;
-  }
-}
-
-.member__leadnote-eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--color-cyan-400);
-}
-
-.member__section-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.member__rule {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(183, 148, 246, 0.32), transparent);
-}
-
-.member__section-label {
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--color-text-300);
-}
-
-.member__table-wrap {
-  overflow-x: auto;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-card-border);
-  background: linear-gradient(180deg, rgba(42, 24, 92, 0.24), rgba(21, 10, 48, 0.12));
-}
-
-.member__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-
-  th {
-    text-align: left;
-    font-family: "Outfit", sans-serif;
-    font-weight: 600;
-    font-size: 12px;
-    letter-spacing: 0.02em;
-    color: #efe6ff;
-    padding: 12px 16px;
-    background: linear-gradient(180deg, rgba(124, 58, 237, 0.35), rgba(109, 40, 217, 0.18));
-    border-bottom: 1px solid rgba(183, 148, 246, 0.24);
-    white-space: nowrap;
-  }
-
-  td {
-    padding: 11px 16px;
-    color: var(--color-text-300);
-    border-bottom: 1px solid rgba(176, 160, 210, 0.1);
-  }
-
-  tbody tr:hover td {
-    background: rgba(124, 58, 237, 0.08);
-  }
-}
-
-.member__td-country {
-  color: var(--color-text-200);
-}
-
-.member__td-brand {
-  color: #fff;
-  font-weight: 600;
-}
-
-.member__stream {
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 10.5px;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-command-border);
-
-  &.is-exc {
-    color: #ffd479;
-    border-color: rgba(245, 197, 66, 0.4);
-  }
-  &.is-std {
-    color: var(--color-text-200);
-  }
-}
-
-.member__plats {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.member__plat {
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(176, 160, 210, 0.12);
-  color: #d8cdf0;
-}
-
-.member__note {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--color-text-200);
-  margin-top: 16px;
-}
-
-.member__empty {
-  text-align: center;
-  padding: 80px 20px;
-  color: var(--color-text-200);
-}
+<style scoped>
+.member { position: relative; z-index: 1; height: 100%; min-height: 0; overflow: hidden; }
+.member__scroll { height: 100%; overflow-y: auto; padding: 24px clamp(16px,4vw,52px) 64px; }
+.member__content { max-width: 1160px; margin: 0 auto; }
+.member__breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 20px; font-size: 12px; color: var(--color-text-300); }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-card-border); border-radius: 6px; background: var(--space-navy); color: var(--color-text-400); font: inherit; font-size: 12px; cursor: pointer; }
+.member__breadcrumb button { background: transparent; border-color: transparent; padding-left: 0; color: var(--color-cyan-400); }
+.member__back-icon { transform: rotate(180deg); }
+button:hover { border-color: var(--color-card-border-hover); background: var(--color-command-bg-soft); }
+button:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 3px; }
+.member__header { display: flex; align-items: flex-start; gap: 24px; padding: 28px 0; margin-bottom: 24px; border-top: 1px solid var(--color-card-border); border-bottom: 1px solid var(--color-card-border); }
+.member__avatar { flex: none; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 20px; background: color-mix(in srgb,var(--member-accent) 10%,var(--space-navy)); border: 1px solid color-mix(in srgb,var(--member-accent) 35%,var(--color-card-border)); font-size: 30px; font-weight: 500; }
+.member__identity { min-width: 0; }
+.member__eyebrow { font-size: 10px; letter-spacing: .12em; color: var(--color-cyan-400); line-height: 1.5; }
+h1 { font-size: clamp(30px,4vw,42px); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin: 8px 0 10px; overflow-wrap: anywhere; }
+.member__role { font-size: 15px; color: var(--color-text-400); line-height: 1.6; font-weight: 500; }
+.member__summary { color: var(--color-text-300); font-size: 14px; line-height: 1.75; max-width: 65ch; margin-top: 12px; }
+.member__labels { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-top: 16px; color: var(--color-text-300); font-size: 12px; line-height: 1.6; }
+.member__labels>span { display: inline-flex; gap: 8px; align-items: center; }
+.member__empty { margin-top: 28px; padding: 24px; border: 1px solid var(--color-card-border); border-radius: var(--radius-md); background: var(--space-navy); }
+.member__empty h2 { font-size: 22px; font-weight: 500; line-height: 1.4; }
+.member__empty p { max-width: 70ch; color: var(--color-text-300); font-size: 14px; line-height: 1.75; margin-top: 12px; }
+.member__empty button { margin-top: 20px; }
+.member__skeleton { display: grid; gap: 12px; margin-top: 20px; }
+.member__skeleton span { height: 32px; border-radius: 6px; background: var(--color-command-bg-soft); }
+.member__boundary { max-width: 90ch; color: var(--color-text-300); font-size: 12px; line-height: 1.7; margin-top: 24px; }
+@media(max-width:540px) { .member__header { gap: 16px; flex-wrap: wrap; padding-top: 20px; } .member__avatar { width: 52px; height: 52px; border-radius: 14px; font-size: 24px; } .member__identity { flex: 1; min-width: 160px; } .member__empty { padding: 20px 16px; } }
 </style>

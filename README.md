@@ -1,193 +1,88 @@
 # Value Protection Hub
 
-**Claimback, AR & Finance Control Workspace**
+Vue 3 / TypeScript / Vite workspace for finding Value Protection resources, understanding
+the claimback lifecycle, and discovering the team's published responsibilities.
+The interface retains the Hub's purple/amethyst identity with English/Vietnamese UI
+catalogs, keyboard navigation and reduced-motion support.
 
-A premium internal command center for the Value Protection / Claimback team — a single
-3D-animated place to find trackers, review cockpits, AR monitoring files, GL analysis,
-close templates, JE upload files, NetSuite saved searches, SOPs, training material and
-project workspaces.
+## Destinations
 
-Built by transforming a 3D Vue/Three.js portfolio into an operational finance-tech hub.
+- **Universe** — category navigation and Hub search; external Google Drive search is a separate, explicit action.
+- **Start here** — entry paths for business understanding, onboarding and daily work.
+- **Directory** — Cards/List, search, country/category/status/criticality filters and truthful source/link states.
+- **Team** — equal-weight cards by collaboration function/market; published portfolio discovery, not an inferred org chart.
+- **Process Atlas** — Explore canvas and a separate document-style Process Guide reading the same records.
 
-> **This repository ships with generic demonstration content only.** Runtime data is
-> served from Google Sheets via Apps Script. Verify the actual Sheet and Web App access
-> settings; a Sheet is not automatically private. See [Security notes](#security-notes).
+## Run and verify
 
----
-
-## Tech Stack
-
-| Layer      | Technology                                   |
-|------------|----------------------------------------------|
-| Framework  | Vue 3 (`<script setup>`), TypeScript         |
-| Build      | Vite 7                                        |
-| 3D / WebGL | Three.js (lazy-loaded command scene)         |
-| Animation  | GSAP + Lenis smooth scroll                    |
-| Styles     | SCSS with shared mixins                        |
-| Data API   | Google Apps Script Web App reading a Sheet    |
-
----
-
-## Sections (one-page app)
-
-1. **3D Command Hero** — title, subtitle, command search bar, quick stats, animated Three.js scene with floating data cards.
-2. **Quick Access** — category chips for fast filtering.
-3. **Link Directory** — premium card grid grouped by category, with search + country/status/criticality filters.
-4. **Operations Map** — the claimback-to-cash flow: Source Data → Review Cockpit → Accrual/Booking → Invoice/CM/VRA → Net-off → Collection/AR Monitoring.
-5. **Maintenance / Admin** — maintainer, last-updated, and optional source-sheet / request-link buttons.
-
----
-
-## Setup
-
-```bash
-npm install
-cp .env.example .env   # optional; leave VITE_LINKS_API_URL empty to use mock data
-npm run dev            # http://localhost:3000
+```sh
+npm ci
+# Optional: copy .env.example to .env and configure the existing approved Web App URL.
+npm run dev
+npm test
+npm run build
 ```
 
-### Environment
+Dev defaults to port 3000. Build includes TypeScript checking; `npm run typecheck`
+runs it separately. `npm run preview` serves `dist/`.
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_LINKS_API_URL` | Google Apps Script Web App URL that returns Links / Categories / Config JSON. **If empty, the app uses bundled mock data.** |
+`VITE_LINKS_API_URL` is a public client configuration value, not a secret. Configured
+API failure never silently substitutes demonstration data. A validated cached Directory
+snapshot is labelled retained/stale with its original fetch time; otherwise source is
+unavailable. Bundled Directory examples require an explicit preview action. Without an
+API, Directory starts unavailable; Atlas development uses a clearly labelled bundled draft.
 
----
+## Edit content
 
-## Data source: Google Sheet
+| Content | Edit location | Release |
+| --- | --- | --- |
+| Resources / categories / configuration / portfolio | Existing Links, Categories, Config, Portfolio Sheet tabs | Refresh/reload; legacy API may cache briefly |
+| Process / controls / references / metadata | AtlasStages, AtlasControls, AtlasReferences, AtlasConfig | Publish eligible records, then Source Info → Refresh source |
+| Reviewed process translations | Optional Translations Sheet tab | Complete current reviewed overlay, then refresh Atlas |
+| UI labels / Crew profile copy | src/i18n/messages/ | Frontend build/deploy |
+| Crew identities / grouping / active roster | src/data/crew.ts | Frontend build/deploy; preserve stable IDs |
+| Layout / interactions / schema | Components / services / types | Tests, build and preview review |
 
-The frontend expects JSON with `links`, optional `categories`, and optional `config`.
+Keep IDs as text (`01` is not `1`). Publication/API labels do not change actual
+Sheet or file sharing permissions. Verify access separately.
 
-### `Links` tab columns
+- [Hub experience and bilingual maintenance](docs/hub-experience.md)
+- [Atlas editing, business guardrails and API](docs/process-atlas.md)
+- [Reviewed translations contract](docs/atlas-translations.md)
+- [Apps Script setup and legacy schemas](apps-script/README.md)
 
-`ID`, `Category`, `Title`, `Description`, `URL`, `Owner`, `Country`, `Status`, `Tags`,
-`AccessNote`, `Criticality`, `SortOrder`, `IsActive`, `LastUpdated`.
+## Navigation and language
 
-Rows where `IsActive` is not `TRUE` are ignored.
+Use `?lang=en` or `?lang=vi` before the hash. URL language wins over saved preference;
+otherwise the last choice is remembered, initially English. Switching does not reload,
+reset filters, or Fit the Atlas camera. The UI default does not declare English to be
+the authoritative business text.
 
-### `Categories` tab (optional)
+Examples: `/?lang=vi#crew`, `/#member?id=khai`,
+`/#directory?country=VN&q=accrual`, `/#atlas?mode=guide&stage=04&tab=controls`.
+Directory filters are shareable; Crew filters persist in-session, not in the URL.
+Ctrl/⌘K opens search. Escape closes a modal before any underlying page shortcut.
 
-`Category`, `Description`, `Color`, `Icon`, `SortOrder`.
+## Deployment and rollback
 
-### `Config` tab (optional)
+Keep Vue/Vite. Vercel: build `npm run build`, output `dist`, configure
+`VITE_LINKS_API_URL` in intended environments. Review branch preview before merging;
+a local build is not proof of live source integration.
 
-Key/Value rows: `PortalName`, `Subtitle`, `Maintainer`, `AdminSheetUrl`,
-`RequestLinkUrl`, `LastUpdatedNote`.
+Update the existing approved Apps Script deployment to a new version; preserve its URL
+and access settings. Optional translations do not require changing Vercel configuration.
+Rollback frontend with the previous Vercel deployment, API with the prior version,
+and content with Sheet version history. Do not delete legacy tabs to roll back.
 
-Full schema and column semantics: [`apps-script/README.md`](./apps-script/README.md).
+## Security and evidence
 
-### Process Atlas
+- Do not commit confidential links, credentials, financial records or private evidence.
+- Public frontend/API can expose returned records. API publication filters do not make the source Sheet private.
+- Validated HTTPS destinations only; missing/blocked/unsafe links have no Open. Valid syntax does not prove access or link health.
+- Errors are generic; retained/demo data is not freshly loaded live content.
+- No external translation service. Incomplete/stale translations retain source and disclose fallback.
+- Reported practice, located evidence and published text do not establish approval or operating effectiveness. Correction/write-off is not cash collection.
 
-Open **Process Atlas** in the header, or `/#atlas`. Explore uses a pan/zoom process map;
-Walkthrough uses the same records in a linear view. Screens at 840px or smaller use the
-linear view. Supporting A is the technical automation pipeline, not a replacement for
-the business lifecycle; supporting B covers master/setup dependencies.
-
-The same `VITE_LINKS_API_URL` is called with `?action=atlas`. Deploy the additive Atlas
-route before connecting live content. Atlas reads only **Public + Published** records
-from four separate tabs; existing Links/Categories/Config/Portfolio behavior is unchanged.
-Unlike the legacy directory, failed Atlas requests do **not** automatically fall back
-to demonstration content. An explicit **Preview bundled draft · not live** action is
-available when the source is unavailable. Without an API URL, local development displays
-the clearly labelled bundled demo.
-
-Editing, publication, API contract, tests and release gates:
-[`docs/process-atlas.md`](./docs/process-atlas.md).
-
----
-
-## Apps Script deployment
-
-1. Create the Google Sheet with the tabs above.
-2. **Extensions → Apps Script**, paste [`apps-script/Code.gs`](./apps-script/Code.gs).
-3. **Deploy → New deployment → Web app**, execute as **Me**, choose access per your policy.
-4. Copy the Web App URL into `.env` as `VITE_LINKS_API_URL`.
-
-CORS / access trade-offs and a JSONP alternative are documented in
-[`apps-script/README.md`](./apps-script/README.md).
-
----
-
-## Frontend deployment
-
-### Option A — Vercel / Netlify (public frontend, data from Apps Script)
-
-Best when a public frontend is acceptable and **no real internal links are hardcoded**
-(this repo only contains mock data, so that holds by default).
-
-1. Push to GitHub.
-2. Import the repo in Vercel/Netlify.
-   - Framework preset: **Vite**
-   - Build command: `npm run build`
-   - Output directory: `dist`
-   - Node.js: 20.x+
-3. Set `VITE_LINKS_API_URL` in the project's environment variables.
-4. Deploy.
-
-### Option B — Internal hosting only
-
-If company security requires it, keep the app private and do not deploy publicly. Serve
-`dist/` from an internal host, and restrict the Apps Script Web App accordingly.
-
-> The frontend repository may be public **only** if it contains mock data and no real
-> internal links.
-
----
-
-## Security notes
-
-- **Do not** hardcode real internal company links in this repository.
-- **Do not** commit real Google Sheet IDs or deployment URLs if the repo is public.
-- **Do not** commit confidential client or brand names unless intentionally public.
-- **Do not** expose credentials, tokens, or private URLs.
-- Mock data only in code; production links live in the private Google Sheet.
-- The "Open source sheet" button only appears when `AdminSheetUrl` is explicitly set in `Config`.
-
----
-
-## How to update links
-
-1. Edit the private Google Sheet (`Links` tab). Set `IsActive = TRUE` to publish a row.
-2. Add or adjust categories in the `Categories` tab (optional).
-3. Tune the hub title, maintainer and admin buttons in the `Config` tab (optional).
-4. Changes appear on the next page load — no redeploy needed.
-
-To change the mock/dev dataset, edit `src/data/mockLinks.ts` and `src/data/mockCategories.ts`.
-
----
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Dev server on port 3000 |
-| `npm run build` | Type-check + production build to `dist/` |
-| `npm run preview` | Serve the production build |
-| `npm run typecheck` | TypeScript check only |
-
----
-
-## Performance & accessibility
-
-- The Three.js scene is **lazy-loaded** during idle time and never blocks link search.
-- If WebGL is unavailable or the scene fails, a static gradient fallback is shown and the
-  directory stays fully usable.
-- `prefers-reduced-motion` disables smooth scroll, scene animation, and reveal transitions.
-- The scene pauses when the tab is hidden.
-
----
-
-## Future improvements
-
-- JSONP or server proxy for org-restricted Apps Script deployments.
-- Admin authentication for editing links in-app.
-- Command-palette keyboard shortcut (⌘K) overlay.
-- Per-user favorites / recently opened.
-- Usage analytics on most-opened links.
-
----
-
-## Credits
-
-3D scene, motion, and design language adapted from a Vue/Three.js portfolio into an
-internal finance-control workspace. Data-serving layer via Google Apps Script.
+Universe currently uses CSS/SVG and scoped GSAP; the legacy Three.js scene is not
+mounted. Team, Directory and Atlas route components load on demand. No new tilt,
+smooth-scroll or scroll-pinning behavior is introduced into the process workspace.

@@ -13,6 +13,7 @@ approved SOP hoặc kết luận operating effectiveness. Explore và Process Gu
 | AtlasReferences | Reason codes, document steps, routes, pipeline, KPI | Group, Title, Body, Applicability |
 | AtlasConfig | Metadata của bản phát hành | ContentVersion, ProcessStatus, EffectiveFrom, UpdatedAt, Subtitle |
 | AtlasGuide | Hướng dẫn ngay trong Sheet | Không được serialize qua API |
+| Translations | Bản dịch theo ID và fingerprint source | Overlay đủ Reviewed + Published + Public; xem [contract](atlas-translations.md) |
 
 Sau khi API đã deploy đúng: sửa và lưu Sheet → **Source Info → Refresh source** hoặc reload page.
 Atlas không dùng server cache/localStorage. Layout, branch geometry, zoom hoặc thay schema
@@ -36,6 +37,9 @@ scroll lồng với canvas. Không cần bật Focus map riêng.
   giữ đủ các nhóm và record, có tìm kiếm/type filter; không còn modal/side inspector.
 
 Canvas giữ nguyên instance khi đọc Guide và quay lại, nên camera/zoom không bị reset.
+EN/VI dùng query `?lang=en` hoặc `?lang=vi` trước hash; đổi ngôn ngữ không remount/Fit canvas.
+UI labels có catalog riêng; nội dung thiếu bản dịch được review giữ nguyên source,
+không dịch máy hoặc coi bản EN mặc định là bản nghiệp vụ có thẩm quyền.
 Hidden viewport 0×0 không ghi đè measurement dương cuối cùng; Guide không truyền selection
 vào map phía sau. Fit chỉ chạy lần đầu có viewport hoặc khi người xem yêu cầu. Resize,
 Source Info, pipeline toggle và Guide navigation không tự Fit. Guide dùng mục lục dropdown

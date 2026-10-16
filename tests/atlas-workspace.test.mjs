@@ -6,6 +6,7 @@ import test from "node:test";
 import vm from "node:vm";
 import { build } from "esbuild";
 import { compileScript, parse } from "@vue/compiler-sfc";
+import { createLocaleHarness } from './localeHarness.mjs';
 
 const require = createRequire(import.meta.url);
 const Vue = require("vue");
@@ -15,7 +16,7 @@ const compiled = compileScript(descriptor, { id: "atlas-workspace-runtime-test",
 const bundled = await build({
   stdin: { contents: compiled.content, loader: "ts", resolveDir: fileURLToPath(new URL("../src/components/atlas/", import.meta.url)) },
   bundle: true, write: false, format: "cjs", platform: "node", logLevel: "silent", external: ["vue"],
-  plugins: [{ name: "workspace-child-stubs", setup(plugin) { plugin.onResolve({ filter: /\.vue$/ }, ({ path }) => ({ path, external: true })); } }],
+  plugins: [{ name: "workspace-child-stubs", setup(plugin) { plugin.onResolve({ filter: /\.vue$/ }, ({ path }) => ({ path, external: true })); plugin.onResolve({ filter: /\/i18n$/ }, ({ path }) => ({ path, external: true })); } }],
 });
 
 const payload = () => ({
@@ -28,6 +29,7 @@ const payload = () => ({
 });
 
 function runtime({ hash = "#atlas", ...initialProps } = {}) {
+  const localeHarness = createLocaleHarness();
   const children = { canvas: [], guide: [], sourceInfo: [] }, emitted = { refresh: 0, preview: 0 };
   const counters = { canvasMounted: 0, canvasUnmounted: 0, fit: 0 };
   const listeners = new Map(), historyEntries = [hash];
@@ -88,7 +90,7 @@ function runtime({ hash = "#atlas", ...initialProps } = {}) {
   };
   const context = vm.createContext({
     module: { exports: {} }, window, document, URLSearchParams,
-    require(name) { if (name === "vue") return Vue; if (stubs[name]) return stubs[name]; throw new Error(`Unexpected module ${name}`); },
+    require(name) { if (name === "vue") return Vue; if (name.endsWith('/i18n')) return { useLocale: () => localeHarness }; if (stubs[name]) return stubs[name]; throw new Error(`Unexpected module ${name}`); },
   });
   vm.runInContext(bundled.outputFiles[0].text, context);
   const AtlasView = context.module.exports.default;
@@ -128,7 +130,7 @@ function runtime({ hash = "#atlas", ...initialProps } = {}) {
     find((element) => element.type === "section").props.onKeydown(event); return event;
   }
   return {
-    root, props, children, counters, location, history, emitted, find, button, click, toggleDataPipeline, key, text,
+    root, props, children, counters, location, history, emitted, find, button, click, toggleDataPipeline, key, text, localeHarness,
     latest: (kind) => children[kind].at(-1), flush: () => Vue.nextTick(),
     unmount: () => app.unmount(),
   };
@@ -159,6 +161,25 @@ test("Explore is a pure map; Guide and reference reading keep the same Canvas wi
     assert.equal(view.latest("canvas"), canvas); assert.equal(view.counters.canvasMounted, 1); assert.equal(view.counters.canvasUnmounted, 0);
     assert.equal(view.counters.fit, 0);
     canvas.emit("fit"); await view.flush(); assert.equal(view.counters.fit, 1);
+  } finally { view.unmount(); }
+});
+
+test('Changing EN/VI preserves the mounted Canvas, selected Guide chapter and route without implicit Fit', async () => {
+  const view = runtime({ hash: '#atlas?mode=guide&stage=04' });
+  try {
+    const hash = view.location.hash;
+    const canvas = view.latest('canvas');
+    view.localeHarness.setLocale('vi');
+    await view.flush();
+    assert.equal(view.location.hash, hash);
+    assert.equal(view.latest('guide').props.stageId, '04');
+    assert.equal(view.latest('canvas'), canvas);
+    assert.deepEqual(view.counters, { canvasMounted: 1, canvasUnmounted: 0, fit: 0 });
+    await view.click('Khám phá');
+    view.localeHarness.setLocale('en');
+    await view.flush();
+    assert.equal(view.latest('canvas'), canvas);
+    assert.deepEqual(view.counters, { canvasMounted: 1, canvasUnmounted: 0, fit: 0 });
   } finally { view.unmount(); }
 });
 
@@ -203,8 +224,8 @@ test("Stale warnings reach Source Info and Guide while Refresh stays an explicit
     assert.equal(view.latest("sourceInfo").props.meta.contentVersion, "test-business-understanding");
     assert.equal(view.latest("sourceInfo").props.refreshedAt, "2026-10-15T12:00:00Z");
     await view.click("Process Guide");
-    assert.equal(view.latest("guide").props.sourceWarning, warning);
-    assert.equal(view.latest("guide").props.sourceLabel, "Google Sheets source · retained copy");
+    assert.equal(view.latest("guide").props.sourceWarning, "The last refresh did not complete. Check Source info and retry.");
+    assert.equal(view.latest("guide").props.sourceLabel, "Google Sheets · retained copy");
     assert.equal(view.latest("guide").props.version, "test-business-understanding");
     view.latest("sourceInfo").emit("refresh"); await view.flush();
     assert.equal(view.emitted.refresh, 1); assert.equal(view.emitted.preview, 0);
@@ -231,8 +252,8 @@ test("Data Pipeline checkbox changes only its Canvas prop and preserves visibili
     assert.equal(canvas.props.showDataPipeline, true);
     await view.toggleDataPipeline(false); assert.equal(canvas.props.showDataPipeline, false);
     await view.click("Process Guide");
-    assert.equal(view.latest("guide").props.sourceLabel, "Demo content · not live source");
-    assert.equal(view.latest("guide").props.sourceWarning, "Bundled preview · not live");
+    assert.equal(view.latest("guide").props.sourceLabel, "Bundled demo · not live source");
+    assert.equal(view.latest("guide").props.sourceWarning, "The last refresh did not complete. Check Source info and retry.");
     await view.click("Explore"); assert.equal(canvas.props.showDataPipeline, false);
     await view.toggleDataPipeline(true); assert.equal(canvas.props.showDataPipeline, true);
     assert.equal(view.latest("canvas"), canvas);

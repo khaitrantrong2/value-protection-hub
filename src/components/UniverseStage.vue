@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { RING_GEOMETRY, sectors, type Sector } from "../data/sectors";
 import { useLinks } from "../composables/useLinks";
 import { useReducedMotion } from "../composables/useReducedMotion";
 import StarfighterIcon from "./StarfighterIcon.vue";
-// CommanderModel (three.js GLB) temporarily disabled to keep the home page light — platform + label stay.
+import { useLocale } from '../i18n';
 
-const { openSector } = useLinks();
+const { openSector, paletteOpen } = useLinks();
+const { t } = useLocale();
 const { prefersReducedMotion } = useReducedMotion();
 
 const stageRef = ref<HTMLElement | null>(null);
@@ -82,6 +83,7 @@ function launch(s: Sector) {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  if (e.defaultPrevented || paletteOpen.value || !stageRef.value?.contains(e.target as Node)) return;
   const t = e.target as HTMLElement | null;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
   const n = sectors.length;
@@ -92,14 +94,26 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault();
     hoveredIndex.value = hoveredIndex.value === null ? n - 1 : (hoveredIndex.value - 1 + n) % n;
   } else if (e.key === "Enter" && hoveredIndex.value !== null) {
+    e.preventDefault();
     launch(sectors[hoveredIndex.value]);
   }
+  if (e.key.startsWith('Arrow') && hoveredIndex.value !== null) {
+    stageRef.value?.querySelectorAll<HTMLButtonElement>('.stage__ship')[hoveredIndex.value]?.focus({ preventScroll: true });
+  }
 }
+
+function syncMotion() {
+  running = !prefersReducedMotion.value && !document.hidden;
+  cancelAnimationFrame(frameId);
+  if (running) frameId = requestAnimationFrame(tick);
+}
+watch(prefersReducedMotion, syncMotion);
 
 onMounted(() => {
   measure();
   positionShips();
   window.addEventListener("keydown", onKeydown);
+  document.addEventListener('visibilitychange', syncMotion);
   resizeObserver = new ResizeObserver(() => {
     measure();
     positionShips();
@@ -117,16 +131,17 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(frameId);
   resizeObserver?.disconnect();
   window.removeEventListener("keydown", onKeydown);
+  document.removeEventListener('visibilitychange', syncMotion);
 });
 </script>
 
 <template>
-  <div ref="stageRef" class="stage" aria-hidden="true">
+  <div ref="stageRef" class="stage" role="navigation" :aria-label="t('shell.exploreAreas')">
     <!-- ambient planet glow -->
-    <div class="stage__glow"></div>
+    <div class="stage__glow" aria-hidden="true"></div>
 
     <!-- orbit rings -->
-    <svg class="stage__orbits" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <svg class="stage__orbits" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <ellipse
         v-for="(ring, r) in RING_GEOMETRY"
         :key="r"
@@ -139,7 +154,7 @@ onBeforeUnmount(() => {
     </svg>
 
     <!-- glowing wireframe planet -->
-    <div class="stage__planet">
+    <div class="stage__planet" aria-hidden="true">
       <div class="stage__planet-core"></div>
       <img class="stage__planet-mark" src="/brand/intrepid-mark.png" alt="" aria-hidden="true" />
       <svg class="stage__globe" viewBox="0 0 200 200">
@@ -174,7 +189,7 @@ onBeforeUnmount(() => {
         zIndex: ships[i].z,
         color: s.accent,
       }"
-      :aria-label="`${s.name} sector`"
+      :aria-label="t('shell.categories.' + s.categoryId)"
       @mouseenter="hoveredIndex = i"
       @mouseleave="hoveredIndex = null"
       @focus="hoveredIndex = i"
@@ -185,7 +200,7 @@ onBeforeUnmount(() => {
       <span class="stage__ship-craft" :style="{ transform: `rotate(${ships[i].rot}deg)` }">
         <StarfighterIcon :arch="s.arch" />
       </span>
-      <span class="stage__ship-label">{{ s.name }}</span>
+      <span class="stage__ship-label">{{ t('shell.categories.' + s.categoryId) }}</span>
     </button>
 
     <!-- hover tooltip -->
@@ -198,25 +213,25 @@ onBeforeUnmount(() => {
     >
       <div class="stage__tip-head">
         <span class="stage__tip-dot" :style="{ background: hoveredSector.accent }"></span>
-        <span class="stage__tip-name">{{ hoveredSector.name }}</span>
+        <span class="stage__tip-name">{{ t('shell.categories.' + hoveredSector.categoryId) }}</span>
         <span class="stage__tip-arch">{{ hoveredSector.archLabel }}</span>
       </div>
-      <p class="stage__tip-body">{{ hoveredSector.tip }}</p>
+      <p class="stage__tip-body">{{ t('shell.findAsset') }}</p>
       <div class="stage__tip-foot">
         <span>SECTOR {{ hoveredSector.code }}</span>
-        <span :style="{ color: hoveredSector.accent }">NAVIGATE →</span>
+        <span :style="{ color: hoveredSector.accent }">{{ t('shell.open') }} →</span>
       </div>
     </div>
 
-    <!-- commander (3D model temporarily hidden — platform + label only) -->
-    <div class="stage__commander">
+    <!-- Shared team identity, not an individual spotlight. -->
+    <div class="stage__commander" aria-hidden="true">
       <div class="stage__platform">
         <span class="stage__platform-ring"></span>
         <span class="stage__platform-ring stage__platform-ring--gold"></span>
         <span class="stage__platform-core"></span>
       </div>
-      <div class="stage__commander-name">Commander Khải</div>
-      <div class="stage__commander-role mono">VALUE PROTECTION TEAM LEAD</div>
+      <div class="stage__commander-name">Intrepid · Value Protection</div>
+      <div class="stage__commander-role mono">VN · TH · SG · MY · PH · ID</div>
     </div>
   </div>
 </template>

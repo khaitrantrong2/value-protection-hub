@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useLocale } from "../../i18n";
 import type { AtlasPracticeState, AtlasEvidenceState } from "../../types/atlas";
+const { t } = useLocale();
 const props = defineProps<{ state: AtlasPracticeState | AtlasEvidenceState; control?: boolean; compact?: boolean }>();
-const label = computed(() => ({ reported: props.compact ? "Reported" : props.control ? "Reported control" : "Reported practice", proposed: "Proposed", develop: props.compact ? "Developing" : "In development", "to-locate": "Evidence to locate", located: "Evidence located" }[props.state]));
+const label = computed(() => ({ reported: t(props.compact ? "atlas.reported" : props.control ? "atlas.reportedControl" : "atlas.reportedPractice"), proposed: t("atlas.proposed"), develop: t(props.compact ? "atlas.developing" : "atlas.inDevelopment"), "to-locate": t("atlas.evidenceToLocate"), located: t("atlas.evidenceLocated") }[props.state]));
 </script>
 <template><span class="atlas-status" :class="[`atlas-status--${state}`, { 'is-compact': compact }]">{{ label }}</span></template>
 <style scoped>

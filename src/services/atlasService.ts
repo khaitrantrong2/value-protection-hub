@@ -1,5 +1,6 @@
 import { ATLAS_STAGE_IDS } from "../types/atlas";
 import type { AtlasControl, AtlasPayload, AtlasReference, AtlasStage } from "../types/atlas";
+import { parseAtlasTranslations } from "./atlasTranslationService";
 
 const INVALID_DATA = "Dữ liệu Atlas không hợp lệ. Kiểm tra nội dung đã publish trong Google Sheet.";
 const UNAVAILABLE = "Không tải được Atlas. Kiểm tra kết nối rồi thử lại.";
@@ -155,6 +156,7 @@ export function parseAtlasResponse(value: unknown): AtlasPayload {
     meta: { contentVersion: text(meta.contentVersion, 80), processStatus: text(meta.processStatus, 600), effectiveFrom: date(meta.effectiveFrom), updatedAt: date(meta.updatedAt), generatedAt: generatedAt(meta.generatedAt), subtitle: text(meta.subtitle, 600) },
     stages, controls, references,
   };
+  if (payload.translations !== undefined) result.translations = parseAtlasTranslations(payload.translations);
   if (JSON.stringify(result).length > 500000) invalid();
   return result;
 }

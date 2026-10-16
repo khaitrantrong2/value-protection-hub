@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { gsap, VPH_EASE } from "../motion";
 import UniverseStage from "./UniverseStage.vue";
 import Icon from "./Icon.vue";
 import { useLinks } from "../composables/useLinks";
 import { useReducedMotion } from "../composables/useReducedMotion";
+import { useLocale } from '../i18n';
 
-const { config, openSector, openCrew } = useLinks();
+const { openSector, openCrew, openAtlas, source, paletteOpen } = useLinks();
+const { t } = useLocale();
 const { prefersReducedMotion } = useReducedMotion();
 
 const heroRef = ref<HTMLElement | null>(null);
 const driveQuery = ref("");
+const searchMode = ref<'hub' | 'drive'>('hub');
+const sourceLabel = computed(() => t(source.value === 'live' ? 'shell.sourceLive' : source.value === 'stale' ? 'shell.sourceStale' : source.value === 'mock' ? 'shell.sourceDemo' : source.value === 'unavailable' ? 'shell.sourceUnavailable' : 'shell.sourceLoading'));
+let motionContext: ReturnType<typeof gsap.context> | undefined;
 
 function searchDrive() {
   const q = driveQuery.value.trim();
@@ -21,56 +26,60 @@ function searchDrive() {
 }
 
 function scanVaults() {
-  // "The vaults" = the Claimback control assets.
-  openSector("claimback-trackers");
+  openSector('all');
 }
 
 onMounted(() => {
   if (!heroRef.value || prefersReducedMotion.value) return;
-  const targets = heroRef.value.querySelectorAll("[data-reveal]");
-  gsap.from(targets, { opacity: 0, y: 22, duration: 0.7, ease: VPH_EASE, stagger: 0.08 });
+  motionContext = gsap.context(() => {
+    gsap.from('[data-reveal]', { opacity: 0, y: 14, duration: 0.45, ease: VPH_EASE, stagger: 0.045 });
+  }, heroRef.value);
 });
+onBeforeUnmount(() => motionContext?.revert());
 </script>
 
 <template>
   <section ref="heroRef" class="hero">
     <div class="hero__copy">
-      <div class="hero__status" data-reveal>
+      <div class="hero__status" data-reveal :title="t('shell.sourceNote')" role="status">
         <span class="hero__status-dot"></span>
-        <span class="hero__status-text mono">SYSTEM ONLINE</span>
+        <span class="hero__status-text">{{ sourceLabel }}</span>
       </div>
 
       <h1 class="hero__title" data-reveal>Value<br />Protection Hub</h1>
 
       <p class="hero__subtitle" data-reveal>
-        {{ config?.subtitle || "Claimback, AR & Finance Control Workspace" }}
+        {{ t('shell.heroSubtitle') }}
       </p>
       <p class="hero__desc" data-reveal>
-        A galactic command center for the trackers, dashboards, SOPs, and control assets that protect value across
-        Intrepid.
+        {{ t('shell.heroDescription') }}
       </p>
 
-      <form class="hero__scan" data-reveal @submit.prevent="searchDrive">
+      <div class="hero__search-scope" role="group" :aria-label="t('shell.searchScope')" data-reveal><button type="button" :aria-pressed="searchMode === 'hub'" @click="searchMode = 'hub'">{{ t('shell.search') }}</button><button type="button" :aria-pressed="searchMode === 'drive'" @click="searchMode = 'drive'">{{ t('shell.drive') }}<Icon name="external" :size="12" /></button></div>
+      <button v-if="searchMode === 'hub'" type="button" class="hero__hub-search" data-reveal @click="paletteOpen = true"><Icon name="search" :size="18" /><span>{{ t('shell.searchPlaceholder') }}</span><Icon name="arrowRight" :size="18" /></button>
+      <form v-else class="hero__scan" data-reveal @submit.prevent="searchDrive">
         <span class="hero__scan-sweep"></span>
         <Icon name="search" :size="18" class="hero__scan-icon" />
         <input
           v-model="driveQuery"
           type="search"
           class="hero__scan-input"
-          placeholder="Search Google Drive — files, folders, shared docs…"
-          aria-label="Search Google Drive"
+          :placeholder="t('shell.driveSearch')"
+          :aria-label="t('shell.driveSearch')"
         />
-        <button type="submit" class="hero__scan-go" aria-label="Search Google Drive">
+        <button type="submit" class="hero__scan-go" :aria-label="t('shell.driveSearch')">
           <Icon name="arrowRight" :size="16" />
         </button>
       </form>
+      <p class="hero__search-hint">{{ t(searchMode === 'hub' ? 'shell.searchHint' : 'shell.driveHint') }}</p>
 
       <div class="hero__actions" data-reveal>
         <button type="button" class="hero__cta hero__cta--primary" @click="scanVaults">
-          Scan the vaults
+          {{ t('shell.findAsset') }}
           <Icon name="arrowRight" :size="16" />
         </button>
-        <button type="button" class="hero__cta hero__cta--ghost" @click="openCrew">Meet the crew</button>
+        <button type="button" class="hero__cta hero__cta--ghost" @click="openAtlas('01')">{{ t('shell.understandProcess') }}</button>
+        <button type="button" class="hero__team-link" @click="openCrew">{{ t('shell.meetTeam') }}<Icon name="arrowRight" :size="14" /></button>
       </div>
     </div>
 
@@ -137,7 +146,7 @@ onMounted(() => {
 
 .hero__status-text {
   font-size: 11px;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.02em;
   color: #d4c2f5;
 }
 
@@ -208,7 +217,7 @@ onMounted(() => {
   border: none;
   outline: none;
   background: none;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--color-text-400);
 
   &::placeholder {
@@ -243,6 +252,15 @@ onMounted(() => {
   gap: 12px;
   margin-top: 22px;
 }
+
+.hero__search-scope { display: flex; gap: 6px; margin-bottom: 10px; }
+.hero__search-scope button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; border: 1px solid transparent; border-radius: var(--radius-md); padding: 8px 10px; background: transparent; color: var(--color-text-200); font-size: 12px; }
+.hero__search-scope button[aria-pressed=true] { color: var(--color-text-400); background: var(--color-beige-600); border-color: var(--color-card-border); }
+.hero__hub-search { width: 100%; max-width: 500px; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--color-card-border-hover); border-radius: var(--radius-lg); background: var(--color-field-bg); color: var(--color-text-300); text-align: start; font-size: 15px; }
+.hero__hub-search span { flex: 1; }
+.hero__search-hint { max-width: 500px; font-size: 12px; line-height: 1.6; color: var(--color-text-200); margin-top: 10px; }
+.hero__team-link { min-height: 44px; display: inline-flex; gap: 8px; align-items: center; background: transparent; border: 0; font-size: 14px; color: var(--color-text-300); padding: 6px; }
+@media (max-width: 540px) { .hero__copy { max-width: 100%; } .hero__actions { gap: 8px; } .hero__hub-search { font-size: 16px; } }
 
 .hero__cta {
   display: inline-flex;

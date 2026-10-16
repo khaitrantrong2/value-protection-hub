@@ -6,6 +6,7 @@ import { transform } from "esbuild";
 import { compileScript, parse } from "@vue/compiler-sfc";
 import * as Vue from "vue";
 import { renderToString } from "@vue/server-renderer";
+import { createLocaleHarness } from './localeHarness.mjs';
 
 const source = readFileSync(new URL("../src/components/atlas/AtlasSourceInfo.vue", import.meta.url), "utf8");
 const descriptor = parse(source).descriptor;
@@ -40,6 +41,7 @@ function runtime(props, render = false) {
         onBeforeUnmount: callback => unmounted.push(callback),
       };
       if (name.endsWith("Icon.vue")) return icon;
+      if (name.endsWith('/i18n')) return { useLocale: () => createLocaleHarness() };
       throw new Error(`Unexpected Source Info dependency: ${name}`);
     },
   });
@@ -137,7 +139,7 @@ test("Only an explicit Refresh source click emits refresh; loading renders a dis
 
 test("Real server rendering escapes hostile metadata/error strings and retains approval caveats", async () => {
   const marker = '<img src=x onerror="alert(1)">';
-  const context = vm.createContext({ module: { exports: {} }, require(name) { if (name === "vue") return Vue; if (name.endsWith("Icon.vue")) return icon; throw new Error(name); } });
+  const context = vm.createContext({ module: { exports: {} }, require(name) { if (name === "vue") return Vue; if (name.endsWith('/i18n')) return { useLocale: () => createLocaleHarness() }; if (name.endsWith("Icon.vue")) return icon; throw new Error(name); } });
   vm.runInContext(inline, context);
   const html = await renderToString(Vue.createSSRApp(context.module.exports.default,
     props({ error: marker, refreshedAt: marker, meta: { processStatus: marker, contentVersion: marker, effectiveFrom: marker, updatedAt: marker } })));

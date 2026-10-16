@@ -5,11 +5,14 @@ import type { AtlasInspectorTab, AtlasLibraryGroup } from "../../types/atlasUi";
 import AtlasGuideStage from "./AtlasGuideStage.vue";
 import AtlasGuideReferences from "./AtlasGuideReferences.vue";
 import Icon from "../Icon.vue";
+import { useLocale } from "../../i18n";
+const { t, text } = useLocale();
 
-const props = defineProps<{ data: AtlasPayload; stageId: AtlasStageId; activeTab: AtlasInspectorTab; referenceGroup: AtlasLibraryGroup | null; referenceId?: string | null; sourceLabel: string; sourceWarning?: string; version: string }>();
+const props = defineProps<{ data: AtlasPayload; stageId: AtlasStageId; activeTab: AtlasInspectorTab; referenceGroup: AtlasLibraryGroup | null; referenceId?: string | null; sourceLabel: string; sourceWarning?: string; version: string; translatedKeys?: Set<string> }>();
 const emit = defineEmits<{ stage: [id: AtlasStageId]; reference: [reference: AtlasReference]; references: [group: AtlasLibraryGroup]; map: [] }>();
 const documentPane = ref<HTMLElement | null>(null);
-const groupNames: Record<AtlasReferenceGroup, string> = { "document-step": "Document sequence", "reason-code": "Change reasons", kpi: "KPI definitions", "pipeline-step": "Automation handoffs", "settlement-route": "Settlement routes", escalation: "Escalation", record: "Records & evidence", guidance: "Process guidance" };
+const groupNames = computed<Record<AtlasReferenceGroup, string>>(() => ({ "document-step": t("atlas.documentStep"), "reason-code": t("atlas.reasonCode"), kpi: t("atlas.kpi"), "pipeline-step": t("atlas.pipelineStep"), "settlement-route": t("atlas.settlementRoute"), escalation: t("atlas.escalation"), record: t("atlas.record"), guidance: t("atlas.guidance") }));
+function printChapter() { window.print(); }
 const chapters = computed(() => props.data.stages.filter(stage => stage.kind === "chapter").sort((a, b) => a.order - b.order));
 const supporting = computed(() => props.data.stages.filter(stage => stage.kind === "supporting").sort((a, b) => a.order - b.order));
 const selected = computed(() => props.data.stages.find(stage => stage.id === props.stageId));
@@ -20,7 +23,7 @@ const supportedChapters = computed(() => chapters.value.filter(stage => selected
 const chapterIndex = computed(() => chapters.value.findIndex(stage => stage.id === selected.value?.id));
 const previous = computed(() => chapterIndex.value > 0 ? chapters.value[chapterIndex.value - 1] : undefined);
 const next = computed(() => chapterIndex.value >= 0 ? chapters.value[chapterIndex.value + 1] : undefined);
-const groups = computed(() => Object.entries(groupNames).map(([id, title]) => ({ id: id as AtlasReferenceGroup, title, count: props.data.references.filter(reference => reference.group === id).length })).filter(group => group.count));
+const groups = computed(() => Object.entries(groupNames.value).map(([id, title]) => ({ id: id as AtlasReferenceGroup, title, count: props.data.references.filter(reference => reference.group === id).length })).filter(group => group.count));
 const mobileValue = computed(() => props.referenceGroup === null ? `stage:${selected.value?.id ?? props.stageId}` : `references:${props.referenceGroup}`);
 function changeMobile(event: Event) {
   const value = (event.target as HTMLSelectElement).value;
@@ -45,26 +48,27 @@ onMounted(focusDocument);
 
 <template>
   <div class="atlas-process-guide">
-    <aside class="guide-toc" aria-label="Process Guide contents" data-lenis-prevent>
-      <header><span>READING GUIDE</span><h2>Contents</h2></header>
-      <nav class="guide-toc-nav" aria-label="Guide chapters">
-        <h3>End-to-end process</h3><button v-for="stage in chapters" :key="stage.id" type="button" :aria-current="referenceGroup === null && selected?.id === stage.id ? 'page' : undefined" @click="emit('stage', stage.id)"><span>{{ stage.id }}</span><strong>{{ stage.shortTitle }}</strong></button>
-        <template v-if="supporting.length"><h3>Supporting capabilities</h3><button v-for="stage in supporting" :key="stage.id" type="button" :aria-current="referenceGroup === null && selected?.id === stage.id ? 'page' : undefined" @click="emit('stage', stage.id)"><span>{{ stage.id }}</span><strong>{{ stage.shortTitle }}</strong></button></template>
-        <h3>Reference appendix</h3><button type="button" :aria-current="referenceGroup === 'all' ? 'page' : undefined" @click="emit('references', 'all')"><Icon name="list" :size="16" /><strong>All references</strong><small>{{ data.references.length }}</small></button>
+    <aside class="guide-toc" :aria-label="text('Process Guide contents', 'Mục lục tài liệu quy trình')" data-lenis-prevent>
+      <header><span>{{ text("READING GUIDE", "TÀI LIỆU QUY TRÌNH") }}</span><h2>{{ t("atlas.contents") }}</h2></header>
+      <nav class="guide-toc-nav" :aria-label="text('Guide chapters', 'Các chương tài liệu')">
+        <h3>{{ t("atlas.process") }}</h3><button v-for="stage in chapters" :key="stage.id" type="button" :aria-current="referenceGroup === null && selected?.id === stage.id ? 'page' : undefined" @click="emit('stage', stage.id)"><span>{{ stage.id }}</span><strong>{{ stage.shortTitle }}</strong></button>
+        <template v-if="supporting.length"><h3>{{ t("atlas.supporting") }}</h3><button v-for="stage in supporting" :key="stage.id" type="button" :aria-current="referenceGroup === null && selected?.id === stage.id ? 'page' : undefined" @click="emit('stage', stage.id)"><span>{{ stage.id }}</span><strong>{{ stage.shortTitle }}</strong></button></template>
+        <h3>{{ t("atlas.appendix") }}</h3><button type="button" :aria-current="referenceGroup === 'all' ? 'page' : undefined" @click="emit('references', 'all')"><Icon name="list" :size="16" /><strong>{{ t("atlas.allReferences") }}</strong><small>{{ data.references.length }}</small></button>
         <div v-if="referenceGroup !== null" class="guide-toc-reference-types"><button v-for="group in groups" :key="group.id" type="button" :aria-current="referenceGroup === group.id ? 'page' : undefined" @click="emit('references', group.id)"><strong>{{ group.title }}</strong><small>{{ group.count }}</small></button></div>
       </nav>
-      <footer>Business-understanding material.<br>Not an approved SOP or an OE conclusion.</footer>
+      <footer>{{ text("Business-understanding material. Not an approved SOP or an OE conclusion.", "Tài liệu tìm hiểu doanh nghiệp. Không phải SOP đã phê duyệt hay kết luận về tính hữu hiệu vận hành.") }}</footer>
     </aside>
 
     <div class="guide-document-column">
-      <div class="guide-mobile-toc"><label for="atlas-guide-mobile-chapter">Contents</label><select id="atlas-guide-mobile-chapter" :value="mobileValue" @change="changeMobile"><optgroup label="End-to-end process"><option v-for="stage in chapters" :key="stage.id" :value="`stage:${stage.id}`">{{ stage.id }} · {{ stage.shortTitle }}</option></optgroup><optgroup v-if="supporting.length" label="Supporting capabilities"><option v-for="stage in supporting" :key="stage.id" :value="`stage:${stage.id}`">{{ stage.id }} · {{ stage.shortTitle }}</option></optgroup><optgroup label="Reference appendix"><option value="references:all">All references ({{ data.references.length }})</option><option v-for="group in groups" :key="group.id" :value="`references:${group.id}`">{{ group.title }} ({{ group.count }})</option></optgroup></select></div>
-      <div ref="documentPane" class="guide-document-scroll" aria-label="Process Guide document" tabindex="0" data-lenis-prevent>
+      <div class="guide-mobile-toc"><label for="atlas-guide-mobile-chapter">{{ t("atlas.contents") }}</label><select id="atlas-guide-mobile-chapter" :value="mobileValue" @change="changeMobile"><optgroup :label="t('atlas.process')"><option v-for="stage in chapters" :key="stage.id" :value="`stage:${stage.id}`">{{ stage.id }} · {{ stage.shortTitle }}</option></optgroup><optgroup v-if="supporting.length" :label="t('atlas.supporting')"><option v-for="stage in supporting" :key="stage.id" :value="`stage:${stage.id}`">{{ stage.id }} · {{ stage.shortTitle }}</option></optgroup><optgroup :label="t('atlas.appendix')"><option value="references:all">{{ t("atlas.allReferences") }} ({{ data.references.length }})</option><option v-for="group in groups" :key="group.id" :value="`references:${group.id}`">{{ group.title }} ({{ group.count }})</option></optgroup></select></div>
+      <div ref="documentPane" class="guide-document-scroll" :aria-label="text('Process Guide document', 'Nội dung tài liệu quy trình')" tabindex="0" data-lenis-prevent>
         <div class="guide-document">
-          <header class="guide-document-context"><div class="guide-document-label"><span>CLAIMBACK · BUSINESS UNDERSTANDING GUIDE</span><button type="button" @click="emit('map')"><Icon name="project" :size="16" />Back to map</button></div><div class="guide-document-metadata"><span>{{ sourceLabel }}</span><span>{{ version || 'Version not specified' }}</span><span class="guide-document-status">{{ data.meta.processStatus || 'Business-understanding draft' }}</span></div><p class="guide-document-disclaimer">Reported practice and controls ≠ independently tested operating effectiveness.</p><p v-if="sourceWarning" class="guide-document-warning" role="status">{{ sourceWarning }}</p></header>
+          <header class="guide-document-context"><div class="guide-document-label"><span>{{ text("CLAIMBACK · BUSINESS UNDERSTANDING GUIDE", "CLAIMBACK · TÀI LIỆU TÌM HIỂU DOANH NGHIỆP") }}</span><button type="button" @click="emit('map')"><Icon name="project" :size="16" />{{ t("atlas.backToMap") }}</button><button type="button" class="guide-print" @click="printChapter">{{ t("atlas.print") }}</button></div><div class="guide-document-metadata"><span>{{ sourceLabel }}</span><span>{{ version || t('atlas.noVersion') }}</span><span class="guide-document-status">{{ data.meta.processStatus || text('Business-understanding draft', 'Bản nháp tìm hiểu doanh nghiệp') }}</span></div><p class="guide-document-disclaimer">{{ text("Reported practice and controls ≠ independently tested operating effectiveness.", "Thực tế và kiểm soát được xác nhận ≠ tính hữu hiệu vận hành đã được kiểm tra độc lập.") }}</p><p v-if="sourceWarning" class="guide-document-warning" role="status">{{ sourceWarning }}</p></header>
+    <p class="guide-translation-notice" role="status">{{ t("atlas.translationNotice") }}</p>
           <AtlasGuideStage v-if="referenceGroup === null && selected" :stage="selected" :controls="controls" :references="references" :support-stages="supports" @stage="emit('stage', $event)" @reference="emit('reference', $event)" />
           <AtlasGuideReferences v-else-if="referenceGroup !== null" :references="data.references" :stages="data.stages" :group="referenceGroup" :group-names="groupNames" :reference-id="referenceId" @group="emit('references', $event)" @stage="emit('stage', $event)" />
-          <div v-else class="guide-no-chapter"><h2 id="atlas-guide-title" tabindex="-1">No published chapter</h2><p>Choose another chapter or refresh the process source.</p></div>
-          <footer v-if="referenceGroup === null && selected" class="guide-chapter-navigation"><template v-if="selected.kind === 'chapter'"><button type="button" :disabled="!previous" @click="previous && emit('stage', previous.id)"><span>← Previous chapter</span><strong>{{ previous ? `${previous.id} · ${previous.shortTitle}` : 'Start of process' }}</strong></button><button type="button" :disabled="!next" @click="next && emit('stage', next.id)"><span>Next chapter →</span><strong>{{ next ? `${next.id} · ${next.shortTitle}` : 'End of business flow' }}</strong></button></template><div v-else-if="supportedChapters.length" class="guide-return-chapters"><p>Return to a supported business stage</p><button v-for="stage in supportedChapters" :key="stage.id" type="button" @click="emit('stage', stage.id)">{{ stage.id }} · {{ stage.shortTitle }}<Icon name="arrowRight" :size="14" /></button></div></footer>
+          <div v-else class="guide-no-chapter"><h2 id="atlas-guide-title" tabindex="-1">{{ text("No published chapter", "Chưa có chương được xuất bản") }}</h2><p>{{ text("Choose another chapter or refresh the process source.", "Chọn chương khác hoặc tải lại nguồn nội dung.") }}</p></div>
+          <footer v-if="referenceGroup === null && selected" class="guide-chapter-navigation"><template v-if="selected.kind === 'chapter'"><button type="button" :disabled="!previous" @click="previous && emit('stage', previous.id)"><span>← {{ text("Previous chapter", "Chương trước") }}</span><strong>{{ previous ? `${previous.id} · ${previous.shortTitle}` : text('Start of process', 'Bắt đầu quy trình') }}</strong></button><button type="button" :disabled="!next" @click="next && emit('stage', next.id)"><span>{{ text("Next chapter", "Chương tiếp") }} →</span><strong>{{ next ? `${next.id} · ${next.shortTitle}` : text('End of business flow', 'Kết thúc luồng nghiệp vụ') }}</strong></button></template><div v-else-if="supportedChapters.length" class="guide-return-chapters"><p>{{ text("Return to a supported business stage", "Về giai đoạn nghiệp vụ được hỗ trợ") }}</p><button v-for="stage in supportedChapters" :key="stage.id" type="button" @click="emit('stage', stage.id)">{{ stage.id }} · {{ stage.shortTitle }}<Icon name="arrowRight" :size="14" /></button></div></footer>
         </div>
       </div>
     </div>
@@ -95,12 +99,28 @@ button { cursor: pointer; color: var(--color-text-400); min-height: 44px; border
 .guide-document-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-gutter: stable; }
 .guide-document { max-width: 980px; padding: 24px 40px 48px; margin: 0 auto; }
 .guide-document-context { padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--color-card-border); }
-.guide-document-label { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.guide-document-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.guide-document-label>span { flex: 1 1 180px; }
+.guide-print { font-size: 11px !important; }
+@media print {
+  .atlas-process-guide { display: block; height: auto; overflow: visible; background: #fff; color: #111; }
+  .guide-toc,.guide-mobile-toc,.guide-chapter-navigation,.guide-document-label button { display: none !important; }
+  .guide-document-column,.guide-document-scroll { display: block; height: auto; overflow: visible; }
+  .guide-document { max-width: none; margin: 0; padding: 0; }
+  .guide-document-context { break-inside: avoid; border-color: #bbb; }
+  .guide-document-metadata,.guide-document-label>span,.guide-document-disclaimer,.guide-document-status { color: #222; }
+  .guide-document :deep(*) { color: #111 !important; background: transparent !important; box-shadow: none !important; }
+  .guide-document :deep(.guide-control),.guide-document :deep(.guide-mini-flow),.guide-document :deep(.guide-reference-record) { break-inside: avoid; border-color: #aaa; }
+  .guide-document :deep(button) { border-color: #aaa; }
+  .guide-document :deep(h2),.guide-document :deep(h3),.guide-document :deep(h4) { break-after: avoid; }
+  .guide-document :deep(a[href]::after) { content: " (" attr(href) ")"; font-size: 9pt; overflow-wrap: anywhere; }
+}
 .guide-document-label>span { color: var(--color-text-300); font-size: 10px; letter-spacing: .06em; line-height: 1.5; }
 .guide-document-label button { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 12px; }
 .guide-document-status { color: var(--color-orange-400); }
 .guide-document-disclaimer { margin-top: 4px; font-size: 11px; line-height: 1.5; color: var(--color-text-300); }
 .guide-document-metadata { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; color: var(--color-text-300); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.guide-translation-notice { padding: 10px 12px; border-left: 2px solid var(--color-cyan-400); color: var(--color-text-300); font-size: 12px; line-height: 1.65; margin-bottom: 20px; background: var(--color-beige-500); }
 .guide-document-warning { margin-top: 20px; padding: 12px 16px; border-left: 2px solid var(--color-orange-400); background: var(--color-orange-muted); color: var(--color-text-300); font-size: 13px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
 .guide-chapter-navigation { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--color-card-border); }
 .guide-chapter-navigation>button { display: grid; align-content: start; gap: 8px; text-align: left; padding: 16px; }

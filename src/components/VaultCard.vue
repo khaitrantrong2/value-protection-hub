@@ -1,305 +1,71 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 import type { LinkItem } from "../types/links";
+import { getLinkDestination } from "../services/linkSafety";
+import { useLocale } from "../i18n";
 import Icon from "./Icon.vue";
-
-const props = defineProps<{ link: LinkItem; accent: string; icon: string }>();
-
-const copied = ref(false);
-const canCopy = props.link.status !== "Blocked";
-
+const props = defineProps<{ link: LinkItem; accent: string; icon: string; compact?: boolean }>();
+const { t } = useLocale();
+const destination = computed(() => getLinkDestination(props.link));
+const expanded = ref(false);
+const copyState = ref<"idle" | "copied" | "failed">("idle");
+let copyTimer: ReturnType<typeof setTimeout> | undefined;
 async function copyLink() {
-  if (!canCopy) return;
-  try {
-    await navigator.clipboard.writeText(props.link.url);
-    copied.value = true;
-    setTimeout(() => (copied.value = false), 1600);
-  } catch {
-    /* clipboard unavailable */
-  }
+  if (!destination.value.href) return;
+  try { await navigator.clipboard.writeText(destination.value.href); copyState.value = "copied"; }
+  catch { copyState.value = "failed"; }
+  if (copyTimer) clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => copyState.value = "idle", 3000);
 }
+onBeforeUnmount(() => { if (copyTimer) clearTimeout(copyTimer); });
 </script>
 
 <template>
-  <article class="vault" :style="{ '--accent': accent }">
-    <span class="vault__bar"></span>
-
-    <div class="vault__head">
-      <span class="vault__icon"><Icon :name="icon" :size="18" /></span>
-      <h4 class="vault__title">{{ link.title }}</h4>
-      <span class="vault__status" :class="`vault__status--${link.status.toLowerCase()}`">
-        <span class="vault__status-dot"></span>{{ link.status }}
-      </span>
+  <article class="vault" :class="{ 'vault--compact': compact }" :style="{ '--accent': accent }">
+    <header class="vault__head"><span class="vault__icon" aria-hidden="true"><Icon :name="icon" :size="18" /></span><h2 class="vault__title">{{ link.title }}</h2><span class="vault__status" :class="`vault__status--${link.status.toLowerCase()}`">{{ t(`directory.statusValues.${link.status}`) }}</span></header>
+    <div class="vault__body">
+      <p class="vault__desc" :class="{ 'is-expanded': expanded }">{{ link.description || '—' }}</p>
+      <dl class="vault__meta"><div><dt>{{ t('directory.owner') }}</dt><dd>{{ link.owner || t('directory.unassigned') }}</dd></div><div><dt>{{ t('directory.country') }}</dt><dd>{{ link.country === 'Regional' ? t('directory.region') : link.country || t('directory.unassigned') }}</dd></div><div><dt>{{ t('directory.criticality') }}</dt><dd :class="`vault__crit--${link.criticality.toLowerCase()}`">{{ t(`directory.criticalityValues.${link.criticality}`) }}</dd></div></dl>
+      <ul v-if="link.tags.length" class="vault__tags"><li v-for="tag in (expanded ? link.tags : link.tags.slice(0, 3))" :key="tag">{{ tag }}</li><li v-if="!expanded && link.tags.length > 3">+{{ link.tags.length - 3 }}</li></ul>
+      <p v-if="link.accessNote" class="vault__note"><Icon name="shield" :size="14" /><span>{{ t('directory.access') }}: {{ link.accessNote }}</span></p>
+      <p v-if="destination.reason" class="vault__note" :class="{ 'vault__note--warning': !destination.href }">{{ t(destination.reason) }}</p>
     </div>
-
-    <p class="vault__desc">{{ link.description }}</p>
-
-    <ul v-if="link.tags.length" class="vault__tags">
-      <li v-for="tag in link.tags.slice(0, 3)" :key="tag" class="mono">{{ tag }}</li>
-      <li v-if="link.tags.length > 3" class="mono vault__tags-more">+{{ link.tags.length - 3 }}</li>
-    </ul>
-
-    <div class="vault__meta">
-      <div><span class="vault__k">Owner</span><span class="vault__v">{{ link.owner || "—" }}</span></div>
-      <div><span class="vault__k">Country</span><span class="vault__v">{{ link.country || "Regional" }}</span></div>
-      <div>
-        <span class="vault__k">Criticality</span>
-        <span class="vault__v" :class="`vault__crit--${link.criticality.toLowerCase()}`">{{ link.criticality }}</span>
-      </div>
-    </div>
-
-    <p v-if="link.accessNote" class="vault__note"><Icon name="shield" :size="12" /> {{ link.accessNote }}</p>
-
-    <div class="vault__actions">
-      <a class="vault__open" :href="link.url" target="_blank" rel="noopener noreferrer">Open<Icon name="arrowRight" :size="15" /></a>
-      <button v-if="canCopy" class="vault__copy" type="button" @click="copyLink">
-        <Icon name="copy" :size="15" />{{ copied ? "Copied" : "Copy" }}
-      </button>
-    </div>
+    <footer class="vault__actions"><a v-if="destination.href" class="vault__open" :href="destination.href" target="_blank" rel="noopener noreferrer" :aria-label="t('directory.openNamed', { title: link.title })">{{ t('directory.open') }}<Icon name="external" :size="14" /></a><span v-else class="vault__disabled" aria-disabled="true">{{ t('directory.noDestination') }}</span><button v-if="destination.href" class="vault__copy" type="button" :aria-label="t('directory.copyNamed', { title: link.title })" @click="copyLink"><Icon name="copy" :size="15" /><span>{{ t(copyState === 'copied' ? 'directory.copied' : 'directory.copy') }}</span></button><button class="vault__details" type="button" :aria-expanded="expanded" @click="expanded = !expanded">{{ t(expanded ? 'directory.less' : 'directory.more') }}</button></footer>
+    <p v-if="copyState !== 'idle'" class="vault__feedback" role="status">{{ t(copyState === 'copied' ? 'directory.copied' : 'directory.copyFailed') }}</p>
   </article>
 </template>
 
 <style lang="scss" scoped>
-.vault {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  border-radius: 18px;
-  border: 1px solid rgba(183, 148, 246, 0.2);
-  background:
-    radial-gradient(140% 100% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
-    linear-gradient(180deg, rgba(48, 27, 104, 0.55), rgba(16, 8, 38, 0.42));
-  box-shadow:
-    var(--shadow-card),
-    inset 0 1px 0 rgba(183, 148, 246, 0.14);
-  transition:
-    transform 0.22s var(--ease-power2-out),
-    border-color 0.22s var(--ease-power2-out),
-    box-shadow 0.22s var(--ease-power2-out);
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-      radial-gradient(1.2px 1.2px at 22% 28%, rgba(255, 255, 255, 0.5), transparent),
-      radial-gradient(1.2px 1.2px at 70% 16%, rgba(183, 148, 246, 0.6), transparent),
-      radial-gradient(1.2px 1.2px at 86% 60%, rgba(255, 255, 255, 0.35), transparent),
-      radial-gradient(1.2px 1.2px at 38% 80%, rgba(183, 148, 246, 0.45), transparent);
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  @include hover {
-    &:hover {
-      transform: translateY(-3px);
-      border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-      box-shadow:
-        0 24px 54px -24px rgba(0, 0, 0, 0.9),
-        0 0 28px -8px color-mix(in srgb, var(--accent) 50%, transparent),
-        inset 0 1px 0 rgba(183, 148, 246, 0.2);
-    }
-  }
-}
-
-.vault__bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), transparent);
-}
-
-.vault__head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.vault__icon {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  flex: none;
-  border-radius: 11px;
-  border: 1px solid var(--color-command-border);
-  background: rgba(168, 132, 246, 0.06);
-  color: var(--accent);
-}
-
-.vault__title {
-  flex: 1;
-  min-width: 0;
-  padding-top: 8px;
-  font-size: 15.5px;
-  font-weight: 600;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.vault__status {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  border: 1px solid var(--color-command-border);
-  color: var(--color-text-300);
-
-  &--active {
-    color: #7ff0c0;
-    border-color: rgba(55, 211, 154, 0.4);
-  }
-  &--review {
-    color: #ffd479;
-    border-color: rgba(254, 188, 16, 0.4);
-  }
-  &--blocked {
-    color: #ff8f88;
-    border-color: rgba(242, 90, 81, 0.45);
-  }
-  &--archived {
-    color: var(--color-text-200);
-  }
-}
-
-.vault__status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.vault__desc {
-  font-size: 13px;
-  line-height: 1.5;
-  color: #b8acd8;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.vault__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-
-  li {
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    color: #b0a4cc;
-    padding: 3px 9px;
-    border-radius: 6px;
-    background: rgba(176, 160, 210, 0.1);
-  }
-}
-
-.vault__tags-more {
-  background: transparent !important;
-}
-
-.vault__meta {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  font-size: 12px;
-
-  div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-}
-
-.vault__k {
-  color: var(--color-text-200);
-  font-size: 11px;
-}
-
-.vault__v {
-  color: #e8e0ff;
-  font-weight: 600;
-}
-
-.vault__crit {
-  &--high {
-    color: var(--criticality-high);
-  }
-  &--medium {
-    color: var(--criticality-medium);
-  }
-  &--low {
-    color: var(--color-text-300);
-  }
-}
-
-.vault__note {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--color-text-200);
-}
-
-.vault__actions {
-  display: flex;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.vault__open,
-.vault__copy {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.vault__open {
-  flex: 1;
-  border: none;
-  background: var(--grad-cta);
-  color: #ffffff;
-
-  @include hover {
-    &:hover {
-      filter: brightness(1.06);
-    }
-  }
-}
-
-.vault__copy {
-  border: 1px solid var(--color-command-border);
-  background: transparent;
-  color: #dcd2f0;
-
-  @include hover {
-    &:hover {
-      border-color: rgba(168, 132, 246, 0.4);
-      color: #fff;
-    }
-  }
-}
+.vault { min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; border: 1px solid var(--color-card-border); border-top: 2px solid var(--accent); border-radius: var(--radius-md); background: var(--color-card-bg); transition: border-color .18s, background .18s; }
+.vault:hover { border-color: var(--color-card-border-hover); background: var(--color-card-bg-hover); }
+.vault__head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.vault__icon { color: var(--accent); flex: none; padding-top: 2px; }
+.vault__title { flex: 1; min-width: 100px; font-size: 16px; line-height: 1.4; font-weight: 650; overflow-wrap: anywhere; }
+.vault__status { flex: none; font-size: 11px; line-height: 1.5; padding: 3px 8px; border-radius: 5px; border: 1px solid var(--color-card-border); color: var(--color-text-300); background: var(--color-beige-600); }
+.vault__status--blocked { color: var(--color-orange-400); border-color: var(--color-orange-400); }
+.vault__status--review { color: var(--color-yellow-400, #f5c542); }
+.vault__body { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
+.vault__desc { color: var(--color-text-300); font-size: 14px; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.vault__desc.is-expanded { display: block; }
+.vault__meta { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.vault__meta dt { color: var(--color-text-200); font-size: 11px; margin-bottom: 4px; }
+.vault__meta dd { color: var(--color-text-400); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.vault__meta dd.vault__crit--high { color: var(--color-orange-400); }
+.vault__tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.vault__tags li { font-size: 11px; color: var(--color-text-300); padding: 3px 7px; border-radius: 4px; background: var(--color-beige-600); overflow-wrap: anywhere; }
+.vault__note { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.55; color: var(--color-text-200); overflow-wrap: anywhere; }
+.vault__note :deep(svg) { flex: none; margin-top: 2px; }
+.vault__note--warning { color: var(--color-orange-400); }
+.vault__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-card-border); }
+.vault__open,.vault__copy,.vault__details,.vault__disabled { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border-radius: 6px; font-size: 12px; line-height: 1.4; padding: 8px 10px; }
+.vault__open { background: var(--grad-cta); color: white; }
+.vault__copy,.vault__details { color: var(--color-text-300); border: 1px solid var(--color-card-border); background: transparent; cursor: pointer; }
+.vault__details { margin-left: auto; }
+.vault__disabled { color: var(--color-text-200); border: 1px dashed var(--color-card-border); }
+.vault__feedback { font-size: 12px; line-height: 1.5; color: var(--color-text-300); }
+.vault--compact { gap: 10px; padding: 16px 20px; }
+.vault--compact .vault__body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; column-gap: 24px; }
+.vault--compact .vault__desc { -webkit-line-clamp: 2; line-clamp: 2; }
+.vault--compact .vault__tags,.vault--compact .vault__note { grid-column: 1 / -1; }
+@media(max-width:540px) { .vault,.vault--compact { padding: 16px; } .vault--compact .vault__body { display: flex; } .vault__actions>* { min-height: 44px; } .vault__details { margin-left: 0; } }
 </style>

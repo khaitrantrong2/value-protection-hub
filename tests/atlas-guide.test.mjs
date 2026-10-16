@@ -7,6 +7,7 @@ import * as Vue from "vue";
 import { renderToString } from "@vue/server-renderer";
 import { compileScript, parse } from "@vue/compiler-sfc";
 import { build, transform } from "esbuild";
+import { createLocaleHarness, searchHelpers } from './localeHarness.mjs';
 
 const guideNames = ["AtlasProcessGuide", "AtlasGuideStage", "AtlasGuideReferences"];
 const sources = new Map(guideNames.map(name => [name, readFileSync(new URL(`../src/components/atlas/${name}.vue`, import.meta.url), "utf8")]));
@@ -19,9 +20,9 @@ const demoBuild = await build({ entryPoints: [fileURLToPath(new URL("../src/data
 const { atlasDemo } = await import(`data:text/javascript;base64,${Buffer.from(demoBuild.outputFiles[0].text).toString("base64")}`);
 const renderBuild = await build({
   entryPoints: [fileURLToPath(new URL("../src/components/atlas/AtlasProcessGuide.vue", import.meta.url))], bundle: true, write: false, format: "cjs", platform: "node", external: ["vue"], logLevel: "silent",
-  plugins: [{ name: "compile-guide-templates", setup(builder) { builder.onLoad({ filter: /\.vue$/ }, args => ({ contents: compileScript(parse(readFileSync(args.path, "utf8")).descriptor, { id: args.path, inlineTemplate: true }).content, loader: "ts" })); } }],
+  plugins: [{ name: "compile-guide-templates", setup(builder) { builder.onResolve({ filter: /\/i18n$/ }, ({ path }) => ({ path, external: true })); builder.onLoad({ filter: /\.vue$/ }, args => ({ contents: compileScript(parse(readFileSync(args.path, "utf8")).descriptor, { id: args.path, inlineTemplate: true }).content, loader: "ts" })); } }],
 });
-const renderContext = vm.createContext({ module: { exports: {} }, require: name => { if (name === "vue") return Vue; throw new Error(`Unexpected template dependency: ${name}`); } });
+const renderContext = vm.createContext({ module: { exports: {} }, require: name => { if (name === "vue") return Vue; if (name.endsWith('/i18n')) return { useLocale: () => createLocaleHarness() }; throw new Error(`Unexpected template dependency: ${name}`); } });
 vm.runInContext(renderBuild.outputFiles[0].text, renderContext);
 const Guide = renderContext.module.exports.default;
 
@@ -31,6 +32,8 @@ function runtime(name, props) {
     require(moduleName) {
       if (moduleName === "vue") return { defineComponent: component => component, ref: value => ({ value }), computed: get => ({ get value() { return get(); } }), nextTick: () => Promise.resolve(), onMounted: callback => mounted.push(callback), watch: (source, callback) => watchers.push({ source, callback }) };
       if (moduleName.endsWith(".vue")) return {};
+      if (moduleName.endsWith('/i18n')) return { useLocale: () => createLocaleHarness() };
+      if (moduleName.endsWith('/search')) return searchHelpers;
       throw new Error(`Unexpected component dependency: ${moduleName}`);
     },
   });
@@ -95,7 +98,7 @@ test("Stage 05 parallel branches use the actual reference body and never become 
 
 test("Reference appendix includes all eight groups and all 46 source records", () => {
   const guide = runtime("AtlasProcessGuide", guideProps()).state;
-  const props = { references: atlasDemo.references, stages: atlasDemo.stages, group: "all", groupNames: guide.groupNames, referenceId: null };
+  const props = { references: atlasDemo.references, stages: atlasDemo.stages, group: "all", groupNames: guide.groupNames.value, referenceId: null };
   const { state } = runtime("AtlasGuideReferences", props);
   assert.equal(state.count.value, 46);
   assert.equal(state.groups.value.length, 8);
@@ -111,7 +114,7 @@ test("Reference appendix includes all eight groups and all 46 source records", (
 test("Reference backlinks include explicit shared-record membership and HTTPS renderer guard", () => {
   const guide = runtime("AtlasProcessGuide", guideProps()).state;
   const reference = atlasDemo.references.find(item => item.id === "ROUTE-APCN");
-  const { state } = runtime("AtlasGuideReferences", { references: atlasDemo.references, stages: atlasDemo.stages, group: "all", groupNames: guide.groupNames });
+  const { state } = runtime("AtlasGuideReferences", { references: atlasDemo.references, stages: atlasDemo.stages, group: "all", groupNames: guide.groupNames.value });
   assert.deepEqual(ids(state.relatedStages(reference)), atlasDemo.stages.filter(stage => stage.id === reference.stageId || stage.referenceIds.includes(reference.id)).map(stage => stage.id));
   for (const url of ["javascript:alert(1)", "http://ifrs.org/", "https://user:pass@ifrs.org/"]) assert.equal(state.publicLink(url), undefined);
   assert.equal(state.publicLink("https://ifrs.org/reference"), "https://ifrs.org/reference");

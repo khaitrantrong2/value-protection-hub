@@ -1,200 +1,79 @@
 <script setup lang="ts">
-import { useLinks } from "../composables/useLinks";
-import Icon from "./Icon.vue";
+import { computed, onBeforeUnmount, ref } from 'vue';
+import { useLinks } from '../composables/useLinks';
+import { useLocale } from '../i18n';
+import Icon from './Icon.vue';
+import { containDialogFocus } from '../services/focusScope';
 
-const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas } = useLinks();
+const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas, openStart } = useLinks();
+const { t, locale, setLocale } = useLocale();
+const menu = ref<HTMLDialogElement | null>(null);
+const menuOpen = ref(false);
+const items = computed(() => [
+  { id: 'home', label: t('shell.home'), href: '#', action: goHome },
+  { id: 'start', label: t('shell.start'), href: '#start', action: openStart },
+  { id: 'sector', label: t('shell.directory'), href: '#directory', action: () => openSector('all') },
+  { id: 'crew', label: t('shell.crew'), href: '#crew', action: openCrew },
+  { id: 'atlas', label: t('shell.atlas'), href: '#atlas', action: () => openAtlas() },
+]);
+const current = (id: string) => view.value === id || (id === 'crew' && view.value === 'member');
+function closeMenu() { menu.value?.close(); menuOpen.value = false; }
+function navigate(action: () => void) { closeMenu(); action(); }
+function showMenu() { menu.value?.showModal(); menuOpen.value = true; }
+function skipToMain() { document.getElementById('main-content')?.focus({ preventScroll: true }); }
+onBeforeUnmount(closeMenu);
 </script>
 
 <template>
+  <a class="skip-link" href="#main-content" @click.prevent="skipToMain">{{ t('shell.skip') }}</a>
   <header class="hdr">
     <a class="hdr__brand" href="#" @click.prevent="goHome">
-      <span class="hdr__mark">
-        <span class="hdr__mark-glow"></span>
-        <img src="/brand/intrepid-mark.png" alt="Intrepid" />
-      </span>
-      <span class="hdr__brand-text">
-        <span class="hdr__name">{{ config?.portalName || "Value Protection Hub" }}</span>
-        <span class="hdr__sub mono">VALUE PROTECTION · COMMAND CENTER</span>
-      </span>
+      <img src="/brand/intrepid-mark.png" alt="Intrepid" width="36" height="32" />
+      <span class="hdr__identity"><span class="hdr__name">{{ config?.portalName || 'Value Protection Hub' }}</span><span class="hdr__tagline">{{ t('shell.tagline') }}</span></span>
     </a>
-
-    <nav class="hdr__nav">
-      <a class="hdr__link" href="#" @click.prevent="goHome">Universe</a>
-      <a class="hdr__link" href="#" @click.prevent="openSector('all')">Directory</a>
-      <a class="hdr__link" href="#" @click.prevent="openCrew">Crew</a>
-      <a class="hdr__link hdr__link--atlas" href="#atlas" :aria-current="view === 'atlas' ? 'page' : undefined" @click.prevent="openAtlas"><span class="hdr__atlas-full">Process </span>Atlas</a>
-
-      <a
-        v-if="config?.adminSheetUrl"
-        class="hdr__link hdr__link--source"
-        :href="config.adminSheetUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Icon name="external" :size="14" /> Source
-      </a>
-
-      <button type="button" class="hdr__scan" aria-label="Open command scanner" @click="paletteOpen = true">
-        <Icon name="search" :size="15" />
-        <span class="hdr__scan-label">Scan</span>
-        <kbd class="mono">Ctrl K</kbd>
-      </button>
+    <nav class="hdr__desktop" :aria-label="t('shell.navigation')">
+      <a v-for="item in items" :key="item.id" :href="item.href" :aria-current="current(item.id) ? 'page' : undefined" @click.prevent="item.action">{{ item.label }}</a>
     </nav>
+    <div class="hdr__tools">
+      <div class="language-switch" role="group" :aria-label="t('shell.language')">
+        <button type="button" lang="en" :aria-label="t('shell.english')" :aria-pressed="locale === 'en'" @click="setLocale('en')">EN</button>
+        <button type="button" lang="vi" :aria-label="t('shell.vietnamese')" :aria-pressed="locale === 'vi'" @click="setLocale('vi')">VI</button>
+      </div>
+      <button class="hdr__search" type="button" :aria-label="t('shell.searchLabel')" @click="paletteOpen = true"><Icon name="search" :size="18" /><span>{{ t('shell.search') }}</span><kbd>⌘ / Ctrl K</kbd></button>
+      <button class="hdr__menu" type="button" :aria-label="t('shell.menu')" :aria-expanded="menuOpen" aria-controls="hub-mobile-menu" @click="showMenu"><Icon name="list" :size="22" /></button>
+    </div>
   </header>
+  <dialog id="hub-mobile-menu" ref="menu" class="mobile-menu" :aria-label="t('shell.navigation')" @keydown="containDialogFocus($event, menu)" @close="menuOpen = false" @click="($event.target === menu) && closeMenu()">
+    <div class="mobile-menu__heading"><span>{{ t('shell.navigation') }}</span><button type="button" class="vph-icon-button" :aria-label="t('shell.closeMenu')" @click="closeMenu"><Icon name="close" /></button></div>
+    <nav :aria-label="t('shell.navigation')"><a v-for="item in items" :key="item.id" :href="item.href" :aria-current="current(item.id) ? 'page' : undefined" @click.prevent="navigate(item.action)">{{ item.label }}<Icon name="arrowRight" :size="18" /></a></nav>
+  </dialog>
 </template>
 
-<style lang="scss" scoped>
-.hdr {
-  position: relative;
-  z-index: var(--z-index-header);
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  height: var(--height-header);
-  padding: 0 clamp(20px, 4vw, 52px);
-  background: linear-gradient(180deg, rgba(21, 10, 48, 0.82), rgba(21, 10, 48, 0.42));
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(176, 160, 210, 0.1);
-}
-
-.hdr__brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--color-text-400);
-}
-
-.hdr__mark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 34px;
-  flex: none;
-}
-
-.hdr__mark-glow {
-  position: absolute;
-  inset: -6px -3px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(168, 132, 246, 0.28), transparent 70%);
-}
-
-.hdr__mark img {
-  position: relative;
-  width: 40px;
-  height: auto;
-  display: block;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
-}
-
-.hdr__brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-}
-
-.hdr__name {
-  font-weight: 600;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-}
-
-.hdr__sub {
-  font-size: 9px;
-  letter-spacing: 0.28em;
-  color: var(--color-text-200);
-  margin-top: 5px;
-
-  @include mq(sm, max) {
-    display: none;
-  }
-}
-
-.hdr__nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.hdr__link {
-  font-size: 14px;
-  color: rgba(219, 228, 247, 0.82);
-  padding: 8px 14px;
-  border-radius: var(--radius-pill);
-  transition: color 0.2s;
-
-  @include hover {
-    &:hover {
-      color: #fff;
-    }
-  }
-
-  @include mq(md, max) {
-    display: none;
-  }
-}
-
-.hdr__link--source {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-
-  @include mq(lg, max) {
-    display: none;
-  }
-}
-
-.hdr__link--atlas {
-  &[aria-current="page"] { color: var(--color-text-400); background: var(--color-beige-600); }
-  @include mq(md, max) { display: inline-flex; padding: 8px; }
-}
-
-.hdr__atlas-full {
-  @include mq(md, max) { display: none; }
-}
-
-@include mq(sm, max) {
-  .hdr { gap: 8px; padding: 0 12px; }
-  .hdr__brand { gap: 8px; min-width: 0; }
-  .hdr__name { font-size: 13px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hdr__scan { padding: 9px; }
-  .hdr__scan kbd { display: none; }
-}
-
-.hdr__scan {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  padding: 9px 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(168, 132, 246, 0.3);
-  background: rgba(168, 132, 246, 0.07);
-  color: #e4d7ff;
-  font-size: 13.5px;
-  transition: background 0.2s var(--ease-power2-out);
-
-  @include hover {
-    &:hover {
-      background: rgba(168, 132, 246, 0.13);
-    }
-  }
-
-  kbd {
-    font-size: 10px;
-    color: var(--color-text-200);
-    border: 1px solid var(--color-command-border);
-    border-radius: 6px;
-    padding: 2px 6px;
-  }
-}
-
-.hdr__scan-label {
-  @include mq(sm, max) {
-    display: none;
-  }
-}
+<style scoped lang="scss">
+.hdr { flex: none; min-height: var(--height-header); position: relative; z-index: var(--z-index-header); display: flex; align-items: center; gap: 20px; padding: 12px clamp(16px, 3vw, 44px); background: rgba(21, 10, 48, .86); backdrop-filter: blur(12px); border-bottom: 1px solid var(--color-card-border); }
+.hdr__brand { display: flex; align-items: center; gap: 10px; min-width: 0; margin-right: auto; }
+.hdr__brand img { flex: none; object-fit: contain; }
+.hdr__identity { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
+.hdr__name { font-size: 15px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hdr__tagline { font-size: 9px; letter-spacing: .16em; color: var(--color-text-200); }
+.hdr__desktop { display: flex; align-items: center; gap: 2px; }
+.hdr__desktop a { display: flex; align-items: center; min-height: 44px; padding: 0 11px; font-size: 13px; border-radius: var(--radius-md); color: var(--color-text-300); white-space: nowrap; transition: background .18s, color .18s; }
+.hdr__desktop a:hover, .hdr__desktop a[aria-current] { background: var(--color-beige-600); color: var(--color-text-400); }
+.hdr__tools { display: flex; align-items: center; gap: 10px; flex: none; }
+.language-switch { display: flex; border: 1px solid var(--color-card-border); border-radius: var(--radius-md); padding: 2px; }
+.language-switch button { min-width: 36px; min-height: 38px; padding: 0 7px; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-200); font-size: 12px; font-weight: 650; }
+.language-switch button[aria-pressed='true'] { color: var(--color-text-400); background: var(--color-beige-700); }
+.hdr__search, .hdr__menu { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 44px; min-height: 44px; border: 1px solid var(--color-card-border); border-radius: var(--radius-md); background: var(--color-beige-500); color: var(--color-text-300); }
+.hdr__search { padding: 0 12px; font-size: 13px; }
+.hdr__search kbd { color: var(--color-text-200); font-size: 9px; }
+.hdr__menu { display: none; }
+.mobile-menu { position: fixed; inset: 12px 12px auto auto; margin: 0; padding: 18px; width: min(360px, calc(100vw - 24px)); border: 1px solid var(--color-card-border-hover); border-radius: var(--radius-lg); color: var(--color-text-400); background: var(--space-navy); box-shadow: var(--shadow-card); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.mobile-menu::backdrop { background: rgba(7,3,17,.76); }
+.mobile-menu__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--color-text-200); }
+.mobile-menu nav { display: grid; gap: 5px; }
+.mobile-menu nav a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 12px; border-radius: var(--radius-md); }
+.mobile-menu nav a[aria-current] { background: var(--color-beige-700); }
+@media (max-width: 1170px) { .hdr__search span, .hdr__search kbd { display: none; } .hdr__search { padding: 0; } .hdr { gap: 12px; } }
+@media (max-width: 980px) { .hdr__desktop { display: none; } .hdr__menu { display: flex; } }
+@media (max-width: 480px) { .hdr { padding: 10px 12px; gap: 6px; } .hdr__brand { gap: 7px; } .hdr__brand img { width: 28px; height: 28px; } .hdr__name { font-size: 12px; } .hdr__tagline { display: none; } .hdr__tools { gap: 5px; } .language-switch button { min-width: 29px; min-height: 40px; padding: 0 5px; } }
 </style>

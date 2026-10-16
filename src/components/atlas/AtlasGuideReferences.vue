@@ -4,6 +4,9 @@ import type { AtlasReference, AtlasReferenceGroup, AtlasStage, AtlasStageId } fr
 import type { AtlasLibraryGroup } from "../../types/atlasUi";
 import AtlasStatus from "./AtlasStatus.vue";
 import Icon from "../Icon.vue";
+import { useLocale } from "../../i18n";
+import { matchesSearch } from '../../services/search';
+const { t, text } = useLocale();
 
 const props = defineProps<{ references: AtlasReference[]; stages: AtlasStage[]; group: AtlasLibraryGroup; groupNames: Record<AtlasReferenceGroup, string>; referenceId?: string | null }>();
 const emit = defineEmits<{ group: [group: AtlasLibraryGroup]; stage: [id: AtlasStageId] }>();
@@ -11,12 +14,11 @@ const search = ref("");
 const root = ref<HTMLElement | null>(null);
 const groupCounts = computed(() => Object.entries(props.groupNames).map(([id, title]) => ({ id: id as AtlasReferenceGroup, title, count: props.references.filter(item => item.group === id).length })));
 const searched = computed(() => {
-  const term = search.value.trim().toLocaleLowerCase();
-  return props.references.filter(item => (!term || [item.id, item.title, item.body, item.applicability, props.groupNames[item.group]].join(" ").toLocaleLowerCase().includes(term)));
+  return props.references.filter(item => matchesSearch(search.value, [item.id, item.title, item.body, item.applicability, props.groupNames[item.group]]));
 });
 const groups = computed(() => groupCounts.value.filter(group => props.group === "all" || props.group === group.id).map(group => ({ ...group, items: searched.value.filter(item => item.group === group.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)) })).filter(group => group.items.length));
 const count = computed(() => groups.value.reduce((total, group) => total + group.items.length, 0));
-const title = computed(() => props.group === "all" ? "Reference appendix" : props.groupNames[props.group]);
+const title = computed(() => props.group === "all" ? t("atlas.appendix") : props.groupNames[props.group]);
 function relatedStages(reference: AtlasReference) { return props.stages.filter(stage => stage.id === reference.stageId || stage.referenceIds.includes(reference.id)).sort((a, b) => a.order - b.order); }
 function publicLink(value: string) {
   try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password ? url.href : undefined; } catch { return undefined; }
@@ -32,11 +34,11 @@ watch(() => props.referenceId, async () => {
 
 <template>
   <article ref="root" class="guide-references">
-    <header><p class="guide-reference-eyebrow">REFERENCE APPENDIX</p><h2 id="atlas-guide-title" tabindex="-1">{{ title }}</h2><p>Definitions, document sequences and handoffs used in the process. These records provide context; they are not conclusions on control effectiveness.</p></header>
-    <div class="guide-reference-filters"><label><span>Search the source</span><input v-model="search" type="search" maxlength="300" placeholder="Reference ID, title or definition" autocomplete="off"></label><label><span>Reference type</span><select :value="group" @change="changeGroup"><option value="all">All types ({{ references.length }})</option><option v-for="item in groupCounts" :key="item.id" :value="item.id">{{ item.title }} ({{ item.count }})</option></select></label></div>
-    <p class="guide-reference-count" role="status" aria-live="polite">{{ count }} of {{ references.length }} source references<span v-if="search"> matching “{{ search }}”</span></p>
-    <div v-if="!count" class="guide-reference-empty"><h3>No matching references</h3><p>Try another search or reference type. The published source has not changed.</p><button type="button" @click="search = ''; emit('group', 'all')">Reset filters</button></div>
-    <section v-for="section in groups" :key="section.id" class="guide-reference-group"><h3>{{ section.title }} <span>{{ section.items.length }}</span></h3><article v-for="item in section.items" :key="item.id" :data-guide-reference="item.id" tabindex="-1" class="guide-reference-record" :class="{ 'is-selected': item.id === referenceId }"><header><span class="guide-reference-id">{{ item.id }}</span><h4>{{ item.title }}</h4><AtlasStatus :state="item.practiceState" /></header><p>{{ item.body || 'No definition published.' }}</p><dl v-if="item.applicability"><dt>Applicability</dt><dd>{{ item.applicability }}</dd></dl><div v-if="relatedStages(item).length" class="guide-reference-stages"><span>Process context</span><button v-for="stage in relatedStages(item)" :key="stage.id" type="button" @click="emit('stage', stage.id)">{{ stage.id }} · {{ stage.shortTitle }}<Icon name="arrowRight" :size="14" /></button></div><footer><span>{{ item.contentVersion || 'Version not specified' }}</span><a v-if="publicLink(item.url)" :href="publicLink(item.url)" target="_blank" rel="noopener noreferrer">Public reference <Icon name="external" :size="14" /></a></footer></article></section>
+    <header><p class="guide-reference-eyebrow">{{ text("REFERENCE APPENDIX", "PHỤ LỤC THAM CHIẾU") }}</p><h2 id="atlas-guide-title" tabindex="-1">{{ title }}</h2><p>{{ text("Definitions, document sequences and handoffs used in the process. These records provide context; they are not conclusions on control effectiveness.", "Định nghĩa, trình tự chứng từ và điểm bàn giao trong quy trình. Những bản ghi này cung cấp bối cảnh, không phải kết luận về tính hữu hiệu kiểm soát.") }}</p></header>
+    <div class="guide-reference-filters"><label><span>{{ text("Search the source", "Tìm trong nội dung nguồn") }}</span><input v-model="search" type="search" maxlength="300" :placeholder="text('Reference ID, title or definition', 'Mã, tiêu đề hoặc định nghĩa tham chiếu')" autocomplete="off"></label><label><span>{{ text("Reference type", "Loại tham chiếu") }}</span><select :value="group" @change="changeGroup"><option value="all">{{ text("All types", "Tất cả loại") }} ({{ references.length }})</option><option v-for="item in groupCounts" :key="item.id" :value="item.id">{{ item.title }} ({{ item.count }})</option></select></label></div>
+    <p class="guide-reference-count" role="status" aria-live="polite">{{ text(`${count} of ${references.length} source references`, `${count} / ${references.length} tham chiếu nguồn`) }}<span v-if="search"> {{ text("matching", "khớp với") }} “{{ search }}”</span></p>
+    <div v-if="!count" class="guide-reference-empty"><h3>{{ text("No matching references", "Không có tham chiếu phù hợp") }}</h3><p>{{ text("Try another search or reference type. The published source has not changed.", "Thử từ khóa hoặc loại tham chiếu khác. Nội dung nguồn đã xuất bản không thay đổi.") }}</p><button type="button" @click="search = ''; emit('group', 'all')">{{ text("Reset filters", "Xóa bộ lọc") }}</button></div>
+    <section v-for="section in groups" :key="section.id" class="guide-reference-group"><h3>{{ section.title }} <span>{{ section.items.length }}</span></h3><article v-for="item in section.items" :key="item.id" :data-guide-reference="item.id" tabindex="-1" class="guide-reference-record" :class="{ 'is-selected': item.id === referenceId }"><header><span class="guide-reference-id">{{ item.id }}</span><h4>{{ item.title }}</h4><AtlasStatus :state="item.practiceState" /></header><p>{{ item.body || text('No definition published.', 'Chưa xuất bản định nghĩa.') }}</p><dl v-if="item.applicability"><dt>{{ text("Applicability", "Phạm vi áp dụng") }}</dt><dd>{{ item.applicability }}</dd></dl><div v-if="relatedStages(item).length" class="guide-reference-stages"><span>{{ text("Process context", "Bối cảnh quy trình") }}</span><button v-for="stage in relatedStages(item)" :key="stage.id" type="button" @click="emit('stage', stage.id)">{{ stage.id }} · {{ stage.shortTitle }}<Icon name="arrowRight" :size="14" /></button></div><footer><span>{{ item.contentVersion || t('atlas.noVersion') }}</span><a v-if="publicLink(item.url)" :href="publicLink(item.url)" target="_blank" rel="noopener noreferrer">{{ text("Public reference", "Tham chiếu công khai") }} <Icon name="external" :size="14" /></a></footer></article></section>
   </article>
 </template>
 

@@ -7,6 +7,9 @@ import { transform } from "esbuild";
 const source = readFileSync(new URL("../src/composables/useAtlasRouteState.ts", import.meta.url), "utf8");
 const compiled = await transform(source, { loader: "ts", format: "cjs", target: "es2022" });
 const linksCompiled = await transform(readFileSync(new URL("../src/composables/useLinks.ts", import.meta.url), "utf8"), { loader: "ts", format: "cjs", target: "es2022" });
+const hubCompiled = await transform(readFileSync(new URL("../src/composables/hubRoute.ts", import.meta.url), "utf8"), { loader: "ts", format: "cjs", target: "es2022" });
+const hubContext = vm.createContext({ module: { exports: {} }, URLSearchParams, require: () => ({ CATEGORY_IDS: ["ar-collection"] }) });
+vm.runInContext(hubCompiled.code, hubContext);
 
 function runtime(initialHash = "#atlas") {
   const mounted = [], unmounted = [], listeners = new Map(), calls = [];
@@ -28,6 +31,7 @@ function runtime(initialHash = "#atlas") {
   const vue = {
     reactive: (value) => value, ref: (value) => ({ value }), computed: (get) => ({ get value() { return get(); } }),
     onMounted: (callback) => mounted.push(callback), onBeforeUnmount: (callback) => unmounted.push(callback),
+    watch() {},
   };
   const window = {
     location, history, scrollTo() {},
@@ -52,10 +56,12 @@ function runtime(initialHash = "#atlas") {
     navigate(hash) { location.hash = hash; emit("hashchange"); },
     loadLinks() {
       const linksContext = vm.createContext({
-        module: { exports: {} }, window,
+        module: { exports: {} }, window, AbortController,
         require(name) {
           if (name === "vue") return vue;
           if (name === "./useAtlasRouteState") return api;
+          if (name === "./hubRoute") return hubContext.module.exports;
+          if (name === "../data/crew") return { crew: [] };
           if (name === "../services/linkService") return {
             loadLinks: async () => ({ links: [], categories: [], config: {}, source: "live", portfolio: [] }),
             readCachedLinks: () => null, sortLinks: (links) => links,
@@ -165,9 +171,9 @@ test("Hub navigation recognises Atlas suffixes, clears them on exit and follows 
   const r = runtime("#atlas?stage=04&tab=controls");
   const links = r.loadLinks();
   assert.equal(links.view.value, "atlas");
-  links.openCrew(); assert.equal(links.view.value, "crew"); assert.equal(r.location.hash, "");
+  links.openCrew(); assert.equal(links.view.value, "crew"); assert.equal(r.location.hash, "#crew");
   links.openAtlas(); assert.equal(links.view.value, "atlas"); assert.equal(r.location.hash, "#atlas");
-  r.history.back(); assert.equal(links.view.value, "home");
+  r.history.back(); assert.equal(links.view.value, "crew");
   r.history.forward(); assert.equal(links.view.value, "atlas");
   r.navigate("#atlas?mode=story&chapter=07"); assert.equal(links.view.value, "atlas");
   r.navigate("#unrelated"); assert.equal(links.view.value, "home");
