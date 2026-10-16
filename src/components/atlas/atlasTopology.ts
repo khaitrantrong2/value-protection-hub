@@ -1,7 +1,7 @@
 import type { AtlasReference, AtlasStage } from "../../types/atlas";
 
 export const ATLAS_MAP_BOUNDS = { x: 32, y: 0, width: 3136, height: 480 };
-export const ATLAS_SUPPORT_LANE = { x: 32, y: 400, width: 3136, height: 220 };
+export const ATLAS_SUPPORT_LANE = { y: 400 };
 
 export interface AtlasMapNode {
   key: string;
@@ -38,35 +38,44 @@ export function buildAtlasNodes(stages: AtlasStage[], references: AtlasReference
 
 /** These are dependency relationships, never additional business-sequence stages. */
 export function buildSupportCapabilities(stages: AtlasStage[], nodes: AtlasMapNode[]) {
+  const pipeline = stages.find(stage => stage.id === "A" && stage.kind === "supporting");
+  const pipelineConsumers = nodes.filter(node => pipeline?.supports.includes(node.stage.id));
+  const contextX = pipelineConsumers.length ? Math.min(...pipelineConsumers.map(node => node.x)) : nodes.find(node => node.stage.id === "02")?.x ?? 444;
   return stages.filter(stage => stage.kind === "supporting").sort((a, b) => a.order - b.order).flatMap((stage, index) => {
     const consumers = nodes.filter(node => stage.supports.includes(node.stage.id));
     if (!consumers.length) return [];
     const x = Math.min(...consumers.map(node => node.x));
     const right = Math.max(...consumers.map(node => node.x + node.width));
-    return [{ key: stage.id, stage, consumers, x, y: 440 + index * 112, width: right - x, height: 64 }];
+    return [{ key: stage.id, stage, consumers, x: stage.id === "B" ? contextX : x,
+      y: 440 + index * 112, width: stage.id === "B" ? 300 : right - x, height: 64 }];
   });
 }
 
 export function projectAtlasNodes(nodes: AtlasMapNode[], camera: { x: number; y: number; scale: number }) {
-  return nodes.map(node => ({ ...node,
-    cx: camera.x + (node.x + node.width / 2) * camera.scale,
-    cy: camera.y + (node.y + node.height / 2) * camera.scale,
-    screenWidth: Math.max(52, Math.min(320, node.width * camera.scale)),
-    screenHeight: camera.scale < 0.52 ? 64 : Math.max(128, Math.min(224, node.height * camera.scale)),
-  }));
+  return nodes.map(node => {
+    const screenHeight = camera.scale < 0.52 ? 64 : Math.max(128, Math.min(224, node.height * camera.scale));
+    const coreCenter = camera.y + 180 * camera.scale;
+    const branchOffset = Math.max(100 * camera.scale, (screenHeight + 16) / 2);
+    const cy = node.key === "05A" ? coreCenter - branchOffset : node.key === "05B" ? coreCenter + branchOffset
+      : camera.y + (node.y + node.height / 2) * camera.scale;
+    return { ...node, cx: camera.x + (node.x + node.width / 2) * camera.scale, cy,
+      screenWidth: Math.max(52, Math.min(320, node.width * camera.scale)), screenHeight };
+  });
 }
 
-/** Readable support bars retain one lane without colliding at the 15% zoom floor. */
+/** A local data-pipeline lane plus a contextual master-data input, not two global support bars. */
 export function projectSupportCapabilities(capabilities: ReturnType<typeof buildSupportCapabilities>, camera: { x: number; y: number; scale: number }, businessBottom: number) {
-  const top = Math.max(camera.y + ATLAS_SUPPORT_LANE.y * camera.scale, businessBottom + 10);
-  const rowGap = Math.max(44, 112 * camera.scale);
-  const items = capabilities.map((item, index) => ({ ...item,
-    cx: camera.x + (item.x + item.width / 2) * camera.scale,
-    cy: top + 40 + index * rowGap,
-    screenWidth: Math.max(120, item.width * camera.scale), screenHeight: 36,
+  const top = Math.max(camera.y + ATLAS_SUPPORT_LANE.y * camera.scale, businessBottom + 20);
+  const pipeline = capabilities.find(item => item.key === "A");
+  const left = camera.x + (pipeline?.x ?? capabilities[0]?.x ?? 0) * camera.scale;
+  const items = capabilities.map(item => ({ ...item,
+    cx: item.key === "B" ? left + Math.max(120, Math.min(160, item.width * camera.scale)) / 2
+      : camera.x + (item.x + item.width / 2) * camera.scale,
+    cy: top + (item.key === "B" ? 74 : 18),
+    screenWidth: item.key === "B" ? Math.max(120, Math.min(160, item.width * camera.scale)) : Math.max(140, item.width * camera.scale), screenHeight: 36,
   }));
-  return { items, lane: { left: camera.x + ATLAS_SUPPORT_LANE.x * camera.scale, top,
-    width: ATLAS_SUPPORT_LANE.width * camera.scale, height: 70 + Math.max(0, items.length - 1) * rowGap } };
+  return { items, lane: { left, top, width: pipeline ? Math.max(140, pipeline.width * camera.scale) : 160,
+    height: capabilities.some(item => item.key === "B") ? 92 : 36 } };
 }
 
 /** Fit the rendered projection, including readable labels, rather than an inflated world rectangle. */

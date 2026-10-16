@@ -6,7 +6,7 @@ export type AtlasChapterId = Exclude<AtlasStageId, "A" | "B">;
 
 /** Shareable reading context only. Camera, dragging and hover never belong in the URL. */
 export interface AtlasRouteState {
-  mode: "explore" | "story";
+  mode: "explore" | "guide";
   stageId: AtlasStageId | null;
   chapterId: AtlasChapterId;
   inspectorTab: AtlasInspectorTab;

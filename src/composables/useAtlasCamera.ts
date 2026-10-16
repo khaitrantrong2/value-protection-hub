@@ -109,8 +109,10 @@ export function useAtlasCamera(viewport: Ref<HTMLElement | null>, bounds: AtlasB
     });
   }
   function measureViewport() {
-    viewportSize.width = viewport.value?.clientWidth ?? 0;
-    viewportSize.height = viewport.value?.clientHeight ?? 0;
+    const width = viewport.value?.clientWidth ?? 0, height = viewport.value?.clientHeight ?? 0;
+    if (!width || !height) return;
+    viewportSize.width = width;
+    viewportSize.height = height;
     if (!initialized && viewportSize.width && viewportSize.height) {
       initialized = true;
       fit(false);
@@ -123,5 +125,5 @@ export function useAtlasCamera(viewport: Ref<HTMLElement | null>, bounds: AtlasB
   });
   watch(prefersReducedMotion, value => { if (value) stop(); });
   onBeforeUnmount(() => { stop(); observer?.disconnect(); });
-  return { camera, viewportSize, transform, dragging, focus, fit, ensureVisible, panBy, measureViewport, zoom, wheel, pointerDown, pointerMove, pointerUp, centerAt };
+  return { camera, viewportSize, transform, dragging, focus, fit, ensureVisible, panBy, measureViewport, stopMotion: stop, zoom, wheel, pointerDown, pointerMove, pointerUp, centerAt };
 }

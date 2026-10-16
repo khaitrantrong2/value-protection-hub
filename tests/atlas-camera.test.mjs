@@ -187,6 +187,21 @@ test("Opening and closing an inspector measures its viewport without reframing t
   assert.deepEqual({ ...view.camera }, before);
 });
 
+test("A hidden canvas preserves its last positive measurement and camera until shown again", () => {
+  const view = runtime();
+  const camera = { ...view.camera }, size = { ...view.viewportSize };
+  view.element.clientWidth = 0;
+  view.element.clientHeight = 0;
+  view.observers[0].trigger();
+  assert.deepEqual({ ...view.viewportSize }, size);
+  assert.deepEqual({ ...view.camera }, camera);
+  view.element.clientWidth = 1100;
+  view.element.clientHeight = 500;
+  view.observers[0].trigger();
+  assert.equal(view.viewportSize.width, 1100);
+  assert.deepEqual({ ...view.camera }, camera);
+});
+
 test("Initial fit waits for the first nonzero viewport and never repeats on resize", () => {
   const view = runtime({ width: 0, height: 0 });
   assert.equal(view.camera.scale, 0.3);

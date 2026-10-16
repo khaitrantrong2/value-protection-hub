@@ -9,7 +9,7 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b",
-    "test": "node --test apps-script/tests/atlas-api.test.mjs tests/atlas-service.test.mjs tests/atlas-composable.test.mjs tests/atlas-camera.test.mjs tests/atlas-route.test.mjs tests/atlas-topology.test.mjs tests/atlas-workspace.test.mjs tests/atlas-inspector-library.test.mjs"
+    "test": "node --test apps-script/tests/atlas-api.test.mjs tests/atlas-service.test.mjs tests/atlas-composable.test.mjs tests/atlas-camera.test.mjs tests/atlas-route.test.mjs tests/atlas-topology.test.mjs tests/atlas-workspace.test.mjs tests/atlas-source-info.test.mjs tests/atlas-guide.test.mjs"
   },
   "dependencies": {
     "gsap": "^3.12.7",

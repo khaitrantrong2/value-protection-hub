@@ -19,29 +19,32 @@ export function parseAtlasHash(hash: string): AtlasRouteState {
   if (!isAtlasHash(hash) || hash.length > 1024) return state;
   const params = new URLSearchParams(hash.slice(7));
   const stage = params.get("stage"), chapter = params.get("chapter"), tab = params.get("tab"), group = params.get("library"), scope = params.get("scope");
-  if (params.get("mode") === "story") state.mode = "story";
+  if (params.get("mode") === "guide" || params.get("mode") === "story") state.mode = "guide";
   if (isChapter(chapter)) state.chapterId = chapter;
   if (isStage(stage)) {
+    state.mode = "guide";
     state.stageId = stage;
     if (isChapter(stage)) state.chapterId = stage;
-    if (isTab(tab)) state.inspectorTab = tab;
   }
   if (isGroup(group)) {
+    state.mode = "guide";
     state.libraryGroup = group;
     if (isStage(scope)) state.libraryStage = scope;
     state.referenceId = referenceId(params.get("ref"));
   }
+  if (state.mode === "guide" && isTab(tab)) state.inspectorTab = tab;
   return state;
 }
 
 export function serializeAtlasHash(state: AtlasRouteState): string {
   const params = new URLSearchParams();
-  if (state.mode === "story") params.set("mode", "story");
+  const guide = state.mode === "guide" || isStage(state.stageId) || isGroup(state.libraryGroup);
+  if (guide) params.set("mode", "guide");
   if (isChapter(state.chapterId) && state.chapterId !== "01" && state.chapterId !== state.stageId) params.set("chapter", state.chapterId);
   if (isStage(state.stageId)) {
     params.set("stage", state.stageId);
-    if (isTab(state.inspectorTab) && state.inspectorTab !== "summary") params.set("tab", state.inspectorTab);
   }
+  if (guide && isTab(state.inspectorTab) && state.inspectorTab !== "summary") params.set("tab", state.inspectorTab);
   if (isGroup(state.libraryGroup)) {
     params.set("library", state.libraryGroup);
     if (isStage(state.libraryStage)) params.set("scope", state.libraryStage);
@@ -72,19 +75,20 @@ export function useAtlasRouteState() {
     window.removeEventListener("popstate", syncFromLocation);
   });
 
-  function selectStage(id: AtlasStageId) {
-    if (isStage(id)) commit({ stageId: id, ...(isChapter(id) ? { chapterId: id } : {}) });
+  function openGuide(id: AtlasStageId = state.stageId ?? state.chapterId, tab: AtlasInspectorTab = "summary") {
+    if (isStage(id)) commit({ mode: "guide", stageId: id, inspectorTab: isTab(tab) ? tab : "summary", libraryGroup: null, libraryStage: "", referenceId: null, ...(isChapter(id) ? { chapterId: id } : {}) });
   }
+  function setGuideStage(id: AtlasStageId) { openGuide(id, state.inspectorTab); }
+  const selectStage = openGuide;
   function closeStage() { commit({ stageId: null, inspectorTab: "summary" }, true); }
   function setInspectorTab(tab: AtlasInspectorTab) { if (isTab(tab)) commit({ inspectorTab: tab }, true); }
   function setMode(mode: AtlasRouteState["mode"]) {
-    if (mode === "explore" || mode === "story") commit({ mode, stageId: null, inspectorTab: "summary" });
+    if (mode === "explore") commit({ mode, stageId: null, inspectorTab: "summary", libraryGroup: null, libraryStage: "", referenceId: null });
+    else if (mode === "guide") commit({ mode });
   }
-  function setChapter(id: AtlasStageId) {
-    if (isChapter(id)) commit({ chapterId: id, stageId: null, inspectorTab: "summary" });
-  }
+  const setChapter = setGuideStage;
   function openLibrary(options: AtlasLibraryOptions = {}) {
-    commit({ libraryGroup: isGroup(options.group) ? options.group : "all", libraryStage: isStage(options.stageId) ? options.stageId : "", referenceId: referenceId(options.referenceId) });
+    commit({ mode: "guide", libraryGroup: isGroup(options.group) ? options.group : "all", libraryStage: isStage(options.stageId) ? options.stageId : "", referenceId: referenceId(options.referenceId) });
   }
   function closeLibrary() { commit({ libraryGroup: null, libraryStage: "", referenceId: null }, true); }
   function setLibraryGroup(group: AtlasLibraryGroup) {
@@ -93,5 +97,5 @@ export function useAtlasRouteState() {
   function setLibraryStage(id: AtlasStageId | "") {
     if (state.libraryGroup !== null && (id === "" || isStage(id))) commit({ libraryStage: id, referenceId: null }, true);
   }
-  return { state, selectStage, closeStage, setInspectorTab, setMode, setChapter, openLibrary, closeLibrary, setLibraryGroup, setLibraryStage };
+  return { state, openGuide, setGuideStage, selectStage, closeStage, setInspectorTab, setMode, setChapter, openLibrary, closeLibrary, setLibraryGroup, setLibraryStage };
 }

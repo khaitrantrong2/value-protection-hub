@@ -27,10 +27,10 @@ const payload = () => ({
   references: [{ id: "DOC-01", stageId: "", group: "document-step", title: "Document 1" }],
 });
 
-function runtime({ hash = "#atlas", compact = false, ...initialProps } = {}) {
-  const children = { canvas: [], detail: [], story: [], library: [] }, emitted = { refresh: 0, preview: 0 };
+function runtime({ hash = "#atlas", ...initialProps } = {}) {
+  const children = { canvas: [], guide: [], sourceInfo: [] }, emitted = { refresh: 0, preview: 0 };
   const counters = { canvasMounted: 0, canvasUnmounted: 0, fit: 0 };
-  const listeners = new Map(), mediaListeners = new Set(), historyEntries = [hash];
+  const listeners = new Map(), historyEntries = [hash];
   let historyIndex = 0;
   const location = { hash };
   const history = {
@@ -45,15 +45,16 @@ function runtime({ hash = "#atlas", compact = false, ...initialProps } = {}) {
     location, history,
     addEventListener(type, callback) { if (!listeners.has(type)) listeners.set(type, new Set()); listeners.get(type).add(callback); },
     removeEventListener(type, callback) { listeners.get(type)?.delete(callback); },
-    matchMedia() { return { matches: compact, addEventListener(_type, callback) { mediaListeners.add(callback); }, removeEventListener(_type, callback) { mediaListeners.delete(callback); } }; },
   };
   const document = { activeElement: null };
   function node(type, text = "") {
     const element = {
-      type, text, children: [], parent: null, props: {}, style: {}, tabIndex: 0, scrollTop: 0,
+      type, text, children: [], parent: null, props: {}, style: {}, tabIndex: 0, scrollTop: 0, listeners: new Map(),
       get isConnected() { return !!this.parent || this.type === "root"; },
       getClientRects() { return this.isConnected ? [{}] : []; },
       focus(options) { document.activeElement = this; this.focusOptions = options; },
+      addEventListener(event, callback) { if (!this.listeners.has(event)) this.listeners.set(event, new Set()); this.listeners.get(event).add(callback); },
+      removeEventListener(event, callback) { this.listeners.get(event)?.delete(callback); },
       matches(selector) { return selector.split(",").some((item) => item.trim() === this.type); },
       closest(selector) {
         const selectors = selector.split(",").map((item) => item.trim());
@@ -68,22 +69,21 @@ function runtime({ hash = "#atlas", compact = false, ...initialProps } = {}) {
   }
   function stub(kind, propNames, rootClass) {
     return Vue.defineComponent({
-      name: `Test${kind}`, props: propNames, emits: ["select", "fit", "close", "tab", "reference", "chapter", "detail", "group", "stage", "select-stage"],
+      name: `Test${kind}`, props: propNames, emits: ["select", "fit", "reference", "references", "stage", "map", "refresh"],
       setup(props, { emit, expose }) {
         const record = { props, emit, mounted: false };
         children[kind].push(record);
         if (kind === "canvas") expose({ fit: () => counters.fit++ });
         Vue.onMounted(() => { record.mounted = true; if (kind === "canvas") counters.canvasMounted++; });
         Vue.onBeforeUnmount(() => { record.mounted = false; if (kind === "canvas") counters.canvasUnmounted++; });
-        return () => Vue.h("div", { class: rootClass }, kind === "detail" ? [Vue.h("button", {}, "Inspector button")] : []);
+        return () => Vue.h("div", { class: rootClass }, kind === "guide" ? [Vue.h("button", {}, "Guide button")] : []);
       },
     });
   }
   const stubs = {
-    "./AtlasCanvas.vue": stub("canvas", ["stages", "references", "selectedId", "selectionKey"], "test-canvas"),
-    "./AtlasStageDetail.vue": stub("detail", ["stage", "controls", "references", "activeTab"], "atlas-detail"),
-    "./AtlasStory.vue": stub("story", ["stage", "chapters", "references"], "test-story"),
-    "./AtlasReferenceLibrary.vue": stub("library", ["references", "stages", "group", "stageId", "referenceId", "sourceLabel", "sourceWarning", "version"], "test-library"),
+    "./AtlasCanvas.vue": stub("canvas", ["stages", "references", "selectedId", "active", "showDataPipeline"], "test-canvas"),
+    "./AtlasProcessGuide.vue": stub("guide", ["data", "stageId", "activeTab", "referenceGroup", "referenceId", "sourceLabel", "sourceWarning", "version"], "test-guide"),
+    "./AtlasSourceInfo.vue": stub("sourceInfo", ["source", "meta", "error", "refreshedAt", "isLoading"], "test-source-info"),
     "../Icon.vue": Vue.defineComponent({ setup: () => () => Vue.h("i") }),
   };
   const context = vm.createContext({
@@ -116,87 +116,98 @@ function runtime({ hash = "#atlas", compact = false, ...initialProps } = {}) {
   function find(predicate) { return all().find(predicate); }
   function button(label) { const result = find((element) => element.type === "button" && text(element).trim() === label); assert.ok(result, `Missing button ${label}`); return result; }
   async function click(label) { button(label).props.onClick(); await Vue.nextTick(); }
-  async function openLibrary() {
-    const launcher = find((element) => element.type === "button" && text(element).startsWith("Reference Library"));
-    assert.ok(launcher, "Missing Reference Library launcher");
-    launcher.props.onClick(); await Vue.nextTick();
+  async function toggleDataPipeline(value) {
+    const checkbox = find((element) => element.type === "input" && element.props.type === "checkbox");
+    assert.ok(checkbox, "Missing Show Data Pipeline checkbox");
+    checkbox.checked = value;
+    for (const callback of checkbox.listeners.get("change") ?? []) callback();
+    await Vue.nextTick();
   }
-  function key(key, target = find((element) => element.type === "section")) {
-    const event = { key, target, prevented: 0, stopped: 0, preventDefault() { this.prevented++; }, stopPropagation() { this.stopped++; } };
+  function key(key, target = find((element) => element.type === "section"), options = {}) {
+    const event = { key, target, prevented: 0, stopped: 0, preventDefault() { this.prevented++; }, stopPropagation() { this.stopped++; }, ...options };
     find((element) => element.type === "section").props.onKeydown(event); return event;
   }
   return {
-    root, props, children, counters, location, history, emitted, find, button, click, openLibrary, key, text,
+    root, props, children, counters, location, history, emitted, find, button, click, toggleDataPipeline, key, text,
     latest: (kind) => children[kind].at(-1), flush: () => Vue.nextTick(),
     unmount: () => app.unmount(),
-    setCompact(value) { for (const callback of mediaListeners) callback({ matches: value }); },
   };
 }
 
-test("Real workspace preserves one Canvas instance across inspector, library and mode changes; only manual Fit calls fit", async () => {
+test("Explore is a pure map; Guide and reference reading keep the same Canvas without implicit Fit", async () => {
   const view = runtime();
   try {
     const canvas = view.latest("canvas");
     assert.equal(view.counters.canvasMounted, 1);
+    assert.equal(canvas.props.selectedId, null); assert.equal(canvas.props.active, true);
+    assert.equal(view.find((element) => element.type === "select"), undefined);
+    assert.equal(view.find((element) => element.type === "dialog"), undefined);
+    assert.equal(view.find((element) => /atlas-inspector-slot|atlas-bottom-bar|atlas-library-launcher/.test(element.props.class ?? "")), undefined);
     canvas.emit("select", "04", "04-main"); await view.flush();
-    assert.equal(view.latest("detail").props.stage.id, "04");
-    assert.equal(view.latest("detail").props.controls.length, 1);
-    view.latest("detail").emit("tab", "controls"); await view.flush();
-    assert.equal(view.latest("detail").props.activeTab, "controls");
-    view.latest("detail").emit("reference", view.props.data.references[0]); await view.flush();
-    assert.equal(view.latest("library").props.stageId, "04");
-    assert.equal(view.latest("library").props.referenceId, "DOC-01");
-    view.latest("library").emit("close"); await view.flush();
-    assert.equal(view.latest("detail").props.stage.id, "04"); assert.equal(view.latest("detail").props.activeTab, "controls");
-    view.latest("detail").emit("close"); await view.flush();
-    assert.equal(view.latest("detail").mounted, false);
-    await view.click("Walkthrough"); await view.click("Explore");
-    await view.openLibrary(); view.latest("library").emit("close"); await view.flush();
+    assert.equal(view.latest("guide").props.stageId, "04");
+    assert.equal(view.latest("guide").props.data, view.props.data);
+    assert.equal(canvas.props.active, false); assert.equal(canvas.props.selectedId, null);
+    view.latest("guide").emit("reference", view.props.data.references[0]); await view.flush();
+    assert.equal(view.latest("guide").props.referenceGroup, "document-step");
+    assert.equal(view.latest("guide").props.referenceId, "DOC-01");
+    assert.equal(view.latest("guide").props.stageId, "04");
+    view.latest("guide").emit("stage", "A"); await view.flush();
+    assert.equal(view.latest("guide").props.stageId, "A"); assert.equal(view.latest("guide").props.referenceGroup, null);
+    view.latest("guide").emit("map"); await view.flush();
+    assert.equal(view.latest("guide").mounted, false); assert.equal(canvas.props.active, true);
+    await view.click("Process Guide"); await view.click("Explore");
     assert.equal(view.latest("canvas"), canvas); assert.equal(view.counters.canvasMounted, 1); assert.equal(view.counters.canvasUnmounted, 0);
     assert.equal(view.counters.fit, 0);
     canvas.emit("fit"); await view.flush(); assert.equal(view.counters.fit, 1);
   } finally { view.unmount(); }
 });
 
-test("Inspector Escape closes details without Fit, including focus inside the inspector", async () => {
+test("Guide Escape returns to Explore without Fit; handled source-popover keys do not navigate", async () => {
   const view = runtime({ hash: "#atlas?stage=04&tab=controls" });
   try {
-    const inspectorButton = view.find((element) => element.type === "button" && view.text(element) === "Inspector button");
-    const event = view.key("Escape", inspectorButton); await view.flush();
-    assert.equal(event.prevented, 1); assert.equal(view.latest("detail").mounted, false);
+    assert.equal(view.latest("guide").props.activeTab, "controls");
+    const guideButton = view.find((element) => element.type === "button" && view.text(element) === "Guide button");
+    view.key("Escape", guideButton, { defaultPrevented: true }); await view.flush();
+    assert.equal(view.latest("guide").mounted, true);
+    const event = view.key("Escape", guideButton); await view.flush();
+    assert.equal(event.prevented, 1); assert.equal(view.latest("guide").mounted, false);
     assert.equal(view.latest("canvas").props.selectedId, null); assert.equal(view.counters.fit, 0);
   } finally { view.unmount(); }
 });
 
-test("Back and Forward restore stage, inspector tab and library without remounting Canvas", async () => {
-  const view = runtime();
+test("Back and Forward restore Guide stage, legacy section anchor and reference appendix without remounting Canvas", async () => {
+  const view = runtime({ hash: "#atlas?stage=04&tab=controls" });
   try {
     const canvas = view.latest("canvas");
-    canvas.emit("select", "04"); await view.flush();
-    view.latest("detail").emit("tab", "controls"); await view.flush();
-    canvas.emit("select", "05"); await view.flush();
+    view.latest("guide").emit("stage", "05"); await view.flush();
     view.history.back(); await view.flush();
-    assert.equal(view.latest("detail").props.stage.id, "04"); assert.equal(view.latest("detail").props.activeTab, "controls");
-    view.history.forward(); await view.flush(); assert.equal(view.latest("detail").props.stage.id, "05");
-    await view.openLibrary();
-    view.history.back(); await view.flush(); assert.equal(view.latest("library").mounted, false); assert.equal(view.latest("detail").props.stage.id, "05");
-    view.history.forward(); await view.flush(); assert.equal(view.latest("library").mounted, true);
+    assert.equal(view.latest("guide").props.stageId, "04"); assert.equal(view.latest("guide").props.activeTab, "controls");
+    view.history.forward(); await view.flush(); assert.equal(view.latest("guide").props.stageId, "05");
+    view.latest("guide").emit("references", "kpi"); await view.flush();
+    assert.equal(view.latest("guide").props.referenceGroup, "kpi");
+    view.history.back(); await view.flush(); assert.equal(view.latest("guide").props.referenceGroup, null); assert.equal(view.latest("guide").props.stageId, "05");
+    view.history.forward(); await view.flush(); assert.equal(view.latest("guide").props.referenceGroup, "kpi");
+    await view.click("Explore"); assert.equal(canvas.props.selectedId, null); assert.equal(canvas.props.active, true);
+    view.history.back(); await view.flush(); assert.equal(view.latest("guide").props.referenceGroup, "kpi");
     assert.equal(view.latest("canvas"), canvas); assert.equal(view.counters.fit, 0);
   } finally { view.unmount(); }
 });
 
-test("Stale source warnings and version pass into L3, and Refresh stays an explicit action", async () => {
+test("Stale warnings reach Source Info and Guide while Refresh stays an explicit action", async () => {
   const warning = "Retained copy: latest source refresh failed.";
   const view = runtime({ error: warning });
   try {
-    assert.equal(view.find((element) => element.props["data-source"] === "stale")?.props.role, "status");
-    assert.ok(view.find((element) => element.props.role === "alert" && view.text(element) === warning));
-    await view.openLibrary();
-    assert.equal(view.latest("library").props.sourceWarning, warning);
-    assert.equal(view.latest("library").props.sourceLabel, "Google Sheets source");
-    assert.equal(view.latest("library").props.version, "test-business-understanding");
-    view.latest("library").emit("close"); await view.flush();
-    await view.click("Refresh source"); assert.equal(view.emitted.refresh, 1); assert.equal(view.emitted.preview, 0);
+    assert.ok(view.find((element) => element.props.role === "status" && view.text(element) === "Retained copy"));
+    assert.ok(view.find((element) => element.props.role === "alert" && view.text(element).includes("last successful source copy")));
+    assert.equal(view.latest("sourceInfo").props.error, warning);
+    assert.equal(view.latest("sourceInfo").props.meta.contentVersion, "test-business-understanding");
+    assert.equal(view.latest("sourceInfo").props.refreshedAt, "2026-10-15T12:00:00Z");
+    await view.click("Process Guide");
+    assert.equal(view.latest("guide").props.sourceWarning, warning);
+    assert.equal(view.latest("guide").props.sourceLabel, "Google Sheets source · retained copy");
+    assert.equal(view.latest("guide").props.version, "test-business-understanding");
+    view.latest("sourceInfo").emit("refresh"); await view.flush();
+    assert.equal(view.emitted.refresh, 1); assert.equal(view.emitted.preview, 0);
   } finally { view.unmount(); }
 });
 
@@ -213,16 +224,17 @@ test("Unavailable and loading sources never silently mount demo content", async 
   } finally { view.unmount(); }
 });
 
-test("Responsive mode changes retain Canvas instance without Fit, and keep source labels honest", async () => {
+test("Data Pipeline checkbox changes only its Canvas prop and preserves visibility across Guide navigation", async () => {
   const view = runtime({ source: "demo", error: "Bundled preview · not live" });
   try {
     const canvas = view.latest("canvas");
-    view.setCompact(true); await view.flush();
-    assert.equal(view.button("Explore").props.disabled, true);
-    view.setCompact(false); await view.flush();
-    await view.openLibrary();
-    assert.equal(view.latest("library").props.sourceLabel, "Demo content · not live source");
-    assert.equal(view.latest("library").props.sourceWarning, "Bundled preview · not live");
+    assert.equal(canvas.props.showDataPipeline, true);
+    await view.toggleDataPipeline(false); assert.equal(canvas.props.showDataPipeline, false);
+    await view.click("Process Guide");
+    assert.equal(view.latest("guide").props.sourceLabel, "Demo content · not live source");
+    assert.equal(view.latest("guide").props.sourceWarning, "Bundled preview · not live");
+    await view.click("Explore"); assert.equal(canvas.props.showDataPipeline, false);
+    await view.toggleDataPipeline(true); assert.equal(canvas.props.showDataPipeline, true);
     assert.equal(view.latest("canvas"), canvas);
     assert.equal(view.counters.canvasMounted, 1); assert.equal(view.counters.fit, 0);
   } finally { view.unmount(); }

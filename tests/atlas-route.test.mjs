@@ -15,7 +15,7 @@ function runtime(initialHash = "#atlas") {
   const location = { pathname: "/hub", search: "?source=hub", hash: initialHash };
   const emit = (type) => { for (const callback of listeners.get(type) ?? []) callback(); };
   function setUrl(url) {
-    const parsed = new URL(url, "https://example.test" + entries[index]);
+    const parsed = new URL(url, "https://example.test" + location.pathname + location.search + location.hash);
     location.pathname = parsed.pathname; location.search = parsed.search; location.hash = parsed.hash;
   }
   const history = {
@@ -74,17 +74,21 @@ test("Root and validated deep links round-trip without camera state", () => {
   assert.equal(r.serializeAtlasHash(r.parseAtlasHash("#atlas")), "#atlas");
   const state = r.parseAtlasHash("#atlas?stage=04&tab=controls");
   assert.equal(state.stageId, "04"); assert.equal(state.chapterId, "04"); assert.equal(state.inspectorTab, "controls");
-  assert.equal(r.serializeAtlasHash(state), "#atlas?stage=04&tab=controls");
+  assert.equal(state.mode, "guide");
+  assert.equal(r.serializeAtlasHash(state), "#atlas?mode=guide&stage=04&tab=controls");
   const story = r.parseAtlasHash("#atlas?mode=story&chapter=04");
-  assert.equal(story.mode, "story"); assert.equal(story.chapterId, "04");
-  assert.equal(r.serializeAtlasHash(story), "#atlas?mode=story&chapter=04");
+  assert.equal(story.mode, "guide"); assert.equal(story.chapterId, "04");
+  assert.equal(r.serializeAtlasHash(story), "#atlas?mode=guide&chapter=04");
+  const guide = r.parseAtlasHash("#atlas?mode=guide&chapter=04&tab=ownership");
+  assert.equal(guide.inspectorTab, "ownership");
+  assert.equal(r.serializeAtlasHash(guide), "#atlas?mode=guide&chapter=04&tab=ownership");
 });
 
 test("Untrusted query fields are allowlisted and bounded", () => {
   const r = runtime();
   const state = r.parseAtlasHash("#atlas?stage=09&chapter=B&tab=html&mode=evil&library=guidance&scope=unknown&ref=https://secret.test&camera=10");
   assert.equal(state.stageId, null); assert.equal(state.chapterId, "01"); assert.equal(state.inspectorTab, "summary");
-  assert.equal(state.mode, "explore"); assert.equal(state.libraryStage, ""); assert.equal(state.referenceId, null);
+  assert.equal(state.mode, "guide"); assert.equal(state.libraryStage, ""); assert.equal(state.referenceId, null);
   assert.equal(r.parseAtlasHash("#atlas?library=all&ref=" + "X".repeat(81)).referenceId, null);
   assert.equal(r.parseAtlasHash("#atlas?stage=04&noise=" + "X".repeat(1200)).stageId, null);
   assert.equal(r.parseAtlasHash("#atlas?library=%3Cscript%3E&ref=DOC-01").libraryGroup, null);
@@ -101,26 +105,31 @@ test("Stage selection pushes history; tab changes replace and Back/Forward resto
   assert.equal(r.history.state.preserved, true);
 });
 
-test("Supporting selection preserves numeric walkthrough chapter and numeric chapter input is guarded", () => {
+test("Guide stages support A/B without replacing the remembered numeric chapter; Explore clears reading state", () => {
   const r = runtime("#atlas?chapter=04");
   r.route.selectStage("A"); assert.equal(r.route.state.stageId, "A"); assert.equal(r.route.state.chapterId, "04");
-  r.route.setChapter("B"); assert.equal(r.route.state.chapterId, "04"); assert.equal(r.route.state.stageId, "A");
-  r.route.setChapter("06"); assert.equal(r.route.state.chapterId, "06"); assert.equal(r.route.state.stageId, null);
-  r.route.selectStage("05"); r.route.setMode("story");
-  assert.equal(r.route.state.stageId, null); assert.equal(r.route.state.chapterId, "05"); assert.equal(r.route.state.mode, "story");
+  r.route.setGuideStage("B"); assert.equal(r.route.state.chapterId, "04"); assert.equal(r.route.state.stageId, "B");
+  r.route.setChapter("06"); assert.equal(r.route.state.chapterId, "06"); assert.equal(r.route.state.stageId, "06");
+  r.route.openLibrary({ group: "kpi", referenceId: "KPI-01" }); r.route.setMode("explore");
+  assert.equal(r.route.state.stageId, null); assert.equal(r.route.state.chapterId, "06"); assert.equal(r.route.state.mode, "explore");
+  assert.equal(r.route.state.libraryGroup, null); assert.equal(r.route.state.referenceId, null);
+  assert.equal(r.location.hash, "#atlas?chapter=06");
+  r.route.setMode("guide"); assert.equal(r.route.state.stageId, null); assert.equal(r.route.state.chapterId, "06");
+  r.route.openGuide("A", "controls"); assert.equal(r.route.state.stageId, "A"); assert.equal(r.route.state.inspectorTab, "controls");
 });
 
-test("Library opening preserves inspector and closing never navigates to an unrelated prior page", () => {
+test("Reference appendix opens in Guide, preserves stage context and closes without navigating to an unrelated page", () => {
   const r = runtime("#atlas?stage=04&tab=controls");
   r.route.openLibrary({ group: "document-step", stageId: "04", referenceId: "DOC-01" });
   assert.equal(r.route.state.stageId, "04"); assert.equal(r.route.state.inspectorTab, "controls");
   assert.equal(r.route.state.referenceId, "DOC-01"); assert.equal(r.calls.at(-1)[0], "push");
   r.route.setLibraryGroup("kpi"); assert.equal(r.calls.at(-1)[0], "replace"); assert.equal(r.route.state.referenceId, null);
   r.route.setLibraryStage("B"); assert.equal(r.route.state.libraryStage, "B");
-  r.route.closeLibrary(); assert.equal(r.location.hash, "#atlas?stage=04&tab=controls");
+  assert.equal(r.route.state.mode, "guide");
+  r.route.closeLibrary(); assert.equal(r.location.hash, "#atlas?mode=guide&stage=04&tab=controls");
   assert.equal(r.calls.at(-1)[0], "replace");
   r.route.closeStage(); assert.equal(r.route.state.stageId, null); assert.equal(r.route.state.libraryGroup, null);
-  assert.equal(r.location.hash, "#atlas?chapter=04");
+  assert.equal(r.location.hash, "#atlas?mode=guide&chapter=04");
 });
 
 test("Library filters round-trip on reload and history while invalid filters do not open the library", () => {
@@ -131,6 +140,19 @@ test("Library filters round-trip on reload and history while invalid filters do 
   r.route.openLibrary(); assert.equal(r.route.state.libraryGroup, "all"); assert.equal(r.route.state.libraryStage, "");
   r.history.back(); assert.equal(r.route.state.libraryGroup, null); assert.equal(r.route.state.stageId, "B");
   r.history.forward(); assert.equal(r.route.state.libraryGroup, "all");
+  r.route.setGuideStage("A"); assert.equal(r.route.state.libraryGroup, null); assert.equal(r.route.state.stageId, "A");
+});
+
+test("Opening a stage from Explore changes reading context only; legacy contradictory stage URLs never select the map", () => {
+  const r = runtime("#atlas?chapter=05");
+  r.route.openLibrary(); assert.equal(r.route.state.mode, "guide"); assert.equal(r.route.state.chapterId, "05");
+  r.route.openGuide(); assert.equal(r.route.state.stageId, "05"); assert.equal(r.route.state.libraryGroup, null);
+  r.route.setMode("explore"); assert.equal(r.route.state.stageId, null);
+  const state = r.parseAtlasHash("#atlas?mode=explore&stage=04&tab=controls");
+  assert.equal(state.mode, "guide"); assert.equal(state.stageId, "04");
+  r.route.setMode("guide"); r.route.setInspectorTab("ownership");
+  assert.equal(r.route.state.inspectorTab, "ownership");
+  assert.equal(r.serializeAtlasHash(r.route.state).includes("camera"), false);
 });
 
 test("Hash listeners clean up and do not react to later navigation", () => {

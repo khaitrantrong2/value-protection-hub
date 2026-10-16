@@ -26,16 +26,40 @@ test("Only 01–08 form the business sequence; 05 remains two meaningful paralle
   assert.equal(edges.some(edge => /(?:^|→)[AB](?:→|$)/.test(edge)), false);
 });
 
+test("Parallel branch cards retain a 16px screen-space gap above and below the core flow at every zoom", () => {
+  for (const scale of [0.15, 0.25, 0.38, 0.51, 0.52, 0.7, 0.9, 1.6]) {
+    const projected = topology.projectAtlasNodes(nodes, { x: 125, y: -40, scale });
+    const accounting = projected.find(node => node.key === "05A");
+    const brand = projected.find(node => node.key === "05B");
+    const core = projected.find(node => node.key === "04");
+    assert.ok(accounting.cy < core.cy, `Accounting stays above the core at ${scale}`);
+    assert.ok(brand.cy > core.cy, `Brand stays below the core at ${scale}`);
+    const gap = brand.cy - brand.screenHeight / 2 - (accounting.cy + accounting.screenHeight / 2);
+    assert.ok(gap >= 16 - 1e-8, `Expected a readable branch gap at ${scale}; got ${gap}px`);
+  }
+});
+
 test("Supporting capability spans and links come from published Supports, not a duplicate hardcoded map", () => {
   const pipeline = support.find(item => item.key === "A"), master = support.find(item => item.key === "B");
   assert.deepEqual(Array.from(new Set(pipeline.consumers.map(node => node.stage.id))), ["02", "03", "04"]);
   assert.equal(pipeline.x, nodes.find(node => node.key === "02").x);
   assert.equal(pipeline.x + pipeline.width, nodes.find(node => node.key === "04").x + 300);
   assert.equal(new Set(master.consumers.map(node => node.stage.id)).size, 8);
+  assert.equal(master.width, 300, "Master data is contextual, not a process-wide bar");
+  assert.equal(master.x, pipeline.x);
   const altered = atlasDemo.stages.map(stage => stage.id === "A" ? { ...stage, supports: ["03"] } : stage);
   const changed = topology.buildSupportCapabilities(altered, nodes).find(item => item.key === "A");
   assert.equal(changed.width, 300);
   assert.deepEqual(Array.from(changed.consumers, node => node.key), ["03"]);
+});
+
+test("Embedded data lane retains a narrow pipeline span and contextual master input", () => {
+  const projection = topology.projectSupportCapabilities(support, { x: 0, y: 0, scale: 0.4 }, 200);
+  const pipeline = projection.items.find(item => item.key === "A"), master = projection.items.find(item => item.key === "B");
+  assert.equal(pipeline.screenWidth, 1060 * 0.4);
+  assert.ok(master.screenWidth <= 160);
+  assert.ok(master.cy - master.screenHeight / 2 > pipeline.cy + pipeline.screenHeight / 2);
+  assert.equal(projection.lane.width, pipeline.screenWidth);
 });
 
 test("Support labels stay clear of business cards and one another at every supported zoom", () => {
