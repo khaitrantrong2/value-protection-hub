@@ -7,6 +7,7 @@ import { useLinks } from '../composables/useLinks';
 import { useReducedMotion } from '../composables/useReducedMotion';
 import { useLocale } from '../i18n';
 import GalaxyPlanet from './GalaxyPlanet.vue';
+import GalaxyCore from './GalaxyCore.vue';
 import GalaxyVaultInspector from './GalaxyVaultInspector.vue';
 import ProtectorFleet from './ProtectorFleet.vue';
 import MemberScopePanel from './MemberScopePanel.vue';
@@ -103,7 +104,7 @@ onBeforeUnmount(resetFocusTween);
       </svg>
       <div class="galaxy__core" aria-label="Intrepid · Value Protection Core">
         <span class="galaxy__core-halo" aria-hidden="true"></span>
-        <GalaxyPlanet id="intrepid-core" color="#AE8DF0" surface="terrain" />
+        <GalaxyCore />
         <div class="galaxy__core-identity"><img src="/brand/intrepid-mark.png" alt="" /><strong>INTREPID</strong><span>VALUE PROTECTION CORE</span></div>
       </div>
       <button v-for="planet in vaultPlanets" :key="planet.id" type="button" class="galaxy__planet" :class="{ 'is-selected': selectedPlanet?.id === planet.id }" :style="{ left: planet.x + '%', top: planet.y + '%', '--planet-size': planet.size + 'px', '--planet-accent': planet.color }" :data-planet="planet.id" :aria-label="text('Inspect vault: ', 'Xem vault: ') + t('shell.categories.' + planet.id)" :aria-expanded="selectedPlanet?.id === planet.id" @click="inspectPlanet(planet)">

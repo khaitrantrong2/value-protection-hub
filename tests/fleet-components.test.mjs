@@ -40,7 +40,7 @@ async function runtime(componentName, scope = [], source = 'live') {
     '../data/crew': { crew }, '../services/fleetMotion': motion,
     '../i18n': { useLocale: () => ({ locale, text: (en, vi) => locale.value === 'vi' ? vi : en, t(key, params = {}) { const value = key.split('.').reduce((item, part) => item?.[part], messages[locale.value]); assert.equal(typeof value, 'string', key); return value.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? ''); } }) },
     '../composables/useLinks': { useLinks: () => state },
-    './StarfighterIcon.vue': Vue.defineComponent({ props: ['arch', 'livery'], setup: props => () => Vue.h('svg', { 'data-hull': props.arch, 'data-livery': props.livery }) }),
+    './StarfighterIcon.vue': Vue.defineComponent({ props: ['arch', 'color'], setup: props => () => Vue.h('svg', { 'data-hull': props.arch, 'data-accent': props.color }) }),
     './CrewSourceNotice.vue': Vue.defineComponent({ setup: () => () => Vue.h('div', 'Source status') }),
     './MemberPortfolio.vue': Vue.defineComponent({ props: ['rows', 'memberId'], setup: props => () => Vue.h('div', { 'data-portfolio-member': props.memberId }, `${props.rows.length} published rows`) }),
     './Icon.vue': Vue.defineComponent({ setup: () => () => Vue.h('i') }),
@@ -70,8 +70,13 @@ test('Actual fleet renders 17 equal ship buttons with original SVG designs and a
   assert.equal(new Set(app.ships().map(ship => ship.props.class.replace(/fleet-ship--\w+/g, ''))).size, 1);
   assert.ok(app.ships().every(ship => ship.props['aria-label'].includes(' · ')));
   assert.ok(app.all().some(item => item.tag === 'svg'));
-  assert.equal(app.all().find(item => item.props['data-hull'] === 'aegis').props['data-livery'], motion.fleetSeed('khai'));
-  assert.equal(new Set(app.all().filter(item => item.props['data-livery'] !== undefined).map(item => item.props['data-livery'])).size, 17);
+  const hulls = app.all().filter(item => item.props['data-hull'] !== undefined);
+  // Khải flies the flagship (commander) hull in his own accent.
+  assert.equal(app.all().find(item => item.props['data-hull'] === 'commander').props['data-accent'], crew.find(member => member.id === 'khai').accent);
+  // Every hull carries a real livery colour, and the whole Aegis Wing class set is represented.
+  assert.ok(hulls.every(item => typeof item.props['data-accent'] === 'string' && item.props['data-accent'].startsWith('#')));
+  const classes = new Set(hulls.map(item => item.props['data-hull']));
+  for (const hull of ['commander', 'lead', 'automation', 'guardian', 'interceptor', 'battlecruiser', 'sentinel', 'cadet']) assert.ok(classes.has(hull), hull);
   assert.ok(!app.ships().some(ship => ship.props['data-protector-id'] === 'andriani'));
   app.app.unmount();
 });
