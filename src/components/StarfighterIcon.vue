@@ -2,61 +2,134 @@
 import { computed, useId } from 'vue';
 import type { FleetHull } from '../services/fleetMotion';
 
-const props = withDefaults(defineProps<{ arch: FleetHull; livery?: number }>(), { livery: 0 });
-const instance = useId().replace(/[^a-z0-9-]/gi, '');
-const metalId = instance + '-metal', engineId = instance + '-engine';
-const liveries = [
-  { armor: '#9F8AF0', trim: '#EFC577', glass: '#87E2DF', inset: '#D373A6' },
-  { armor: '#6599CF', trim: '#F0B584', glass: '#B7F0E8', inset: '#B294E6' },
-  { armor: '#69B4A6', trim: '#E9CB80', glass: '#A5C9F8', inset: '#D18BA9' },
-  { armor: '#C37E92', trim: '#F3D79E', glass: '#8DE5E7', inset: '#A799E5' },
-];
-const paint = computed(() => {
-  const seed = Math.abs(Math.trunc(props.livery));
-  if (seed < liveries.length) return liveries[seed]!;
-  const hue = (seed * 137.508) % 360;
-  const color = (offset: number, lightness: number) => `hsl(${(hue + offset) % 360} 56% ${lightness}%)`;
-  return { armor: color(0, 65), trim: color(70, 74), glass: color(165, 79), inset: color(265, 65) };
-});
-const designs: Record<FleetHull, { wings: string; body: string; glass: string; stripe: string; engines: number[] }> = {
-  scout: { wings: 'M25 25 4 53 24 45ZM39 25 60 53 40 45Z', body: 'M32 3 42 52 32 60 22 52Z', glass: 'M32 16 37 34 27 34Z', stripe: 'M12 47 24 38M40 38 52 47', engines: [32] },
-  interceptor: { wings: 'M24 28 3 14 9 44 23 51ZM40 28 61 14 55 44 41 51Z', body: 'M32 3 39 30 37 57 27 57 25 30Z', glass: 'M32 13 35 30 29 30Z', stripe: 'M8 26 20 40M56 26 44 40', engines: [32] },
-  cruiser: { wings: 'M20 24 3 40 5 51 21 48ZM44 24 61 40 59 51 43 48Z', body: 'M32 4C44 12 47 37 43 56L21 56C17 37 20 12 32 4Z', glass: 'M32 15C38 18 39 26 37 31L27 31C25 26 26 18 32 15Z', stripe: 'M8 44 19 39M56 44 45 39', engines: [24, 40] },
-  shuttle: { wings: 'M19 29 4 43 5 52 19 48ZM45 29 60 43 59 52 45 48Z', body: 'M23 8 41 8 47 56 17 56Z', glass: 'M25 13 39 13 41 25 23 25Z', stripe: 'M23 34H41M22 41H42', engines: [24, 40] },
-  lancer: { wings: 'M27 30 11 18 8 54 25 48ZM37 30 53 18 56 54 39 48Z', body: 'M32 1 38 42 35 61 29 61 26 42Z', glass: 'M32 16 34 35 30 35Z', stripe: 'M13 34 12 48M51 34 52 48', engines: [16, 32, 48] },
-  twinwing: { wings: 'M21 15 6 7 4 54 20 48ZM43 15 58 7 60 54 44 48Z', body: 'M32 8 42 38 39 57 25 57 22 38Z', glass: 'M32 20 37 37 27 37Z', stripe: 'M10 18V45M54 18V45M18 34H46', engines: [12, 32, 52] },
-  nova: { wings: 'M27 23 3 35 11 53 25 46ZM37 23 61 35 53 53 39 46Z', body: 'M32 3 45 34 41 55 32 62 23 55 19 34Z', glass: 'M32 16 38 32 32 39 26 32Z', stripe: 'M9 37 19 43M55 37 45 43', engines: [22, 42] },
-  falcon: { wings: 'M25 21 3 31 12 57 26 43ZM39 21 61 31 52 57 38 43Z', body: 'M32 5 42 38 38 58 26 58 22 38Z', glass: 'M32 17 37 31 32 36 27 31Z', stripe: 'M9 33 17 47M55 33 47 47', engines: [20, 32, 44] },
-  aegis: { wings: 'M24 18 3 31 6 48 23 43ZM40 18 61 31 58 48 41 43ZM24 37 9 53 18 59 29 49ZM40 37 55 53 46 59 35 49Z', body: 'M32 2 46 26 41 50 32 62 23 50 18 26Z', glass: 'M32 12 39 27 32 36 25 27Z', stripe: 'M8 33 19 28M56 33 45 28M15 53 23 47M49 53 41 47', engines: [19, 32, 45] },
-};
-const hull = computed(() => designs[props.arch]);
+/** One cohesive "Aegis Wing" fleet language. `arch` is the hull class, `color` the livery accent. */
+const props = withDefaults(defineProps<{ arch: FleetHull; color?: string }>(), { color: '#b794f6' });
+const hullId = 'hull-' + useId().replace(/[^a-z0-9-]/gi, '');
+const hullUrl = computed(() => `url(#${hullId})`);
 </script>
 
 <template>
-  <svg width="50" height="58" viewBox="0 0 64 76" fill="none" aria-hidden="true" :data-hull="arch" :data-special-hull="arch === 'aegis' ? 'true' : undefined">
+  <svg width="46" height="52" viewBox="0 0 64 72" fill="none" aria-hidden="true" :data-hull="arch">
     <defs>
-      <linearGradient :id="metalId" x1="18" y1="8" x2="46" y2="57" gradientUnits="userSpaceOnUse"><stop stop-color="#F3F0E9"/><stop offset=".37" stop-color="#BEC7DD"/><stop offset=".48" stop-color="#697B9B"/><stop offset=".65" stop-color="#DCE1EC"/><stop offset="1" stop-color="#53627F"/></linearGradient>
-      <linearGradient :id="engineId" x1="0" y1="0" x2="0" y2="1"><stop :stop-color="paint.glass"/><stop offset=".4" stop-color="#B38FF3"/><stop offset="1" :stop-color="paint.inset" stop-opacity="0"/></linearGradient>
+      <linearGradient :id="hullId" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#9e90d8" /><stop offset=".5" stop-color="#4a3a86" /><stop offset="1" stop-color="#241546" />
+      </linearGradient>
     </defs>
-    <g v-if="arch === 'aegis'" class="signature-aura"><path d="M32 1 60 27 55 56 32 70 9 56 4 27Z" :stroke="paint.trim" stroke-width=".55" opacity=".5"/><path d="M32 0V5M32 67V73M0 34H6M58 34H64" :stroke="paint.glass" stroke-width="1.3"/></g>
-    <g v-for="engine in hull.engines" :key="engine" class="flame"><path :d="`M${engine - 3} 56 Q${engine - 6} 66 ${engine} 75 Q${engine + 6} 66 ${engine + 3} 56Z`" :fill="`url(#${engineId})`" opacity=".85"/><path :d="`M${engine - 1.2} 57 ${engine} 69 ${engine + 1.2} 57Z`" fill="#DDFDFF"/></g>
-    <path :d="hull.wings" :fill="paint.armor" stroke="#E1D8F0" stroke-width=".7" stroke-linejoin="round"/>
-    <path :d="hull.stripe" :stroke="paint.trim" stroke-width="2.2" stroke-linecap="round"/>
-    <path :d="hull.body" :fill="`url(#${metalId})`" stroke="#E0D8ED" stroke-width=".75" stroke-linejoin="round"/>
-    <path d="M32 8 35 41 32 54 29 41Z" :fill="paint.armor" opacity=".75"/>
-    <path :d="hull.glass" :fill="paint.glass" stroke="#EEE9FF" stroke-width=".55"/>
-    <path d="M30 38H34L35 43H29Z" :fill="paint.inset"/>
-    <path d="M29 48H35M28 51H36" :stroke="paint.trim" stroke-width="1.4"/>
-    <circle cx="17" cy="44" r="1.2" :fill="paint.inset"/><circle cx="47" cy="44" r="1.2" :fill="paint.glass"/>
-    <path v-for="engine in hull.engines" :key="'engine-' + engine" :d="`M${engine - 3} 55H${engine + 3}V59H${engine - 3}Z`" fill="#28334D" :stroke="paint.trim" stroke-width=".8"/>
-    <path v-if="arch === 'aegis'" d="M32 38 35 42 32 46 29 42Z" fill="#F8DB8D"/>
+
+    <!-- Cadet (scout) -->
+    <g v-if="arch === 'cadet'">
+      <path class="flame" d="M29 52 Q32 64 35 52 Q32 57 29 52Z" :fill="color" opacity=".8" />
+      <path d="M32 40 L22 50 L26 52 L32 47 Z" fill="#241546" :stroke="color" stroke-width="1" />
+      <path d="M32 40 L42 50 L38 52 L32 47 Z" fill="#241546" :stroke="color" stroke-width="1" />
+      <path d="M32 14 C36 20 37 34 34 48 L32 52 L30 48 C27 34 28 20 32 14Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width=".8" />
+      <path d="M32 22 L34 32 L30 32Z" fill="#d8ccff" />
+      <circle cx="32" cy="40" r="1.4" :fill="color" />
+    </g>
+
+    <!-- Guardian (fighter) -->
+    <g v-else-if="arch === 'guardian'">
+      <path class="flame" d="M27 54 Q32 68 37 54 Q32 60 27 54Z" :fill="color" opacity=".85" />
+      <path d="M32 34 L8 52 L16 56 L32 46 Z" fill="#241546" :stroke="color" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M32 34 L56 52 L48 56 L32 46 Z" fill="#241546" :stroke="color" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M32 6 C39 14 41 30 38 50 L32 56 L26 50 C23 30 25 14 32 6Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1" />
+      <path d="M32 15 L35 29 L29 29Z" fill="#d8ccff" />
+      <path d="M28 40 L32 36 L36 40 L34 44 L32 42 L30 44 Z" :fill="color" opacity=".9" />
+      <rect x="29" y="50" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+    </g>
+
+    <!-- Lead (cruiser) -->
+    <g v-else-if="arch === 'lead'">
+      <path class="flame" d="M23 56 Q26 68 29 56Z M35 56 Q38 68 41 56Z" :fill="color" opacity=".85" />
+      <path d="M32 30 L6 50 L15 56 L32 44 Z" fill="#241546" :stroke="color" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M32 30 L58 50 L49 56 L32 44 Z" fill="#241546" :stroke="color" stroke-width="1.2" stroke-linejoin="round" />
+      <circle cx="12" cy="51" r="2.1" :fill="color" /><circle cx="52" cy="51" r="2.1" :fill="color" />
+      <path d="M32 4 C40 13 43 30 40 52 L32 58 L24 52 C21 30 24 13 32 4Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1" />
+      <path d="M32 14 L36 30 L28 30Z" fill="#d8ccff" />
+      <path d="M27 37 L32 33 L37 37 M26 44 L32 40 L38 44" fill="none" :stroke="color" stroke-width="2.1" stroke-linecap="round" />
+      <rect x="24" y="51" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+      <rect x="34" y="51" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+    </g>
+
+    <!-- Automation (engineer/constructor class) -->
+    <g v-else-if="arch === 'automation'">
+      <path class="spin" d="M32 8 L53 20 L53 44 L32 56 L11 44 L11 20 Z" fill="none" :stroke="color" stroke-width=".7" opacity=".35" />
+      <path class="flame" d="M29 54 Q32 64 35 54Z" :fill="color" opacity=".85" />
+      <path d="M18 32 H12 M46 32 H52" fill="none" :stroke="color" stroke-width="1.4" />
+      <rect x="5" y="25" width="9" height="14" rx="2.5" fill="#241546" :stroke="color" stroke-width="1" />
+      <rect x="50" y="25" width="9" height="14" rx="2.5" fill="#241546" :stroke="color" stroke-width="1" />
+      <path d="M32 16 V7" fill="none" :stroke="color" stroke-width="1.3" /><circle cx="32" cy="6" r="2.1" fill="#f5b342" />
+      <path d="M26 10 a8 8 0 0 1 12 0" fill="none" :stroke="color" stroke-width="1" opacity=".55" />
+      <path d="M32 15 L45 23 L45 39 L32 47 L19 39 L19 23 Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1" />
+      <rect x="28.5" y="22" width="7" height="8" rx="1.2" fill="#d8ccff" />
+      <circle cx="26" cy="37" r="1.3" :fill="color" /><circle cx="32" cy="39" r="1.3" :fill="color" /><circle cx="38" cy="37" r="1.3" :fill="color" />
+      <rect x="29" y="46" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+    </g>
+
+    <!-- Commander (flagship) -->
+    <g v-else-if="arch === 'commander'" data-special-hull="true">
+      <circle cx="32" cy="34" r="30" fill="none" :stroke="color" stroke-width=".7" opacity=".45" class="spin" stroke-dasharray="3 7" />
+      <path class="flame" d="M20 58 Q23 70 26 58Z M30 60 Q32 72 34 60Z M38 58 Q41 70 44 58Z" :fill="color" opacity=".9" />
+      <path d="M32 26 L3 48 L13 56 L32 42 Z" fill="#241546" :stroke="color" stroke-width="1.3" stroke-linejoin="round" />
+      <path d="M32 26 L61 48 L51 56 L32 42 Z" fill="#241546" :stroke="color" stroke-width="1.3" stroke-linejoin="round" />
+      <circle cx="9" cy="49" r="2.3" :fill="color" /><circle cx="55" cy="49" r="2.3" :fill="color" />
+      <path d="M32 2 C41 12 45 30 42 54 L32 60 L22 54 C19 30 23 12 32 2Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1.1" />
+      <path d="M32 13 L37 31 L27 31Z" fill="#d8ccff" />
+      <path d="M24 40 L32 34 L40 40 M25 46 L32 41 L39 46" fill="none" :stroke="color" stroke-width="2.1" stroke-linecap="round" />
+      <path d="M32 19 l2.1 4.3 4.7 .6 -3.4 3.3 .8 4.7 -4.2 -2.2 -4.2 2.2 .8 -4.7 -3.4 -3.3 4.7 -.6Z" fill="#f5b342" />
+      <rect x="20" y="52" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+      <rect x="29" y="54" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+      <rect x="38" y="52" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+    </g>
+
+    <!-- Interceptor -->
+    <g v-else-if="arch === 'interceptor'">
+      <path class="flame" d="M29 54 Q32 66 35 54Z" :fill="color" opacity=".85" />
+      <path d="M32 32 L9 50 L17 52 L32 44 Z" fill="#241546" :stroke="color" stroke-width="1.1" stroke-linejoin="round" />
+      <path d="M32 32 L55 50 L47 52 L32 44 Z" fill="#241546" :stroke="color" stroke-width="1.1" stroke-linejoin="round" />
+      <path d="M31 19 L20 25 L30 27 Z" :fill="color" opacity=".85" />
+      <path d="M33 19 L44 25 L34 27 Z" :fill="color" opacity=".85" />
+      <path d="M32 3 C35 12 36 42 34 54 L32 58 L30 54 C28 42 29 12 32 3Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1" />
+      <path d="M32 13 L34 28 L30 28Z" fill="#d8ccff" />
+      <rect x="29.5" y="52" width="5" height="4" rx="1" fill="#28334d" :stroke="color" stroke-width=".7" />
+    </g>
+
+    <!-- Battlecruiser (heavy) -->
+    <g v-else-if="arch === 'battlecruiser'">
+      <path class="flame" d="M21 56 Q24 68 27 56Z M30 58 Q32 70 34 58Z M37 56 Q40 68 43 56Z" :fill="color" opacity=".88" />
+      <path d="M32 24 L4 42 L9 50 L32 38 Z" fill="#241546" :stroke="color" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M32 24 L60 42 L55 50 L32 38 Z" fill="#241546" :stroke="color" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M30 46 L13 55 L21 57 L30 51 Z" fill="#241546" :stroke="color" stroke-width="1" />
+      <path d="M34 46 L51 55 L43 57 L34 51 Z" fill="#241546" :stroke="color" stroke-width="1" />
+      <path d="M32 3 C43 12 46 34 43 56 L32 62 L21 56 C18 34 21 12 32 3Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1.1" />
+      <path d="M32 13 L37 30 L27 30Z" fill="#d8ccff" />
+      <path d="M26 38 L32 34 L38 38" fill="none" :stroke="color" stroke-width="2" stroke-linecap="round" />
+      <path d="M27 44 H37" fill="none" :stroke="color" stroke-width="2" stroke-linecap="round" />
+      <rect x="21" y="53" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+      <rect x="29" y="55" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+      <rect x="37" y="53" width="6" height="5" rx="1" fill="#28334d" :stroke="color" stroke-width=".8" />
+    </g>
+
+    <!-- Sentinel (defender) -->
+    <g v-else>
+      <path class="flame" d="M25 54 Q28 64 31 54Z M33 54 Q36 64 39 54Z" :fill="color" opacity=".85" />
+      <path d="M32 36 L10 46 L16 52 L32 46 Z" fill="#241546" :stroke="color" stroke-width="1.1" stroke-linejoin="round" />
+      <path d="M32 36 L54 46 L48 52 L32 46 Z" fill="#241546" :stroke="color" stroke-width="1.1" stroke-linejoin="round" />
+      <path d="M32 8 C40 16 42 34 39 52 L32 58 L25 52 C22 34 24 16 32 8Z" :fill="hullUrl" stroke="rgba(224,216,240,.55)" stroke-width="1" />
+      <path d="M20 23 a12 12 0 0 1 24 0" fill="none" :stroke="color" stroke-width="1.6" opacity=".85" />
+      <path d="M24 23 a8 8 0 0 1 16 0" fill="none" :stroke="color" stroke-width="1" opacity=".45" />
+      <path d="M32 17 L35 30 L29 30Z" fill="#d8ccff" />
+      <path d="M28 40 L32 36 L36 40 L34 44 L32 42 L30 44 Z" :fill="color" opacity=".9" />
+      <rect x="26" y="50" width="5" height="4" rx="1" fill="#28334d" :stroke="color" stroke-width=".7" />
+      <rect x="33" y="50" width="5" height="4" rx="1" fill="#28334d" :stroke="color" stroke-width=".7" />
+    </g>
   </svg>
 </template>
 
 <style scoped>
-svg { overflow:visible; }
-.flame { transform-origin:32px 57px; animation:engine-thrust 1.6s ease-in-out infinite; }
-@keyframes engine-thrust { 0%,100% { transform:scaleY(.86); opacity:.75; } 50% { transform:scaleY(1.08); opacity:1; } }
-.signature-aura { filter:drop-shadow(0 0 3px #EFC57766); }
-@media(prefers-reduced-motion:reduce) { .flame { animation:none; } }
+svg { overflow: visible; }
+.flame { transform-box: fill-box; transform-origin: center bottom; animation: engine-thrust 1.6s ease-in-out infinite; }
+@keyframes engine-thrust { 0%,100% { transform: scaleY(.86); opacity: .8; } 50% { transform: scaleY(1.1); opacity: 1; } }
+.spin { transform-box: fill-box; transform-origin: center; animation: hull-spin 26s linear infinite; }
+@keyframes hull-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .flame, .spin { animation: none; } }
 </style>

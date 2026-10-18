@@ -1,7 +1,7 @@
 /** Patrol positions are visual only: no rank, workload or ownership is encoded. */
 export interface FleetPoint { x: number; y: number }
 export type FleetVariant = 'home' | 'crew';
-export type FleetHull = 'scout' | 'interceptor' | 'cruiser' | 'shuttle' | 'lancer' | 'twinwing' | 'nova' | 'falcon' | 'aegis';
+export type FleetHull = 'commander' | 'lead' | 'automation' | 'guardian' | 'interceptor' | 'battlecruiser' | 'sentinel' | 'cadet';
 export interface OrbitalPoint extends FleetPoint { depth: number; scale: number; heading: number; bank: number }
 
 /** Three physical orbit planes: ascending node, inclination and orbital radius. */
@@ -53,9 +53,13 @@ export function fleetSeed(id: string): number {
   return [...id].reduce((hash, letter) => (Math.imul(hash, 31) + letter.charCodeAt(0)) >>> 0, 17);
 }
 
-export function fleetHullFor(id: string): FleetHull {
-  const designs: FleetHull[] = ['scout', 'interceptor', 'cruiser', 'shuttle', 'lancer', 'twinwing', 'nova', 'falcon'];
-  return id === 'khai' ? 'aegis' : designs[fleetSeed(id) % designs.length];
+/** Hull reflects rank and function; `craft` overrides the market default for specific protectors. */
+export function fleetHullFor(member: { rank: string; function: string; craft?: FleetHull }): FleetHull {
+  if (member.rank === 'commander') return 'commander';
+  if (member.function === 'automation') return 'automation';
+  if (member.rank === 'lead') return 'lead';
+  if (member.rank === 'cadet') return 'cadet';
+  return member.craft ?? 'guardian';
 }
 
 export function advancePatrol(phase: number, elapsedSeconds: number, held: boolean): number {

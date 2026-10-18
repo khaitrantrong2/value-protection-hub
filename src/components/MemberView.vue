@@ -6,7 +6,7 @@ import CrewSourceNotice from "./CrewSourceNotice.vue";
 import MemberPortfolio from "./MemberPortfolio.vue";
 import StarfighterIcon from "./StarfighterIcon.vue";
 import Icon from "./Icon.vue";
-import { fleetHullFor, fleetSeed } from "../services/fleetMotion";
+import { fleetHullFor } from "../services/fleetMotion";
 
 const { selectedMember, openCrew, memberScope, source, isLoading } = useLinks();
 const { t, text } = useLocale();
@@ -22,7 +22,7 @@ const emptyBody = computed(() => source.value === "stale" ? "staleEmptyBody" : s
       <div class="member__top"><nav class="member__breadcrumb" :aria-label="t('crew.member.back')"><button type="button" @click="openCrew"><Icon name="chevronRight" :size="15" class="member__back-icon" />{{ t('crew.member.back') }}</button></nav><CrewSourceNotice v-if="member" /></div>
       <template v-if="member">
         <header class="member__header">
-          <div class="member__ship" aria-hidden="true"><StarfighterIcon :arch="fleetHullFor(member.id)" :livery="fleetSeed(member.id)" /></div>
+          <div class="member__ship" aria-hidden="true"><StarfighterIcon :arch="fleetHullFor(member)" :color="member.accent" /></div>
           <div class="member__identity"><p class="member__eyebrow">{{ text('VALUE PROTECTOR', 'VALUE PROTECTOR') }}</p><h1>{{ member.name }}</h1><p class="member__role">{{ t('crew.profiles.' + member.profileKey + '.role') }}</p></div>
           <div class="member__labels"><span><Icon name="globe" :size="14" />{{ t('crew.markets.' + (member.country || member.market)) }}</span><span>{{ t('crew.functions.' + member.function) }}</span></div>
         </header>

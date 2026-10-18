@@ -10,41 +10,44 @@ const require = createRequire(import.meta.url), Vue = require('vue'), { renderTo
 const source = readFileSync(new URL('../src/components/StarfighterIcon.vue', import.meta.url), 'utf8');
 const script = compileScript(parse(source, { filename: 'StarfighterIcon.vue' }).descriptor, { id: 'fleet-hull', inlineTemplate: true }).content;
 const compiled = await transform(script, { loader: 'ts', format: 'cjs', target: 'es2022' });
-const context = vm.createContext({ module: { exports: {} }, require(name) { assert.equal(name, 'vue'); return Vue; } });
+const context = vm.createContext({ module: { exports: {} }, require(name) { if (name === 'vue') return Vue; return {}; } });
 vm.runInContext(compiled.code, context);
 const Hull = context.module.exports.default;
 
-test('Nine distinct SVG hull designs each contain multicolor armor, metallic panels, glass and engine detail', async () => {
-  const hulls = ['scout', 'interceptor', 'cruiser', 'shuttle', 'lancer', 'twinwing', 'nova', 'falcon', 'aegis'];
+const HULLS = ['commander', 'lead', 'automation', 'guardian', 'interceptor', 'battlecruiser', 'sentinel', 'cadet'];
+
+test('Eight distinct Aegis Wing hulls render with hull gradient, engine flame, livery colour and are decorative', async () => {
   const markup = [];
-  for (const arch of hulls) {
-    const html = await renderToString(Vue.createSSRApp(Hull, { arch, livery: 2 }));
+  for (const arch of HULLS) {
+    const html = await renderToString(Vue.createSSRApp(Hull, { arch, color: '#34d399' }));
     assert.match(html, new RegExp(`data-hull="${arch}"`));
-    const colors = new Set([...html.matchAll(/(?:fill|stroke|stop-color)="(#[0-9a-f]{6})"/gi)].map(match => match[1]));
-    assert.ok(colors.size >= 7, `${arch} must have more than a monochrome outer glow`);
     assert.match(html, /class="flame"/);
     assert.match(html, /linearGradient/);
     assert.match(html, /aria-hidden="true"/);
+    assert.match(html, /#34d399/i, `${arch} must paint the livery colour`);
     markup.push(html);
   }
-  assert.equal(new Set(markup).size, 9);
-  assert.match(markup.at(-1), /data-special-hull="true"/);
+  assert.equal(new Set(markup).size, HULLS.length);
 });
 
-test('Repeated hulls have unique gradient IDs in the same fleet and deterministic per-person liveries', async () => {
-  const html = await renderToString(Vue.createSSRApp({ setup: () => () => Vue.h('div', [Vue.h(Hull, { arch: 'scout', livery: 0 }), Vue.h(Hull, { arch: 'scout', livery: 1 })]) }));
+test('Commander flies the flagship crown + halo; automation carries its own signature ring', async () => {
+  const commander = await renderToString(Vue.createSSRApp(Hull, { arch: 'commander', color: '#f5b342' }));
+  assert.match(commander, /data-special-hull="true"/);
+  assert.match(commander, /class="spin"/); // orbital halo
+  assert.match(commander, /#f5b342/i); // gold crown star
+  const automation = await renderToString(Vue.createSSRApp(Hull, { arch: 'automation', color: '#7dd3fc' }));
+  assert.match(automation, /class="spin"/); // hex signal aura
+});
+
+test('Repeated hulls get unique gradient IDs and independent liveries within one fleet', async () => {
+  const html = await renderToString(Vue.createSSRApp({ setup: () => () => Vue.h('div', [Vue.h(Hull, { arch: 'guardian', color: '#60a5fa' }), Vue.h(Hull, { arch: 'guardian', color: '#f59e0b' })]) }));
   const ids = [...html.matchAll(/id="([^"]+)"/g)].map(match => match[1]);
-  assert.equal(ids.length, 4); assert.equal(new Set(ids).size, 4);
-  assert.match(html, /#9F8AF0/); assert.match(html, /#6599CF/);
+  assert.equal(ids.length, 2);
+  assert.equal(new Set(ids).size, 2);
+  assert.match(html, /#60a5fa/i); assert.match(html, /#f59e0b/i);
 });
 
-test('Individual ship liveries do not collapse into four repeated accent palettes', async () => {
-  const colors = [];
-  for (const livery of [172319, 244987, 730194, 199403, 951267]) {
-    const html = await renderToString(Vue.createSSRApp(Hull, { arch: 'scout', livery }));
-    const accents = [...html.matchAll(/(?:fill|stroke|stop-color)="(hsl\([^"]+\))"/g)].map(match => match[1]);
-    assert.ok(new Set(accents).size >= 4);
-    colors.push(accents.join('|'));
-  }
-  assert.equal(new Set(colors).size, colors.length);
+test('Default livery falls back to amethyst when no colour is supplied', async () => {
+  const html = await renderToString(Vue.createSSRApp(Hull, { arch: 'guardian' }));
+  assert.match(html, /#b794f6/i);
 });

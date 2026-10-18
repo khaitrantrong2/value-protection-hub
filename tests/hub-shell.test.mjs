@@ -57,6 +57,7 @@ function runtime() {
     "../motion": { gsap: { context: () => ({ revert() {} }), fromTo: () => ({ kill() {} }) }, VPH_EASE: "none" },
     "./Icon.vue": Vue.defineComponent({ setup: () => () => Vue.h("i") }), "./UniverseStage.vue": Vue.defineComponent({ setup: () => () => Vue.h("div", "universe") }), "./StarfighterIcon.vue": Vue.defineComponent({ setup: () => () => Vue.h("i") }),
     "./GalaxyPlanet.vue": Vue.defineComponent({ setup: () => () => Vue.h('i', { 'data-planet-art': true }) }),
+    "./GalaxyCore.vue": Vue.defineComponent({ setup: () => () => Vue.h('canvas', { 'data-core-art': true }) }),
     "./GalaxyVaultInspector.vue": Vue.defineComponent({ props: ['planet', 'resources', 'source', 'loading'], setup: props => () => Vue.h('aside', { 'data-vault-inspector': props.planet.id }, props.resources.map(link => link.title).join(' · ')) }),
     "./ProtectorFleet.vue": Vue.defineComponent({ props: ['members', 'selectedId', 'paused', 'variant'], setup: props => () => Vue.h('div', { 'data-fleet': props.variant }, props.members.map(member => Vue.h('button', { 'data-protector-id': member.id }, member.name))) }),
     "./MemberScopePanel.vue": Vue.defineComponent({ props: ['member'], setup: props => () => Vue.h('aside', { 'data-member-inspector': props.member.id }, props.member.name) }),
