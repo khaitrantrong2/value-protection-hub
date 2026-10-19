@@ -30,6 +30,8 @@ function runtime(language = "en") {
       if (path === "../services/linkSafety") return safety;
       if (path === "./VaultLinkActions.vue") return component("VaultLinkActions");
       if (path === "./Icon.vue") return Vue.defineComponent({ setup: () => () => Vue.h("i", { "aria-hidden": true }) });
+      if (path === "../composables/useLinks") return { useLinks: () => ({ filters: Vue.reactive({ query: "", country: "all", status: "all", criticality: "all" }), countryCounts: new Map() }) };
+      if (path === "./PortfolioColumnFilter.vue") return Vue.defineComponent({ props: ["label", "active"], setup: (props, { slots }) => () => Vue.h("div", { class: "column-filter" }, [Vue.h("span", props.label), slots.default?.()]) });
       throw new Error("Unexpected vault import " + path);
     } });
     vm.runInContext(compiled[name], context);

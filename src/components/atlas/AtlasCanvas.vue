@@ -3,12 +3,16 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { AtlasStage, AtlasStageId, AtlasReference } from "../../types/atlas";
 import { useAtlasCamera, type AtlasBounds } from "../../composables/useAtlasCamera";
 import AtlasStatus from "./AtlasStatus.vue";
+import StarfighterIcon from "../StarfighterIcon.vue";
 import { useLocale } from "../../i18n";
 import { ATLAS_SEQUENCE_EDGES, atlasOverviewBounds, buildAtlasNodes, buildSupportCapabilities, projectAtlasNodes, projectSupportCapabilities } from "./atlasTopology";
 
 const props = withDefaults(defineProps<{ stages: AtlasStage[]; references: AtlasReference[]; selectedId: AtlasStageId | null; selectionKey?: string | null; showDataPipeline?: boolean; active?: boolean }>(), { showDataPipeline: true, active: true });
 const emit = defineEmits<{ select: [id: AtlasStageId, nodeKey?: string]; fit: [] }>();
 const { text } = useLocale();
+// NPC-style preview popover: a first click on a phase shows a brief note and a ship
+// "guide"; it opens the full Process Guide only on request (or keyboard 1–8 in the view).
+const popoverKey = ref<string | null>(null);
 const viewport = ref<HTMLElement | null>(null);
 const miniature = ref<SVGSVGElement | null>(null);
 const { camera, viewportSize, dragging, fit: fitCamera, ensureVisible, panBy, measureViewport, stopMotion, zoom, wheel, pointerDown, pointerMove, pointerUp, centerAt } =
@@ -107,6 +111,7 @@ function minimapClick(event: MouseEvent) {
   centerAt((event.clientX - rect.left) / rect.width * 3200, (event.clientY - rect.top) / rect.height * 640);
 }
 function keydown(event: KeyboardEvent) {
+  if (event.key === "Escape" && popoverKey.value) { event.preventDefault(); event.stopPropagation(); closePopover(); viewport.value?.focus({ preventScroll: true }); return; }
   if (event.target !== viewport.value) return;
   if (event.key === "+" || event.key === "=") { event.preventDefault(); zoom(1.2); }
   else if (event.key === "-") { event.preventDefault(); zoom(1 / 1.2); }
@@ -119,13 +124,24 @@ function keydown(event: KeyboardEvent) {
     if (event.key === "ArrowDown") panBy(0, -72);
   }
 }
+const popover = computed(() => screenNodes.value.find(node => node.key === popoverKey.value) ?? null);
+const popoverBelow = computed(() => !!popover.value && popover.value.cy - popover.value.screenHeight / 2 < 190);
+function toggleNode(node: { stage: AtlasStage; key: string }) { popoverKey.value = popoverKey.value === node.key ? null : node.key; }
+function closePopover() { popoverKey.value = null; }
+function openGuideFromPopover() { const node = popover.value; if (node) emit("select", node.stage.id, node.key); closePopover(); }
+function onWheel(event: WheelEvent) { closePopover(); wheel(event); }
+function onPointerDown(event: PointerEvent) { if (!(event.target as HTMLElement)?.closest(".atlas-node")) closePopover(); pointerDown(event); }
+function onZoom(factor: number) { closePopover(); zoom(factor); }
+function onFit() { closePopover(); emit("fit"); }
+watch(() => props.active, active => { if (!active) closePopover(); });
+
 defineExpose({ fit, ensureSelectionVisible });
 </script>
 
 <template>
   <div class="atlas-map-wrap">
     <div ref="viewport" class="atlas-map" :class="{ 'is-dragging': dragging, 'is-compact': compact, 'is-micro': micro, 'is-detailed': detailed }" tabindex="0" role="region" :aria-label="text('Process map. Drag or scroll to pan. Control plus scroll to zoom. Arrow keys pan, F fits the map.', 'Bản đồ quy trình. Kéo hoặc cuộn để di chuyển. Control và cuộn để phóng to. Phím mũi tên để di chuyển, F để vừa khung.')"
-      data-lenis-prevent @wheel="wheel" @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="pointerUp" @keydown="keydown">
+      data-lenis-prevent @wheel="onWheel" @pointerdown="onPointerDown" @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="pointerUp" @keydown="keydown">
       <svg class="atlas-paths" :viewBox="`0 0 ${viewportSize.width || 1} ${viewportSize.height || 1}`" aria-hidden="true">
         <defs><marker id="atlas-path-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L7 4 L1 7" /></marker></defs>
         <path v-for="edge in connections" :key="edge.key" :d="edge.path" :class="{ 'is-accounting': edge.warm }" marker-end="url(#atlas-path-arrow)" />
@@ -133,7 +149,7 @@ defineExpose({ fit, ensureSelectionVisible });
         <path v-for="dependency in dependencies" :key="dependency.key" :d="dependency.path" class="atlas-support-path" marker-end="url(#atlas-path-arrow)" />
       </svg>
       <button v-for="node in screenNodes" :key="node.key" type="button" class="atlas-node" :class="{ 'is-selected': selectedId === node.stage.id && (!selectionKey || selectionKey === node.key), 'is-accounting': node.key === '05A', 'is-supported': supportedIds.includes(node.stage.id) }" :style="nodeStyle(node)"
-        :data-atlas-node-stage="node.stage.id" :data-atlas-node-key="node.key" :title="`${node.branch}: ${node.title}`" :aria-label="`${node.branch}: ${node.title}. ${node.body}`" :aria-pressed="selectedId === node.stage.id && (!selectionKey || selectionKey === node.key)" :tabindex="nodeVisible(node) ? 0 : -1" @click="emit('select', node.stage.id, node.key)">
+        :data-atlas-node-stage="node.stage.id" :data-atlas-node-key="node.key" :title="`${node.branch}: ${node.title}`" :aria-label="`${node.branch}: ${node.title}. ${node.body}`" :aria-pressed="selectedId === node.stage.id && (!selectionKey || selectionKey === node.key)" :aria-expanded="popoverKey === node.key" :tabindex="nodeVisible(node) ? 0 : -1" @click="toggleNode(node)">
         <span class="atlas-node-index">{{ node.branch }}<AtlasStatus v-if="camera.scale >= 0.3" :state="node.stage.practiceState" compact /></span><strong>{{ micro ? microLabels[node.key] : compact ? compactLabels[node.key] : node.title }}</strong>
         <span v-if="detailed" class="atlas-node-question">{{ node.body }}</span>
         <span v-if="detailed" class="atlas-node-role">{{ node.role }}</span>
@@ -142,9 +158,21 @@ defineExpose({ fit, ensureSelectionVisible });
         :data-atlas-node-stage="capability.stage.id" :data-atlas-node-key="capability.key" :aria-label="text(`${capability.stage.shortTitle}. Supports stages ${capability.stage.supports.join(', ')}. Open supporting process detail.`, `${capability.stage.shortTitle}. Hỗ trợ giai đoạn ${capability.stage.supports.join(', ')}. Mở chi tiết quy trình hỗ trợ.`)" :aria-pressed="selectedId === capability.stage.id" :tabindex="capabilityVisible(capability) ? 0 : -1" @click="emit('select', capability.stage.id, capability.key)">
         <strong>{{ capability.stage.shortTitle }}</strong>
       </button>
+
+      <div v-if="popover" class="atlas-npc" :class="{ 'is-below': popoverBelow }" :style="{ left: popover.cx + 'px', top: (popoverBelow ? popover.cy + popover.screenHeight / 2 + 10 : popover.cy - popover.screenHeight / 2 - 10) + 'px' }" role="dialog" :aria-label="`${popover.branch}: ${popover.title}`">
+        <span class="atlas-npc__avatar" aria-hidden="true"><StarfighterIcon arch="commander" color="#F5B342" /></span>
+        <div class="atlas-npc__body">
+          <p class="atlas-npc__eyebrow">{{ text('STAGE', 'GIAI ĐOẠN') }} {{ popover.branch }}</p>
+          <strong class="atlas-npc__title">{{ popover.title }}</strong>
+          <p class="atlas-npc__text">{{ popover.body }}</p>
+          <p v-if="popover.role" class="atlas-npc__role">{{ popover.role }}</p>
+          <button type="button" class="atlas-npc__cta" @click="openGuideFromPopover">{{ text('Open in Process Guide', 'Mở trong Process Guide') }} →</button>
+        </div>
+        <button type="button" class="atlas-npc__close" :aria-label="text('Close', 'Đóng')" @click="closePopover"><span aria-hidden="true">×</span></button>
+      </div>
     </div>
     <div class="atlas-map-foot">
-      <div class="atlas-map-tools"><button type="button" :aria-label="text('Zoom out', 'Thu nhỏ')" @click="zoom(1 / 1.2)">−</button><span aria-live="polite">{{ Math.round(camera.scale * 100) }}%</span><button type="button" :aria-label="text('Zoom in', 'Phóng to')" @click="zoom(1.2)">+</button><button type="button" @click="emit('fit')">{{ text('Fit', 'Vừa khung') }}</button></div>
+      <div class="atlas-map-tools"><button type="button" :aria-label="text('Zoom out', 'Thu nhỏ')" @click="onZoom(1 / 1.2)">−</button><span aria-live="polite">{{ Math.round(camera.scale * 100) }}%</span><button type="button" :aria-label="text('Zoom in', 'Phóng to')" @click="onZoom(1.2)">+</button><button type="button" @click="onFit">{{ text('Fit', 'Vừa khung') }}</button></div>
       <button type="button" class="atlas-minimap" :aria-label="text('Move map to clicked location; press Enter to fit', 'Di chuyển tới vị trí được chọn; nhấn Enter để vừa khung')" @click="minimapClick">
         <svg ref="miniature" viewBox="0 0 3200 640" preserveAspectRatio="none" aria-hidden="true"><rect v-for="node in [...nodes, ...capabilities]" :key="node.key" :x="node.x" :y="node.y" :width="node.width" :height="node.height" rx="12" :class="{ 'is-selected': selectedId === node.stage.id }" /><rect class="atlas-mini-window" v-bind="miniWindow" /></svg>
       </button>
@@ -190,5 +218,20 @@ defineExpose({ fit, ensureSelectionVisible });
 .atlas-minimap rect.is-selected { fill: var(--color-cyan-400); }
 .atlas-minimap .atlas-mini-window { fill: none; stroke: var(--color-orange-400); stroke-width: 16; }
 button:focus-visible,.atlas-map:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 2px; }
-@media(max-width:540px) { .atlas-minimap { display: none; } .atlas-map-foot { right: 8px; bottom: 8px; } }
+.atlas-npc { position: absolute; z-index: 20; transform: translate(-50%,-100%); width: 294px; max-width: calc(100% - 24px); display: flex; gap: 12px; padding: 14px 14px 14px 12px; border: 1px solid var(--color-card-border-hover); border-radius: 12px; background: var(--space-deep); box-shadow: 0 18px 42px #0009; text-align: left; }
+.atlas-npc.is-below { transform: translate(-50%,0); }
+.atlas-npc::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg); background: var(--space-deep); border-right: 1px solid var(--color-card-border-hover); border-bottom: 1px solid var(--color-card-border-hover); }
+.atlas-npc.is-below::after { top: -7px; bottom: auto; border: 0; border-left: 1px solid var(--color-card-border-hover); border-top: 1px solid var(--color-card-border-hover); }
+.atlas-npc__avatar { flex: none; width: 44px; height: 50px; display: grid; place-items: center; filter: drop-shadow(0 0 8px rgba(245,179,66,.4)); }
+.atlas-npc__avatar :deep(.flame) { animation: none; }
+.atlas-npc__body { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.atlas-npc__eyebrow { font-size: 9px; letter-spacing: .16em; color: var(--color-cyan-400); }
+.atlas-npc__title { font-size: 15px; font-weight: 600; line-height: 1.25; color: var(--color-text-400); }
+.atlas-npc__text { font-size: 12px; line-height: 1.5; color: var(--color-text-300); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.atlas-npc__role { font-size: 11px; color: var(--color-text-200); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.atlas-npc__cta { align-self: flex-start; margin-top: 4px; min-height: 32px; padding: 6px 10px; border: 1px solid var(--color-cyan-400); border-radius: 6px; background: color-mix(in srgb,var(--color-cyan-400) 10%,transparent); color: var(--color-cyan-400); font: inherit; font-size: 12px; cursor: pointer; }
+.atlas-npc__cta:hover { background: color-mix(in srgb,var(--color-cyan-400) 18%,transparent); }
+.atlas-npc__close { position: absolute; top: 6px; right: 8px; width: 24px; height: 24px; min-height: 24px; padding: 0; border: 0; background: transparent; color: var(--color-text-200); font-size: 18px; line-height: 1; cursor: pointer; }
+.atlas-npc__close:hover { color: var(--color-text-400); }
+@media(max-width:540px) { .atlas-minimap { display: none; } .atlas-map-foot { right: 8px; bottom: 8px; } .atlas-npc { width: 240px; } }
 </style>

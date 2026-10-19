@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { crew } from '../data/crew';
 import { useLinks } from '../composables/useLinks';
 import { useLocale } from '../i18n';
-import ProtectorFleet from './ProtectorFleet.vue';
+import CrewConstellation from './CrewConstellation.vue';
 
 const { openMember } = useLinks();
 const { t, text } = useLocale();
@@ -18,8 +18,8 @@ onBeforeUnmount(() => preference?.removeEventListener('change', readPreference))
 
 <template>
   <section class="crewpage" :aria-label="t('crew.title')">
-    <header class="crewpage__header"><p class="crewpage__eyebrow mono">INTREPID UNIVERSE</p><h1>Value Protection Crew</h1><p>{{ text('Every ship has a role. Together, protecting value for Intrepid.', 'Mỗi chiến hạm một vai trò. Cùng bảo vệ giá trị cho Intrepid.') }}</p></header>
-    <div class="crewpage__space"><ProtectorFleet :members="roster" :paused="paused" @select="openMember" /></div>
+    <header class="crewpage__header"><p class="crewpage__eyebrow mono">INTREPID UNIVERSE</p><h1>Squadron Roster</h1><p>{{ text('Sixteen Value Protectors, one squadron per market — linked into a single connected crew.', 'Mười sáu Value Protector, mỗi thị trường một đội — kết nối thành một crew thống nhất.') }}</p></header>
+    <div class="crewpage__space"><CrewConstellation :members="roster" :paused="paused || reduced" @select="openMember" /></div>
     <button type="button" class="fleet-motion" :aria-label="motionLabel" :title="motionLabel" :aria-pressed="paused || reduced" :disabled="reduced" @click="paused = !paused"><span aria-hidden="true">{{ paused || reduced ? '▷' : 'Ⅱ' }}</span></button>
   </section>
 </template>
