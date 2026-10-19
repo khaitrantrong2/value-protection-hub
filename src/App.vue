@@ -2,7 +2,7 @@
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
 import Starfield from "./components/Starfield.vue";
 import AppHeader from "./components/AppHeader.vue";
-import CommandHero from "./components/CommandHero.vue";
+import LandingHome from "./components/LandingHome.vue";
 import CommandPalette from "./components/CommandPalette.vue";
 import { useLinks } from "./composables/useLinks";
 import { sectors } from "./data/sectors";
@@ -74,8 +74,8 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", onKeydown); stopLo
     <AppHeader />
 
     <main id="main-content" class="app-main" tabindex="-1">
-      <div v-if="view === 'home'" class="app-view vph-scroll">
-        <CommandHero />
+      <div v-if="view === 'home'" class="app-view">
+        <LandingHome />
       </div>
       <StartHere v-else-if="view === 'start'" />
       <AtlasView v-else-if="view === 'atlas'" :data="atlasData" :source="atlasSource" :is-loading="atlasLoading" :error="atlasError" :refreshed-at="atlasRefreshedAt" @preview="previewAtlasDraft" />

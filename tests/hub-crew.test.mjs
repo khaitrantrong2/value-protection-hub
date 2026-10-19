@@ -93,6 +93,7 @@ function runtime(source = "live", scope = []) {
     "./PortfolioColumnFilter.vue": Vue.defineComponent({ props: ["label"], setup: (props, { slots }) => () => Vue.h("details", [Vue.h("summary", props.label), slots.default?.()]) }),
     "./CrewMemberCard.vue": Vue.defineComponent({ props: ["member"], setup: props => () => Vue.h("button", { "data-crew-member": props.member.id }, props.member.name) }),
     "./ProtectorFleet.vue": Vue.defineComponent({ props: ["members"], setup: props => () => Vue.h("div", props.members.map(member => Vue.h("button", { "data-crew-member": member.id }, member.name))) }),
+    "./CrewConstellation.vue": Vue.defineComponent({ props: ["members"], setup: props => () => Vue.h("div", props.members.map(member => Vue.h("button", { "data-crew-member": member.id }, member.name))) }),
     "./MemberScopePanel.vue": Vue.defineComponent({ setup: () => () => Vue.h('aside') }),
   };
   function component(name) {

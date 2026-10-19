@@ -1,24 +1,56 @@
 <script setup lang="ts">
 import { reactive } from "vue";
-import type { LinkItem } from "../types/links";
+import type { LinkItem, LinkStatus } from "../types/links";
 import { getLinkDestination } from "../services/linkSafety";
+import { useLinks } from "../composables/useLinks";
 import { useLocale } from "../i18n";
 import VaultLinkActions from "./VaultLinkActions.vue";
+import PortfolioColumnFilter from "./PortfolioColumnFilter.vue";
 
 defineProps<{ links: LinkItem[] }>();
 const { t, text } = useLocale();
+const { filters, countryCounts } = useLinks();
 const expanded = reactive(new Set<string>());
 function toggle(id: string) { if (expanded.has(id)) expanded.delete(id); else expanded.add(id); }
+
+const countries = ["all", "Regional", "VN", "TH", "MY", "SG", "PH", "ID"] as const;
+const statuses: (LinkStatus | "all")[] = ["all", "Active", "Review", "Blocked", "Archived"];
+const criticalities = ["all", "High", "Medium", "Low"] as const;
+
+/** Status is shown as a dot at the end of the title: green = live/active, amber = review,
+ *  red = blocked, grey = archived (inactive). The label stays available to assistive tech. */
+function statusClass(status: LinkStatus) { return `is-${status.toLowerCase()}`; }
 </script>
 
 <template>
   <table class="vault-table">
     <caption class="visually-hidden">{{ text('Vault resources. Expand a resource for its full description and tags.', 'Tài nguyên trong vault. Mở chi tiết để đọc đầy đủ mô tả và nhãn.') }}</caption>
-    <thead><tr><th scope="col">{{ text('Title & description', 'Tên & mô tả') }}</th><th scope="col">{{ t('directory.country') }}</th><th scope="col">{{ t('directory.owner') }}</th><th scope="col">{{ t('directory.criticality') }}</th><th scope="col">{{ text('Tags', 'Nhãn') }}</th><th scope="col">{{ text('Quick actions', 'Thao tác nhanh') }}</th></tr></thead>
+    <thead>
+      <tr>
+        <th scope="col">
+          <PortfolioColumnFilter :label="text('Title & description', 'Tên & mô tả')" :active="filters.status !== 'all'">
+            <label>{{ t('directory.status') }}<select v-model="filters.status"><option v-for="status in statuses" :key="status" :value="status">{{ status === 'all' ? t('directory.allStatuses') : t(`directory.statusValues.${status}`) }}</option></select></label>
+          </PortfolioColumnFilter>
+        </th>
+        <th scope="col">
+          <PortfolioColumnFilter :label="t('directory.country')" :active="filters.country !== 'all'">
+            <label>{{ t('directory.country') }}<select v-model="filters.country"><option v-for="country in countries" :key="country" :value="country">{{ country === 'all' ? t('directory.allCountries') : country === 'Regional' ? t('directory.region') : country }} · {{ countryCounts.get(country) ?? 0 }}</option></select></label>
+          </PortfolioColumnFilter>
+        </th>
+        <th scope="col">{{ t('directory.owner') }}</th>
+        <th scope="col">
+          <PortfolioColumnFilter :label="t('directory.criticality')" :active="filters.criticality !== 'all'">
+            <label>{{ t('directory.criticality') }}<select v-model="filters.criticality"><option v-for="level in criticalities" :key="level" :value="level">{{ level === 'all' ? t('directory.allCriticalities') : t(`directory.criticalityValues.${level}`) }}</option></select></label>
+          </PortfolioColumnFilter>
+        </th>
+        <th scope="col">{{ text('Tags', 'Nhãn') }}</th>
+        <th scope="col">{{ text('Quick actions', 'Thao tác nhanh') }}</th>
+      </tr>
+    </thead>
     <tbody>
       <tr v-for="link in links" :key="link.id" :class="{ 'is-expanded': expanded.has(link.id) }" :data-resource="link.id">
         <td class="vault-table__resource">
-          <div class="vault-table__heading"><h2>{{ link.title }}</h2><span class="vault-table__status" :class="`is-${link.status.toLowerCase()}`">{{ t(`directory.statusValues.${link.status}`) }}</span><button type="button" class="vault-table__details" :aria-expanded="expanded.has(link.id)" :aria-label="`${t(expanded.has(link.id) ? 'directory.less' : 'directory.more')}: ${link.title}`" @click="toggle(link.id)"><span aria-hidden="true">{{ expanded.has(link.id) ? '−' : '+' }}</span></button></div>
+          <div class="vault-table__heading"><h2>{{ link.title }}<span class="vault-table__dot" :class="statusClass(link.status)" :title="t(`directory.statusValues.${link.status}`)"><span class="visually-hidden">{{ t('directory.status') }}: {{ t(`directory.statusValues.${link.status}`) }}</span></span></h2><button type="button" class="vault-table__details" :aria-expanded="expanded.has(link.id)" :aria-label="`${t(expanded.has(link.id) ? 'directory.less' : 'directory.more')}: ${link.title}`" @click="toggle(link.id)"><span aria-hidden="true">{{ expanded.has(link.id) ? '−' : '+' }}</span></button></div>
           <p class="vault-table__description">{{ link.description || '—' }}</p>
           <p v-if="link.accessNote" class="vault-table__note">{{ t('directory.access') }}: {{ link.accessNote }}</p>
           <p v-if="getLinkDestination(link).reason" class="vault-table__warning">{{ t(getLinkDestination(link).reason!) }}</p>
@@ -36,29 +68,34 @@ function toggle(id: string) { if (expanded.has(id)) expanded.delete(id); else ex
 <style scoped lang="scss">
 .vault-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 12px; text-align: left; color: var(--color-text-300); }
 .vault-table thead { position: sticky; top: 0; z-index: 2; }
-.vault-table th { padding: 12px 10px; color: var(--color-text-200); background: var(--space-navy); border-block: 1px solid var(--color-card-border); font-size: 11px; font-weight: 500; }
-.vault-table th:first-child { width: 34%; padding-left: 14px; border-radius: 7px 0 0 0; }
-.vault-table th:nth-child(2) { width: 8%; }
-.vault-table th:nth-child(3) { width: 13%; }
-.vault-table th:nth-child(4) { width: 8%; }
-.vault-table th:nth-child(5) { width: 18%; }
-.vault-table th:last-child { width: 19%; border-radius: 0 7px 0 0; }
-.vault-table td { padding: 10px; vertical-align: top; border-bottom: 1px solid var(--color-card-border); line-height: 1.5; overflow-wrap: anywhere; background: var(--color-card-bg); }
+.vault-table th { padding: 6px 4px; color: var(--color-text-200); background: var(--space-navy); border-block: 1px solid var(--color-card-border); font-size: 11px; font-weight: 500; vertical-align: middle; }
+.vault-table th:first-child { width: 36%; padding-left: 10px; border-radius: 7px 0 0 0; }
+.vault-table th:nth-child(2) { width: 9%; }
+.vault-table th:nth-child(3) { width: 13%; padding-left: 10px; }
+.vault-table th:nth-child(4) { width: 9%; }
+.vault-table th:nth-child(5) { width: 17%; }
+.vault-table th:last-child { width: 16%; border-radius: 0 7px 0 0; padding-left: 10px; }
+.vault-table th :deep(.column-filter) { margin-left: -4px; }
+.vault-table td { padding: 8px 10px; vertical-align: top; border-bottom: 1px solid var(--color-card-border); line-height: 1.5; overflow-wrap: anywhere; background: var(--color-card-bg); }
 .vault-table td:first-child { padding-left: 14px; }
 .vault-table tr:hover td { background: var(--color-card-bg-hover); }
 .vault-table__heading { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px 10px; }
 .vault-table h2 { flex: 1; min-width: 100px; font-size: 14px; font-weight: 600; line-height: 1.45; color: var(--color-text-400); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.vault-table__status { flex: none; padding: 1px 5px; border: 1px solid var(--color-card-border); border-radius: 3px; font-size: 10px; }
-.vault-table__status.is-blocked,.vault-table__status.is-review,.vault-table__priority .is-high { color: var(--color-orange-400); }
+.vault-table__dot { display: inline-block; width: 8px; height: 8px; margin-left: 7px; border-radius: 50%; vertical-align: middle; background: var(--color-text-200); }
+.vault-table__dot.is-active { background: #34d399; box-shadow: 0 0 7px rgba(52, 211, 153, 0.55); }
+.vault-table__dot.is-review { background: var(--color-orange-400); box-shadow: 0 0 7px color-mix(in srgb, var(--color-orange-400) 55%, transparent); }
+.vault-table__dot.is-blocked { background: #f87171; box-shadow: 0 0 7px rgba(248, 113, 113, 0.55); }
+.vault-table__dot.is-archived { background: var(--color-text-200); opacity: 0.6; }
+.vault-table__priority .is-high { color: var(--color-orange-400); }
 .vault-table__description { margin-top: 4px; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .vault-table__note { margin-top: 5px; color: var(--color-text-200); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; }
 .is-expanded .vault-table__description,.is-expanded .vault-table__note,.is-expanded h2 { display: block; }
 .vault-table__warning { margin-top: 5px; color: var(--color-orange-400); font-size: 11px; }
-.vault-table__details { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; min-height: 26px; padding: 2px; color: var(--color-text-300); background: transparent; border: 1px solid var(--color-card-border); border-radius: 4px; cursor: pointer; font-size: 15px; line-height: 1; }
+.vault-table__details { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; min-height: 24px; padding: 2px; color: var(--color-text-300); background: transparent; border: 1px solid var(--color-card-border); border-radius: 4px; cursor: pointer; font-size: 15px; line-height: 1; }
 .vault-table__tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .vault-table__tags li { max-width: 100%; padding: 2px 5px; background: var(--color-beige-600); border-radius: 3px; font-size: 10px; }
 .vault-table__empty { color: var(--color-text-200); }
-@media(min-width:761px) and (max-width:1023px) { .vault-table th:first-child { width: 32%; } .vault-table th:nth-child(5) { width: 16%; } .vault-table th:last-child { width: 23%; } .vault-table th:nth-child(3) { width: 13%; } }
+@media(min-width:761px) and (max-width:1023px) { .vault-table th:first-child { width: 33%; } .vault-table th:nth-child(5) { width: 15%; } .vault-table th:last-child { width: 21%; } .vault-table th:nth-child(3) { width: 13%; } }
 @media(max-width:760px) {
   .vault-table,.vault-table tbody { display: block; }
   .vault-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
