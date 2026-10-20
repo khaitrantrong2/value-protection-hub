@@ -5,13 +5,12 @@ import { useLocale } from '../i18n';
 import Icon from './Icon.vue';
 import { containDialogFocus } from '../services/focusScope';
 
-const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas, openStart } = useLinks();
+const { config, paletteOpen, view, goHome, openSector, openCrew, openAtlas } = useLinks();
 const { t } = useLocale();
 const menu = ref<HTMLDialogElement | null>(null);
 const menuOpen = ref(false);
 const items = computed(() => [
   { id: 'home', label: t('shell.home'), href: '#', action: goHome },
-  { id: 'start', label: t('shell.start'), href: '#start', action: openStart },
   { id: 'sector', label: t('shell.directory'), href: '#directory', action: () => openSector('all') },
   { id: 'crew', label: t('shell.crew'), href: '#crew', action: openCrew },
   { id: 'atlas', label: t('shell.atlas'), href: '#atlas', action: () => openAtlas() },

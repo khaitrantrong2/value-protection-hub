@@ -4,6 +4,7 @@ import { useLinks } from '../composables/useLinks';
 import { useReducedMotion } from '../composables/useReducedMotion';
 import { useLocale } from '../i18n';
 import Icon from './Icon.vue';
+defineProps<{ embedded?: boolean }>();
 const { openAtlas, openCrew, openSector } = useLinks();
 const { t, text } = useLocale();
 const { prefersReducedMotion } = useReducedMotion();
@@ -15,10 +16,10 @@ const paths = computed(() => [
 </script>
 
 <template>
-  <section class="start-page vph-scroll">
+  <section class="start-page" :class="[embedded ? 'start-page--embedded' : 'vph-scroll']">
     <div class="start-page__inner">
       <header class="start-page__heading">
-        <div><p class="start-page__eyebrow">VALUE PROTECTION <span aria-hidden="true">/</span> {{ text('FLIGHT PATHS', 'HÀNH TRÌNH') }}</p><h1>{{ text('Choose your flight path.', 'Chọn hành trình của bạn.') }}</h1><p class="start-page__intro">{{ t('shell.startSubtitle') }}</p></div>
+        <div><p class="start-page__eyebrow">VALUE PROTECTION <span aria-hidden="true">/</span> {{ text('FLIGHT PATHS', 'HÀNH TRÌNH') }}</p><component :is="embedded ? 'h2' : 'h1'" class="start-page__title">{{ text('Choose your flight path.', 'Chọn hành trình của bạn.') }}</component><p class="start-page__intro">{{ t('shell.startSubtitle') }}</p></div>
         <svg class="start-page__compass" viewBox="0 0 100 100" fill="none" aria-hidden="true"><circle cx="50" cy="50" r="36"/><ellipse cx="50" cy="50" rx="49" ry="13" transform="rotate(-30 50 50)"/><path d="m50 26 5 20 19 4-19 4-5 20-5-20-19-4 19-4Z"/><circle cx="50" cy="50" r="3"/></svg>
       </header>
       <div class="start-routes">
@@ -42,12 +43,14 @@ const paths = computed(() => [
 
 <style scoped>
 .start-page { height:100%; overflow:auto; overscroll-behavior:contain; background:radial-gradient(ellipse at 66% 47%,rgb(109 67 158 / .1),transparent 63%); }
+.start-page--embedded { height:auto; overflow:visible; }
+.start-page--embedded .start-page__inner { padding-top:0; padding-bottom:0; }
 .start-page__inner { width:100%; max-width:1380px; margin:auto; padding:28px clamp(24px,4.4vw,64px) 24px; }
 .start-page__heading { display:flex; justify-content:space-between; align-items:center; gap:36px; }
 .start-page__heading>div { max-width:720px; }
 .start-page__eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:9px; color:var(--color-cyan-400); font-size:9px; line-height:1.5; letter-spacing:.2em; margin-bottom:12px; }
 .start-page__eyebrow>span { color:var(--color-text-200); opacity:.5; }
-h1 { margin:0; color:var(--color-text-400); font-size:clamp(29px,3.1vw,43px); font-weight:600; line-height:1.15; letter-spacing:-.04em; text-wrap:balance; }
+.start-page__title { margin:0; color:var(--color-text-400); font-size:clamp(29px,3.1vw,43px); font-weight:600; line-height:1.15; letter-spacing:-.04em; text-wrap:balance; }
 .start-page__intro { max-width:61ch; margin-top:12px; color:var(--color-text-300); font-size:14px; line-height:1.65; }
 .start-page__compass { width:90px; height:90px; margin-right:18px; flex:none; stroke:#b79bd8; stroke-width:.65; opacity:.46; transform:rotate(8deg); }.start-page__compass path { fill:rgb(187 155 216 / .1); }.start-page__compass>circle:last-child { fill:#d6be80; stroke:none; }
 .start-routes { position:relative; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(18px,3vw,42px); align-items:start; padding:10px 12px 0 34px; margin-top:18px; }

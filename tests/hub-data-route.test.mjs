@@ -82,7 +82,7 @@ test("Hub routes restore view, stable member and allowlisted Directory filters w
   assert.equal(route.viewMode, "compact");
   assert.equal(parseHubHash("#directory").viewMode, "compact");
   assert.equal(parseHubHash("#member?id=ice").memberId, "ice");
-  assert.equal(parseHubHash("#start").view, "start");
+  assert.equal(parseHubHash("#start").view, "home");
   assert.equal(parseHubHash("#crew").view, "crew");
   assert.equal(parseHubHash("#atlas?mode=guide&stage=02").view, "atlas");
   assert.equal(parseHubHash("#directory?country=evil&status=pass&scope=unknown").country, "all");

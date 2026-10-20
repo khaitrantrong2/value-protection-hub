@@ -8,7 +8,6 @@ import { useLinks } from "./composables/useLinks";
 import { sectors } from "./data/sectors";
 import { useAtlas } from "./composables/useAtlas";
 import { startLocaleSync } from "./i18n";
-import StartHere from "./components/StartHere.vue";
 
 const CrewView = defineAsyncComponent(() => import('./components/CrewView.vue'));
 const MemberView = defineAsyncComponent(() => import('./components/MemberView.vue'));
@@ -77,7 +76,6 @@ onBeforeUnmount(() => { window.removeEventListener("keydown", onKeydown); stopLo
       <div v-if="view === 'home'" class="app-view">
         <LandingHome />
       </div>
-      <StartHere v-else-if="view === 'start'" />
       <AtlasView v-else-if="view === 'atlas'" :data="atlasData" :source="atlasSource" :is-loading="atlasLoading" :error="atlasError" :refreshed-at="atlasRefreshedAt" @preview="previewAtlasDraft" />
       <CrewView v-else-if="view === 'crew'" />
       <MemberView v-else-if="view === 'member'" />
