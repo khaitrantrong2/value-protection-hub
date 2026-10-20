@@ -89,6 +89,8 @@ function applyFrame(p: number) {
   const e = easeInOut(Math.min(1, p / 0.7));
   const dx = e * (W * 0.26);
   const scale = 1 - e * 0.4;
+  pv.style.setProperty('--nebula-far-x', `${-18 * e}px`);
+  pv.style.setProperty('--nebula-near-x', `${32 * e}px`);
   pl.style.transform = `translate(${dx}px,0) scale(${scale})`;
   if (ht) {
     const out = Math.min(1, p / 0.4);
@@ -104,6 +106,8 @@ function applyFrame(p: number) {
 
 function settleStatic() {
   // Reduced-motion / fallback: everything visible, planet at Hero rest.
+  pin.value?.style.removeProperty('--nebula-far-x');
+  pin.value?.style.removeProperty('--nebula-near-x');
   if (planet.value) planet.value.style.transform = 'none';
   if (heroText.value) { heroText.value.style.opacity = '1'; heroText.value.style.transform = 'none'; }
   if (missionText.value) { missionText.value.style.opacity = '1'; missionText.value.style.transform = 'none'; }
@@ -271,6 +275,7 @@ onBeforeUnmount(() => {
       <!-- HERO + MISSION share one persistent planet -->
       <div ref="stage" class="lh-stage" :class="{ 'is-pinned': enhanced }">
         <div ref="pin" class="lh-pin">
+          <div class="lh-nebula" aria-hidden="true"><span class="lh-nebula__far"></span><span class="lh-nebula__near"></span></div>
           <div ref="planet" class="lh-planet"><LandingPlanet /></div>
 
           <div ref="heroText" class="lh-hero-text">
@@ -347,7 +352,11 @@ onBeforeUnmount(() => {
 
 /* STAGE — linear (fallback) layout by default */
 .lh-stage { position: relative; }
-.lh-pin { position: relative; }
+.lh-pin { position: relative; isolation: isolate; }
+.lh-nebula { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.lh-nebula > span { position: absolute; inset: -5%; }
+.lh-nebula__far { background: radial-gradient(ellipse at 32% 36%, rgb(132 83 193 / .16), transparent 44%), radial-gradient(ellipse at 76% 52%, rgb(64 86 153 / .12), transparent 48%); transform: translate3d(var(--nebula-far-x, 0px), 0, 0); }
+.lh-nebula__near { background: radial-gradient(ellipse at 58% 30%, rgb(183 148 246 / .09), transparent 30%), radial-gradient(ellipse at 24% 75%, rgb(191 139 85 / .045), transparent 36%); transform: translate3d(var(--nebula-near-x, 0px), 0, 0); }
 .lh-planet { position: relative; width: min(46vmin, 400px); height: min(46vmin, 400px); margin: clamp(24px, 6vh, 64px) auto 0; }
 .lh-hero-text { text-align: center; padding: 20px clamp(24px, 6vw, 64px) 8px; }
 .lh-eyebrow + .lh-hero-foot { margin-top: 10px; }
@@ -399,6 +408,7 @@ onBeforeUnmount(() => {
 .lh-start-embed { position: relative; }
 
 @media (max-width: 900px) {
+  .lh-nebula { opacity: .6; }
   .lh-constellation { height: 460px; }
   .lh-fleet { height: 440px; }
   .lh-stats { gap: 24px; flex-wrap: wrap; }
@@ -408,6 +418,7 @@ onBeforeUnmount(() => {
   .lh-constellation { height: 420px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .lh-nebula > span { transform: none; }
   .lh-scrollcue span, .lh-vault__orb { animation: none; }
 }
 </style>

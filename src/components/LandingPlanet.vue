@@ -53,6 +53,19 @@ onMounted(() => {
     ctx!.restore();
   }
 
+  function glint(cx: number, cy: number, R: number, angle: number, rot: number, squash: number) {
+    ctx!.save();
+    ctx!.translate(cx, cy); ctx!.rotate(rot);
+    const x = Math.cos(angle) * R, y = Math.sin(angle) * R * squash;
+    const light = ctx!.createRadialGradient(x, y, 0, x, y, 7);
+    light.addColorStop(0, 'rgba(245,227,193,.65)');
+    light.addColorStop(.25, 'rgba(207,181,240,.25)');
+    light.addColorStop(1, 'rgba(207,181,240,0)');
+    ctx!.fillStyle = light;
+    ctx!.fillRect(x - 7, y - 7, 14, 14);
+    ctx!.restore();
+  }
+
   function frame() {
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx!.clearRect(0, 0, W, H);
@@ -63,9 +76,21 @@ onMounted(() => {
     g.addColorStop(0, 'rgba(180,120,255,.5)'); g.addColorStop(.5, 'rgba(124,58,237,.18)'); g.addColorStop(1, 'rgba(20,10,50,0)');
     ctx!.fillStyle = g; ctx!.beginPath(); ctx!.arc(cx, cy, R * 1.5, 0, 7); ctx!.fill();
 
+    // A narrow atmosphere, not a filled surface: preserve the approved wireframe.
+    const rim = ctx!.createRadialGradient(cx, cy, R * .94, cx, cy, R * 1.09);
+    rim.addColorStop(0, 'rgba(183,148,246,0)');
+    rim.addColorStop(.4, 'rgba(183,148,246,.13)');
+    rim.addColorStop(1, 'rgba(183,148,246,0)');
+    ctx!.fillStyle = rim; ctx!.beginPath(); ctx!.arc(cx, cy, R * 1.09, 0, Math.PI * 2); ctx!.fill();
+    ctx!.strokeStyle = 'rgba(220,204,250,.32)'; ctx!.lineWidth = .8;
+    ctx!.beginPath(); ctx!.arc(cx, cy, R * 1.005, Math.PI * 1.03, Math.PI * 1.72); ctx!.stroke();
+
     // faint orbital rings
     ring(cx, cy, R * 1.32, -0.5, 0.26);
     ring(cx, cy, R * 1.18, 0.7, 0.2);
+    glint(cx, cy, R * 1.32, ry * .7 + .4, -.5, .26);
+    glint(cx, cy, R * 1.32, ry * .7 + 3.8, -.5, .26);
+    glint(cx, cy, R * 1.18, -ry * .5 + 2.2, .7, .2);
 
     // latitude/longitude wireframe
     for (let m = 0; m < MERIDIANS; m++) {

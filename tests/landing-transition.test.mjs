@@ -69,11 +69,16 @@ function runtime(t, hash = '#home') {
 test('Mission scroll transform retains its vertical centering and reverses without replacing the planet', t => {
   const r = runtime(t), samePlanet = r.api.planet.value;
   r.api.applyFrame(1);
+  assert.equal(r.api.pin.value.style['--nebula-far-x'], '-18px');
+  assert.equal(r.api.pin.value.style['--nebula-near-x'], '32px');
   assert.match(r.api.missionText.value.style.transform, /-50%/);
   assert.equal(r.api.missionText.value.style.opacity, '1');
   r.api.applyFrame(0);
   assert.equal(r.api.planet.value, samePlanet);
   assert.match(r.api.planet.value.style.transform, /translate\(0px,0\) scale\(1\)/);
+  assert.equal(r.api.pin.value.style['--nebula-far-x'], '0px');
+  r.api.settleStatic();
+  assert.equal(r.api.pin.value.style['--nebula-near-x'], undefined);
 });
 
 test('Motion reconfigures on a breakpoint change and releases its owned context and ticker', async t => {
