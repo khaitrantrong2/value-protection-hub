@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import ScrollTrigger from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import GalaxyCore from './GalaxyCore.vue';
+import LandingPlanet from './LandingPlanet.vue';
 import GalaxyPlanet from './GalaxyPlanet.vue';
 import StarfighterIcon from './StarfighterIcon.vue';
+import StartHere from './StartHere.vue';
 import { sectors } from '../data/sectors';
 import { crew } from '../data/crew';
 import { useLinks } from '../composables/useLinks';
 import { useLocale } from '../i18n';
 import type { FleetHull } from '../services/fleetMotion';
 
-const { openSector, openCrew, openAtlas } = useLinks();
+const { openSector, openCrew } = useLinks();
 const { text } = useLocale();
 
 const activeCrew = crew.filter(member => member.active !== false).length;
@@ -42,20 +43,30 @@ const SQUADS: Squad[] = [
 ];
 const SQUAD_EDGES: [number, number][] = [[0, 1], [0, 5], [0, 7], [1, 2], [1, 5], [2, 3], [3, 4], [4, 6], [6, 7], [5, 3], [5, 4]];
 
-const paths = [
-  { code: '01', icon: '🛰', titleEn: 'Understand the process', titleVi: 'Hiểu quy trình', bodyEn: 'Walk the eight-stage claimback journey, end to end, in the Process Atlas and Guide.', bodyVi: 'Đi hết hành trình claimback tám giai đoạn trong Process Atlas và Guide.', ctaEn: 'Open Process Atlas', ctaVi: 'Mở Process Atlas', action: () => openAtlas('01') },
-  { code: '02', icon: '✦', titleEn: 'Meet the crew', titleVi: 'Gặp đội ngũ', bodyEn: 'See every active protector, the market they defend and what each vault is for.', bodyVi: 'Xem từng Value Protector, thị trường phụ trách và vai trò mỗi vault.', ctaEn: 'Meet the crew', ctaVi: 'Gặp đội ngũ', action: openCrew },
-  { code: '03', icon: '◉', titleEn: 'Begin daily work', titleVi: 'Bắt đầu công việc', bodyEn: 'Open the trackers, SOPs, templates and cockpits you need today, filtered by your market.', bodyVi: 'Mở tracker, SOP, template và cockpit cần dùng, lọc theo thị trường của bạn.', ctaEn: 'Open Directory', ctaVi: 'Mở Directory', action: () => openSector('all') },
-];
-
 const root = ref<HTMLElement | null>(null);
 const inner = ref<HTMLElement | null>(null);
+const stage = ref<HTMLElement | null>(null);
+const pin = ref<HTMLElement | null>(null);
+const planet = ref<HTMLElement | null>(null);
+const heroText = ref<HTMLElement | null>(null);
+const missionText = ref<HTMLElement | null>(null);
 const links = ref<SVGSVGElement | null>(null);
+const enhanced = ref(false);
+
 let lenis: Lenis | undefined;
 const triggers: ScrollTrigger[] = [];
 let tickerFn: ((t: number) => void) | undefined;
+let motionContext: gsap.Context | undefined;
+let wideQuery: MediaQueryList | undefined;
+let reducedQuery: MediaQueryList | undefined;
+let resizeObserver: ResizeObserver | undefined;
+let motionReady = Promise.resolve();
+let disposed = false, motionGeneration = 0, scrollGeneration = 0, layoutFrame = 0;
 
 function squadStyle(s: Squad) { return { left: s.x + '%', top: s.y + '%', '--lv': s.color }; }
+const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+function setVH() { if (root.value) root.value.style.setProperty('--lh-vh', root.value.clientHeight + 'px'); }
 
 function layoutLines() {
   const svg = links.value, host = inner.value?.querySelector('.lh-fleet') as HTMLElement | null;
@@ -70,60 +81,125 @@ function layoutLines() {
   });
 }
 
-function settleAll() {
-  if (!inner.value) return;
-  inner.value.querySelectorAll<HTMLElement>('[data-reveal]').forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; });
-  inner.value.querySelectorAll<HTMLElement>('[data-rule]').forEach(el => { el.style.width = '220px'; });
-  inner.value.querySelectorAll<HTMLElement>('.lh-ship').forEach(el => { el.style.opacity = '1'; });
-  inner.value.querySelectorAll<HTMLElement>('.lh-node').forEach(el => { el.style.opacity = '.7'; });
+/** Drive the persistent planet from Hero centre to Mission right as the stage scrolls. */
+function applyFrame(p: number) {
+  const pv = pin.value, pl = planet.value, ht = heroText.value, mt = missionText.value;
+  if (!pv || !pl) return;
+  const W = pv.clientWidth;
+  const e = easeInOut(Math.min(1, p / 0.7));
+  const dx = e * (W * 0.26);
+  const scale = 1 - e * 0.4;
+  pv.style.setProperty('--nebula-far-x', `${-18 * e}px`);
+  pv.style.setProperty('--nebula-near-x', `${32 * e}px`);
+  pl.style.transform = `translate(${dx}px,0) scale(${scale})`;
+  if (ht) {
+    const out = Math.min(1, p / 0.4);
+    ht.style.opacity = String(1 - out);
+    ht.style.transform = `translateY(${-28 * out}px)`;
+  }
+  if (mt) {
+    const mp = Math.max(0, Math.min(1, (p - 0.32) / 0.4));
+    mt.style.opacity = String(mp);
+    mt.style.transform = `translate(${(1 - mp) * -24}px,-50%)`;
+  }
+}
+
+function settleStatic() {
+  // Reduced-motion / fallback: everything visible, planet at Hero rest.
+  pin.value?.style.removeProperty('--nebula-far-x');
+  pin.value?.style.removeProperty('--nebula-near-x');
+  if (planet.value) planet.value.style.transform = 'none';
+  if (heroText.value) { heroText.value.style.opacity = '1'; heroText.value.style.transform = 'none'; }
+  if (missionText.value) { missionText.value.style.opacity = '1'; missionText.value.style.transform = 'none'; }
+  inner.value?.querySelectorAll<HTMLElement>('[data-reveal]').forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; });
+  inner.value?.querySelectorAll<HTMLElement>('[data-rule]').forEach(el => { el.style.width = '220px'; });
+  inner.value?.querySelectorAll<HTMLElement>('.lh-ship').forEach(el => { el.style.opacity = '1'; });
+  inner.value?.querySelectorAll<HTMLElement>('.lh-node').forEach(el => { el.style.opacity = '.7'; });
   links.value?.querySelectorAll<SVGLineElement>('line').forEach(ln => { ln.dataset.drawn = '1'; ln.style.strokeDashoffset = '0'; });
 }
 
-function setVH() { if (root.value) root.value.style.setProperty('--lh-vh', root.value.clientHeight + 'px'); }
+function scrollToStart() {
+  const target = inner.value?.querySelector('#landing-start-here') as HTMLElement | null;
+  if (!target) return;
+  if (lenis) lenis.scrollTo(target, { offset: -20, immediate: true });
+  else root.value?.scrollTo({ top: target.offsetTop - 20, behavior: 'auto' });
+}
+async function maybeScrollStart() {
+  const request = ++scrollGeneration;
+  if (window.location.hash !== '#start') return;
+  await motionReady;
+  await nextTick();
+  await document.fonts?.ready;
+  if (disposed || request !== scrollGeneration || window.location.hash !== '#start') return;
+  lenis?.resize();
+  triggers.forEach(trigger => trigger.refresh());
+  scrollToStart();
+}
 
-onMounted(() => {
+function handleLandingHash() {
+  if (window.location.hash === '#home') {
+    scrollGeneration++;
+    if (lenis) lenis.scrollTo(0, { immediate: true });
+    else root.value?.scrollTo({ top: 0, behavior: 'auto' });
+    return;
+  }
+  void maybeScrollStart();
+}
+
+function clearMotion() {
+  triggers.splice(0).forEach(trigger => trigger.kill());
+  motionContext?.revert();
+  motionContext = undefined;
+  if (tickerFn) gsap.ticker.remove(tickerFn);
+  tickerFn = undefined;
+  lenis?.destroy();
+  lenis = undefined;
+}
+
+async function configureMotion() {
+  const generation = ++motionGeneration;
+  clearMotion();
   setVH();
   layoutLines();
-  window.addEventListener('resize', setVH);
-  window.addEventListener('resize', layoutLines);
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced || !root.value || !inner.value) { settleAll(); return; }
+  enhanced.value = !!wideQuery?.matches && !reducedQuery?.matches;
+  await nextTick(); // Sticky-stage geometry must exist before ScrollTrigger measures it.
+  if (disposed || generation !== motionGeneration) return;
+  if (!enhanced.value || !root.value || !inner.value) { settleStatic(); return; }
+  const scroller = root.value, content = inner.value;
 
+  motionContext = gsap.context(() => {
   gsap.registerPlugin(ScrollTrigger);
-  lenis = new Lenis({ wrapper: root.value, content: inner.value, duration: 1.35, smoothWheel: true });
+  lenis = new Lenis({ wrapper: scroller, content, duration: 1.3, smoothWheel: true });
   lenis.on('scroll', ScrollTrigger.update);
   tickerFn = (t: number) => lenis!.raf(t * 1000);
   gsap.ticker.add(tickerFn);
-  gsap.ticker.lagSmoothing(0);
-  const scroller = root.value;
   const add = (t: ScrollTrigger) => { triggers.push(t); return t; };
 
   // Hero intro
-  gsap.timeline({ defaults: { ease: 'power3.out' } })
-    .from('.lh-ring', { opacity: 0, duration: 1.3 }, 0.2)
-    .from('.lh-corelogo', { opacity: 0, scale: .8, duration: 1 }, 0.35)
-    .from('.lh-hero-cap', { opacity: 0, y: 16, duration: 1, stagger: .12 }, 0.5);
+  if (heroText.value) gsap.from(heroText.value.children, { opacity: 0, y: 18, duration: 1, stagger: .12, ease: 'power3.out' });
+
+  // Persistent planet: Hero → Mission scrubbed transition
+  if (stage.value && missionText.value) {
+    missionText.value.style.opacity = '0';
+    const transition = add(ScrollTrigger.create({ scroller, trigger: stage.value, start: 'top top', end: 'bottom bottom', scrub: true, onUpdate: self => applyFrame(self.progress) }));
+    applyFrame(transition.progress);
+  }
 
   // Section reveals
-  inner.value.querySelectorAll<HTMLElement>('[data-reveal]').forEach(el => {
-    add(ScrollTrigger.create({ scroller, trigger: el, start: 'top 86%', once: true,
-      onEnter: () => gsap.from(el, { opacity: 0, y: 42, duration: 1.1, ease: 'power3.out' }) }));
-    gsap.set(el, { opacity: 1 });
+  content.querySelectorAll<HTMLElement>('[data-reveal]').forEach(el => {
+    add(ScrollTrigger.create({ scroller, trigger: el, start: 'top 86%', once: true, onEnter: () => motionContext?.add(() => gsap.from(el, { opacity: 0, y: 42, duration: 1.1, ease: 'power3.out' })) }));
   });
-  inner.value.querySelectorAll<HTMLElement>('[data-rule]').forEach(el => {
-    add(ScrollTrigger.create({ scroller, trigger: el, start: 'top 86%', once: true,
-      onEnter: () => gsap.fromTo(el, { width: 0 }, { width: 220, duration: 1, ease: 'power2.out' }) }));
+  content.querySelectorAll<HTMLElement>('[data-rule]').forEach(el => {
+    add(ScrollTrigger.create({ scroller, trigger: el, start: 'top 90%', once: true, onEnter: () => motionContext?.add(() => gsap.fromTo(el, { width: 0 }, { width: 220, duration: 1, ease: 'power2.out' })) }));
   });
-
-  // Vault planets pop in
   add(ScrollTrigger.create({ scroller, trigger: '.lh-vaults', start: 'top 72%', once: true,
-    onEnter: () => gsap.from('.lh-vault', { opacity: 0, scale: .3, duration: 1, ease: 'back.out(1.6)', stagger: { each: .1, from: 'random' } }) }));
+    onEnter: () => motionContext?.add(() => gsap.from('.lh-vault', { opacity: 0, scale: .3, duration: 1, ease: 'back.out(1.6)', stagger: { each: .1, from: 'random' } })) }));
 
   // Crew constellation muster
   const ships = gsap.utils.toArray<HTMLElement>('.lh-ship');
   const nodes = gsap.utils.toArray<HTMLElement>('.lh-node');
   const lineEls = links.value ? Array.from(links.value.querySelectorAll<SVGLineElement>('line')) : [];
-  add(ScrollTrigger.create({ scroller, trigger: '.lh-fleet', start: 'top 74%', once: true, onEnter: () => {
+  add(ScrollTrigger.create({ scroller, trigger: '.lh-fleet', start: 'top 74%', once: true, onEnter: () => motionContext?.add(() => {
     layoutLines();
     ships.forEach(el => {
       const nx = +el.dataset.x!, ny = +el.dataset.y!;
@@ -140,55 +216,92 @@ onMounted(() => {
     });
     const linesAt = SQUADS.length * .24 + .2;
     tl.to(lineEls, { strokeDashoffset: 0, duration: 1.5, ease: 'power1.inOut', stagger: .13, onComplete: () => lineEls.forEach(ln => ln.dataset.drawn = '1') }, linesAt);
-    tl.add(() => {
+    tl.add(() => motionContext?.add(() => {
       gsap.to('.lh-ship .lh-hull', { y: '+=7', duration: 3.8, ease: 'sine.inOut', repeat: -1, yoyo: true, stagger: { each: .3, from: 'random' } });
       gsap.to('.lh-node', { scale: 1.12, opacity: .85, duration: 2.6, ease: 'sine.inOut', repeat: -1, yoyo: true, stagger: { each: .35, from: 'random' } });
-    });
-  } }));
+    }));
+  }) }));
+
+  }, scroller);
+}
+
+function refreshLayout() {
+  setVH();
+  layoutLines();
+  cancelAnimationFrame(layoutFrame);
+  layoutFrame = requestAnimationFrame(() => {
+    if (disposed) return;
+    lenis?.resize();
+    triggers.forEach(trigger => trigger.refresh());
+  });
+}
+
+function reconfigureMotion() {
+  motionReady = configureMotion();
+  void motionReady.then(maybeScrollStart);
+}
+
+onMounted(async () => {
+  wideQuery = window.matchMedia('(min-width: 901px)');
+  reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  wideQuery.addEventListener('change', reconfigureMotion);
+  reducedQuery.addEventListener('change', reconfigureMotion);
+  window.addEventListener('resize', refreshLayout);
+  window.addEventListener('hashchange', handleLandingHash);
+  resizeObserver = new ResizeObserver(refreshLayout);
+  if (root.value) resizeObserver.observe(root.value);
+  motionReady = configureMotion();
+  await motionReady;
+  void maybeScrollStart();
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', setVH);
-  window.removeEventListener('resize', layoutLines);
-  triggers.forEach(t => t.kill());
-  if (tickerFn) gsap.ticker.remove(tickerFn);
-  lenis?.destroy();
+  disposed = true;
+  motionGeneration++;
+  scrollGeneration++;
+  cancelAnimationFrame(layoutFrame);
+  resizeObserver?.disconnect();
+  wideQuery?.removeEventListener('change', reconfigureMotion);
+  reducedQuery?.removeEventListener('change', reconfigureMotion);
+  window.removeEventListener('resize', refreshLayout);
+  window.removeEventListener('hashchange', handleLandingHash);
+  clearMotion();
 });
 </script>
 
 <template>
   <div ref="root" class="lh">
     <div ref="inner" class="lh__content">
-      <!-- HERO -->
-      <section class="lh-hero">
-        <div class="lh-corebox">
-          <GalaxyCore />
-          <span class="lh-halo" aria-hidden="true"></span>
-          <svg class="lh-ring" viewBox="0 0 300 300" aria-hidden="true"><defs><path id="lh-ringpath" d="M150,150 m-132,0 a132,132 0 1,1 264,0 a132,132 0 1,1 -264,0" /></defs><text><textPath href="#lh-ringpath">VALUE PROTECTION · INTREPID · VALUE PROTECTION · INTREPID · </textPath></text></svg>
-        </div>
-        <div class="lh-hero-cap">
-          <p class="lh-eyebrow mono">INTREPID UNIVERSE</p>
-          <p class="lh-hero-tag">{{ text('Guardians of Intrepid value — across six Southeast-Asian markets.', 'Vệ binh giá trị Intrepid — trên sáu thị trường Đông Nam Á.') }}</p>
-        </div>
-        <div class="lh-scrollcue" aria-hidden="true">{{ text('SCROLL', 'CUỘN') }}<span></span></div>
-      </section>
+      <!-- HERO + MISSION share one persistent planet -->
+      <div ref="stage" class="lh-stage" :class="{ 'is-pinned': enhanced }">
+        <div ref="pin" class="lh-pin">
+          <div class="lh-nebula" aria-hidden="true"><span class="lh-nebula__far"></span><span class="lh-nebula__near"></span></div>
+          <div ref="planet" class="lh-planet"><LandingPlanet /></div>
 
-      <!-- MISSION -->
-      <section class="lh-mission lh-gutter">
-        <div class="lh-mission__copy">
-          <p class="lh-eyebrow mono" data-reveal>{{ text('Our mission', 'Sứ mệnh') }}</p>
-          <h2 data-reveal>{{ text('Guardians of Intrepid value', 'Vệ binh giá trị Intrepid') }}</h2>
-          <div class="lh-rule" data-rule></div>
-          <p data-reveal>{{ text('Across six Southeast-Asian markets, we hold the line on claimback value — from the first commercial obligation to the final settlement.', 'Trên sáu thị trường Đông Nam Á, chúng tôi giữ vững giá trị claimback — từ nghĩa vụ thương mại đầu tiên đến lần tất toán cuối cùng.') }}</p>
-          <p data-reveal class="lh-mission__second">{{ text('One end-to-end process. One crew. Every orbit covered, every value protected.', 'Một quy trình end-to-end. Một đội ngũ. Mọi quỹ đạo được bao phủ, mọi giá trị được bảo vệ.') }}</p>
-          <div class="lh-stats">
-            <div class="lh-stat" data-reveal><b>{{ stageCount }}</b><span>{{ text('E2E STAGES', 'GIAI ĐOẠN E2E') }}</span></div>
-            <div class="lh-stat" data-reveal><b>{{ vaults.length }}</b><span>{{ text('RESOURCE VAULTS', 'VAULT TÀI NGUYÊN') }}</span></div>
-            <div class="lh-stat" data-reveal><b>{{ activeCrew }}</b><span>{{ text('PROTECTORS', 'VALUE PROTECTOR') }}</span></div>
+          <div ref="heroText" class="lh-hero-text">
+            <p class="lh-eyebrow mono">INTREPID UNIVERSE</p>
+            <div class="lh-hero-foot">
+              <p class="lh-hero-kicker mono">INTREPID</p>
+              <h1>Value Protection</h1>
+              <p class="lh-hero-tag">{{ text('Guardians of Intrepid value — across six Southeast-Asian markets.', 'Vệ binh giá trị Intrepid — trên sáu thị trường Đông Nam Á.') }}</p>
+              <div class="lh-scrollcue" aria-hidden="true">{{ text('SCROLL TO EXPLORE', 'CUỘN ĐỂ KHÁM PHÁ') }}<span></span></div>
+            </div>
+          </div>
+
+          <div ref="missionText" class="lh-mission-text">
+            <p class="lh-eyebrow mono">{{ text('Our mission', 'Sứ mệnh') }}</p>
+            <h2>{{ text('Guardians of Intrepid value', 'Vệ binh giá trị Intrepid') }}</h2>
+            <div class="lh-rule"></div>
+            <p>{{ text('Across six Southeast-Asian markets, we hold the line on claimback value — from the first commercial obligation to the final settlement.', 'Trên sáu thị trường Đông Nam Á, chúng tôi giữ vững giá trị claimback — từ nghĩa vụ thương mại đầu tiên đến lần tất toán cuối cùng.') }}</p>
+            <p class="lh-mission__second">{{ text('One end-to-end process. One crew. Every orbit covered, every value protected.', 'Một quy trình end-to-end. Một đội ngũ. Mọi quỹ đạo được bao phủ, mọi giá trị được bảo vệ.') }}</p>
+            <div class="lh-stats">
+              <div class="lh-stat"><b>{{ stageCount }}</b><span>{{ text('E2E STAGES', 'GIAI ĐOẠN E2E') }}</span></div>
+              <div class="lh-stat"><b>{{ vaults.length }}</b><span>{{ text('RESOURCE VAULTS', 'VAULT TÀI NGUYÊN') }}</span></div>
+              <div class="lh-stat"><b>{{ activeCrew }}</b><span>{{ text('PROTECTORS', 'VALUE PROTECTOR') }}</span></div>
+            </div>
           </div>
         </div>
-        <div class="lh-memblem" aria-hidden="true"><GalaxyCore /></div>
-      </section>
+      </div>
 
       <!-- VAULTS -->
       <section class="lh-vaults lh-gutter">
@@ -219,21 +332,9 @@ onBeforeUnmount(() => {
         <button type="button" class="lh-crew-cta" data-reveal @click="openCrew">{{ text('Meet the full crew', 'Xem toàn đội') }} →</button>
       </section>
 
-      <!-- START -->
-      <section class="lh-start lh-gutter">
-        <p class="lh-eyebrow mono" data-reveal>{{ text('Start here', 'Bắt đầu') }}</p>
-        <h2 data-reveal>{{ text('Choose your trajectory', 'Chọn hành trình') }}</h2>
-        <p class="lh-sub" data-reveal>{{ text('Three ways into the Hub — understand the process, meet the team, or begin today’s work.', 'Ba lối vào Hub — hiểu quy trình, gặp đội ngũ, hoặc bắt đầu công việc hôm nay.') }}</p>
-        <div class="lh-paths">
-          <button v-for="path in paths" :key="path.code" type="button" class="lh-path" data-reveal @click="path.action">
-            <span class="lh-path__ic" aria-hidden="true">{{ path.icon }}</span>
-            <span class="lh-path__code mono">{{ path.code }}</span>
-            <strong>{{ text(path.titleEn, path.titleVi) }}</strong>
-            <span class="lh-path__body">{{ text(path.bodyEn, path.bodyVi) }}</span>
-            <span class="lh-path__go">{{ text(path.ctaEn, path.ctaVi) }} →</span>
-          </button>
-        </div>
-        <p class="lh-foot" data-reveal>{{ text('One crew. Every orbit. Every value protected.', 'Một đội ngũ. Mọi quỹ đạo. Mọi giá trị được bảo vệ.') }}</p>
+      <!-- START HERE (original station design, embedded once) -->
+      <section id="landing-start-here" class="lh-start-embed">
+        <StartHere embedded />
       </section>
     </div>
   </div>
@@ -249,29 +350,37 @@ onBeforeUnmount(() => {
 .lh-rule { width: 0; height: 2px; margin: 14px 0; background: linear-gradient(90deg, var(--color-cyan-400), transparent); }
 .lh-gutter { padding: clamp(60px, 10vh, 120px) clamp(24px, 6vw, 96px); max-width: 1320px; margin: 0 auto; }
 
-/* HERO */
-.lh-hero { position: relative; min-height: var(--lh-vh, 100dvh); display: grid; place-items: center; }
-.lh-corebox { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(62vmin, 460px); height: min(62vmin, 460px); }
-.lh-halo { position: absolute; inset: -12%; border-radius: 50%; background: radial-gradient(circle, transparent 54%, rgba(170,130,255,.16) 66%, transparent 76%); animation: lh-halo 6s ease-in-out infinite; }
-@keyframes lh-halo { 0%,100% { transform: scale(1); opacity: .8; } 50% { transform: scale(1.05); opacity: 1; } }
-.lh-ring { position: absolute; inset: -6%; width: 112%; height: 112%; animation: lh-spin 46s linear infinite; }
-.lh-ring text { fill: rgba(217,205,245,.5); font-size: 11px; letter-spacing: .36em; font-family: var(--font-mono, monospace); }
-@keyframes lh-spin { to { transform: rotate(360deg); } }
-.lh-corelogo { display: none; }
-.lh-hero-cap { position: absolute; top: 74%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: min(90%, 440px); pointer-events: none; }
-.lh-hero-tag { margin-top: 12px; color: var(--color-text-300); font-size: 13.5px; line-height: 1.6; }
-.lh-scrollcue { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--color-text-200); font-size: 9px; letter-spacing: .3em; }
+/* STAGE — linear (fallback) layout by default */
+.lh-stage { position: relative; }
+.lh-pin { position: relative; isolation: isolate; }
+.lh-nebula { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.lh-nebula > span { position: absolute; inset: -5%; }
+.lh-nebula__far { background: radial-gradient(ellipse at 32% 36%, rgb(132 83 193 / .16), transparent 44%), radial-gradient(ellipse at 76% 52%, rgb(64 86 153 / .12), transparent 48%); transform: translate3d(var(--nebula-far-x, 0px), 0, 0); }
+.lh-nebula__near { background: radial-gradient(ellipse at 58% 30%, rgb(183 148 246 / .09), transparent 30%), radial-gradient(ellipse at 24% 75%, rgb(191 139 85 / .045), transparent 36%); transform: translate3d(var(--nebula-near-x, 0px), 0, 0); }
+.lh-planet { position: relative; width: min(46vmin, 400px); height: min(46vmin, 400px); margin: clamp(24px, 6vh, 64px) auto 0; }
+.lh-hero-text { text-align: center; padding: 20px clamp(24px, 6vw, 64px) 8px; }
+.lh-eyebrow + .lh-hero-foot { margin-top: 10px; }
+.lh-hero-kicker { color: var(--color-text-200); font-size: 10px; letter-spacing: .3em; }
+.lh-hero-text h1 { font-size: clamp(40px, 7vw, 92px); font-weight: 700; letter-spacing: -.045em; line-height: 1; margin: 10px 0 0; color: var(--color-text-400); }
+.lh-hero-tag { margin-top: 14px; color: var(--color-text-300); font-size: 15px; line-height: 1.6; }
+.lh-scrollcue { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 26px; color: var(--color-text-200); font-size: 9px; letter-spacing: .3em; }
 .lh-scrollcue span { width: 1px; height: 26px; background: linear-gradient(var(--color-cyan-400), transparent); animation: lh-cue 1.8s ease-in-out infinite; }
 @keyframes lh-cue { 0%,100% { opacity: .3; transform: scaleY(.6); } 50% { opacity: 1; transform: scaleY(1); } }
-
-/* MISSION */
-.lh-mission { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr); gap: 40px; align-items: center; }
-.lh-mission p { color: var(--color-text-300); font-size: 15px; line-height: 1.75; max-width: 52ch; }
+.lh-mission-text { max-width: 640px; margin: clamp(40px, 7vh, 90px) auto 0; padding: 0 clamp(24px, 6vw, 64px); }
+.lh-mission-text p { color: var(--color-text-300); font-size: 15px; line-height: 1.75; max-width: 52ch; }
 .lh-mission__second { margin-top: 14px; }
 .lh-stats { display: flex; gap: 36px; margin-top: 30px; }
 .lh-stat b { display: block; font-size: 34px; font-weight: 600; color: var(--color-text-400); font-family: var(--font-display, 'Outfit'); }
 .lh-stat span { font-size: 9px; letter-spacing: .14em; color: var(--color-text-200); }
-.lh-memblem { position: relative; aspect-ratio: 1; width: 100%; max-width: 230px; margin: 0 auto; opacity: .85; }
+
+/* STAGE — pinned (enhanced) layout */
+.lh-stage.is-pinned { height: calc(var(--lh-vh, 100dvh) * 2.25); }
+.lh-stage.is-pinned .lh-pin { position: sticky; top: 0; height: var(--lh-vh, 100dvh); overflow: hidden; }
+.lh-stage.is-pinned .lh-planet { position: absolute; inset: 0; margin: auto; width: min(42vh, 44vmin, 440px); height: min(42vh, 44vmin, 440px); transform-origin: center; will-change: transform; top: -16%; }
+.lh-stage.is-pinned .lh-hero-text { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: clamp(22px, 5vh, 54px) 24px clamp(18px, 4vh, 40px); text-align: center; }
+.lh-stage.is-pinned .lh-hero-foot { width: 100%; }
+.lh-stage.is-pinned .lh-mission-text { position: absolute; top: 50%; left: clamp(24px, 6vw, 96px); transform: translateY(-50%); width: min(46%, 520px); max-width: none; margin: 0; padding: 0; }
+.lh-stage.is-pinned .lh-mission-text p { font-size: 14.5px; }
 
 /* VAULTS */
 .lh-constellation { position: relative; height: 520px; margin-top: 30px; }
@@ -295,30 +404,21 @@ onBeforeUnmount(() => {
 .lh-crew-cta { margin-top: 18px; min-height: 40px; padding: 8px 16px; border: 1px solid var(--color-cyan-400); border-radius: 8px; background: color-mix(in srgb, var(--color-cyan-400) 10%, transparent); color: var(--color-cyan-400); font: inherit; font-size: 13px; cursor: pointer; }
 .lh-crew-cta:hover { background: color-mix(in srgb, var(--color-cyan-400) 18%, transparent); }
 
-/* START */
-.lh-paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 30px; }
-.lh-path { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 24px; border: 1px solid var(--color-card-border); border-radius: 14px; background: linear-gradient(160deg, color-mix(in srgb, var(--space-navy) 70%, transparent), rgba(16,9,34,.5)); color: var(--color-text-400); text-align: left; cursor: pointer; transition: border-color .25s, transform .25s, background .25s; }
-.lh-path:hover { border-color: var(--color-cyan-400); transform: translateY(-4px); background: var(--color-command-bg-soft); }
-.lh-path:focus-visible { outline: 2px solid var(--color-orange-400); outline-offset: 3px; }
-.lh-path__ic { font-size: 22px; }
-.lh-path__code { font-size: 10px; letter-spacing: .14em; color: var(--color-cyan-400); }
-.lh-path strong { font-size: 18px; font-weight: 600; line-height: 1.25; }
-.lh-path__body { color: var(--color-text-300); font-size: 13px; line-height: 1.6; }
-.lh-path__go { margin-top: 6px; color: var(--color-cyan-400); font-size: 12px; }
-.lh-foot { margin-top: 28px; color: var(--color-text-200); font-size: 12px; letter-spacing: .02em; }
+/* START embed */
+.lh-start-embed { position: relative; }
 
 @media (max-width: 900px) {
-  .lh-mission { grid-template-columns: 1fr; gap: 24px; }
-  .lh-memblem { max-width: 160px; order: -1; }
-  .lh-paths { grid-template-columns: 1fr; }
+  .lh-nebula { opacity: .6; }
   .lh-constellation { height: 460px; }
   .lh-fleet { height: 440px; }
+  .lh-stats { gap: 24px; flex-wrap: wrap; }
 }
 @media (max-width: 540px) {
-  .lh-stats { gap: 22px; flex-wrap: wrap; }
+  .lh-stats { gap: 22px; }
   .lh-constellation { height: 420px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lh-halo, .lh-ring, .lh-scrollcue span, .lh-vault__orb { animation: none; }
+  .lh-nebula > span { transform: none; }
+  .lh-scrollcue span, .lh-vault__orb { animation: none; }
 }
 </style>

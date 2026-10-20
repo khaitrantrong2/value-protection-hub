@@ -75,12 +75,13 @@ function runtime() {
 const asset = (id, url, status = "Active") => ({ id, url, status, title: `Asset ${id}`, description: "", owner: "VP", country: "VN", category: "claimback-trackers", tags: [], accessNote: "" });
 const keyEvent = (key, target, extra = {}) => ({ key, target, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...extra });
 
-test("Header exposes all five destinations and current Team state without advertising an incomplete language switch", async () => {
+test("Header exposes all core destinations and current Team state without advertising an incomplete language switch", async () => {
   const app = runtime();
   try {
     app.state.view.value = "member";
     let html = await app.render("AppHeader");
-    for (const href of ["#start", "#directory", "#crew", "#atlas"]) assert.ok(html.includes(`href="${href}"`));
+    for (const href of ["#directory", "#crew", "#atlas"]) assert.ok(html.includes(`href="${href}"`));
+    assert.doesNotMatch(html, /href="#start"/);
     assert.match(html, /href="#crew" aria-current="page"/);
     assert.doesNotMatch(html, /aria-label="English"|aria-label="Tiếng Việt"|hdr__language|hdr__locale/);
     assert.match(html, /aria-controls="hub-mobile-menu"/);
@@ -101,7 +102,7 @@ test("Start here keeps three distinct routes and merges responsibilities without
     for (const lang of ["en", "vi"]) {
       app.locale.value = lang;
       const html = await app.render("StartHere");
-      assert.equal((html.match(/<h1>/g) || []).length, 1);
+      assert.equal((html.match(/<h1(?:\s[^>]*)?>/g) || []).length, 1);
       assert.equal((html.match(/<dt>/g) || []).length, 0);
       assert.equal((html.match(/class="start-station start-station--/g) || []).length, 3);
       assert.doesNotMatch(html, /<animateMotion/, 'Reduced motion suppresses introductory flight sparks');

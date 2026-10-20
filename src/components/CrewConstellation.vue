@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { gsap } from 'gsap';
 import type { CrewMember } from '../data/crew';
 import { fleetHullFor } from '../services/fleetMotion';
 import { useLinks } from '../composables/useLinks';
@@ -12,6 +13,33 @@ const props = withDefaults(defineProps<{ members: CrewMember[]; paused?: boolean
 const emit = defineEmits<{ select: [member: CrewMember] }>();
 const { memberScope } = useLinks();
 const { t, text } = useLocale();
+const fleetStage = ref<HTMLElement | null>(null);
+let arrival: gsap.Context | undefined;
+let arrived = false, mounted = false;
+
+function arriveInFormation() {
+  if (!mounted) return;
+  if (props.paused) { arrival?.revert(); arrival = undefined; return; }
+  const stage = fleetStage.value;
+  if (!stage) { arrival?.revert(); arrival = undefined; return; }
+  if (arrived) return;
+  const hulls = stage.querySelectorAll<HTMLElement>('.crewc__arrival');
+  if (!hulls.length) return;
+  arrived = true;
+  // Animate artwork only: camera, labels, hit areas and portfolio anchors never move.
+  arrival = gsap.context(() => {
+    gsap.fromTo(hulls, {
+      x: (i: number) => (placed.value[i].x - 50) * .55,
+      y: (i: number) => (placed.value[i].y - 50) * .4,
+      scale: .88, autoAlpha: 0,
+    }, {
+      x: 0, y: 0, scale: 1, autoAlpha: 1, duration: .68,
+      stagger: { amount: .16 }, ease: 'power3.out',
+      clearProps: 'transform,opacity,visibility',
+    });
+  }, stage);
+}
+watch([fleetStage, () => props.paused], arriveInFormation, { flush: 'post' });
 
 /** Fixed constellation nodes — one squadron per market plus the regional command and automation cells.
  *  Positions are visual only; they encode no rank, workload or ownership. */
@@ -65,11 +93,11 @@ const placed = computed<PlacedMember[]>(() => squads.value.flatMap(squad => {
   const k = squad.members.length;
   return squad.members.map((member, i) => {
     if (k === 1) return { member, x: squad.node.x, y: squad.node.y, squad: squad.key };
-    // Start the ring from the bottom so the node's top stays clear for its squadron label.
-    const theta = Math.PI / 2 + (i * 2 * Math.PI) / k;
+    // Centre an empty gap at the top of the ring so the squadron label never sits under a ship.
+    const theta = (3 * Math.PI / 2 - Math.PI / k) + (i * 2 * Math.PI) / k;
     return {
       member,
-      x: clampX(squad.node.x + RX * Math.cos(theta)),
+      x: clampX(squad.node.x + (squad.key === 'command' ? 10 : RX) * Math.cos(theta)),
       y: clampY(squad.node.y + RY * Math.sin(theta)),
       squad: squad.key,
     };
@@ -122,8 +150,13 @@ const tip = computed(() => {
 const narrow = ref(false);
 let mq: MediaQueryList | undefined;
 const readNarrow = () => { narrow.value = mq?.matches ?? false; };
-onMounted(() => { mq = window.matchMedia('(max-width: 680px)'); mq.addEventListener('change', readNarrow); readNarrow(); });
-onBeforeUnmount(() => mq?.removeEventListener('change', readNarrow));
+onMounted(async () => {
+  mq = window.matchMedia('(max-width: 680px)'); mq.addEventListener('change', readNarrow); readNarrow();
+  mounted = true;
+  await nextTick();
+  arriveInFormation();
+});
+onBeforeUnmount(() => { mounted = false; arrival?.revert(); mq?.removeEventListener('change', readNarrow); });
 </script>
 
 <template>
@@ -133,12 +166,12 @@ onBeforeUnmount(() => mq?.removeEventListener('change', readNarrow));
     </div>
 
     <!-- Constellation (wide) -->
-    <div v-if="!narrow" class="crewc__stage" data-protector-fleet>
+    <div v-if="!narrow" ref="fleetStage" class="crewc__stage" data-protector-fleet>
       <svg class="crewc__links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <line v-for="edge in edges" :key="edge.key" class="crewc__link" :x1="edge.x1" :y1="edge.y1" :x2="edge.x2" :y2="edge.y2" />
       </svg>
 
-      <div v-for="squad in squads" :key="squad.key" class="crewc__node" :class="{ 'is-dim': isDimmed(squad.key) }" :style="{ left: squad.node.x + '%', top: squad.node.y + '%' }">
+      <div v-for="squad in squads" :key="squad.key" class="crewc__node" :class="[{ 'is-dim': isDimmed(squad.key) }, 'crewc__node--' + squad.key]" :style="{ left: squad.node.x + '%', top: squad.node.y + '%' }">
         <span class="crewc__node-glow" aria-hidden="true"></span>
         <span class="crewc__node-label mono">{{ squad.label }}</span>
       </div>
@@ -159,7 +192,7 @@ onBeforeUnmount(() => mq?.removeEventListener('change', readNarrow));
         @blur="focused = ''"
         @click="emit('select', p.member)"
       >
-        <span class="crewc__hull" aria-hidden="true"><StarfighterIcon :arch="fleetHullFor(p.member)" :color="p.member.accent" /></span>
+        <span class="crewc__arrival" aria-hidden="true"><span class="crewc__hull"><StarfighterIcon :arch="fleetHullFor(p.member)" :color="p.member.accent" /></span></span>
         <span class="crewc__name">{{ p.member.name }}</span>
       </button>
 
@@ -203,11 +236,16 @@ onBeforeUnmount(() => mq?.removeEventListener('change', readNarrow));
 .crewc__node { position:absolute; transform:translate(-50%,-50%); display:grid; place-items:center; width:0; height:0; pointer-events:none; transition:opacity .25s; }
 .crewc__node-glow { position:absolute; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle, rgba(183,148,246,.14), transparent 68%); animation:crewc-breathe 4.2s ease-in-out infinite; }
 .crewc__node-label { position:absolute; top:-58px; white-space:nowrap; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--color-text-200); text-shadow:0 2px 6px #000; }
+.crewc__node--command .crewc__node-label { width:62px; white-space:normal; text-align:center; }
+.crewc__node--TH .crewc__node-label { top:-110px; }
+.crewc__node--PH .crewc__node-label { top:-26px; left:36px; }
+.crewc__node--VN .crewc__node-label { left:50px; }
 @keyframes crewc-breathe { 0%,100% { transform:scale(.9); opacity:.7; } 50% { transform:scale(1.12); opacity:1; } }
 
 .crewc__ship { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; width:72px; padding:4px; border:1px solid transparent; border-radius:12px; background:transparent; color:var(--color-cyan-400); font:inherit; cursor:pointer; transition:opacity .25s,border-color .18s,background .18s; z-index:2; }
 .crewc__ship.is-dim { opacity:.16; }
 .crewc__node.is-dim { opacity:.3; }
+.crewc__arrival { display:block; width:46px; height:52px; }
 .crewc__hull { width:46px; height:52px; display:grid; place-items:center; filter:drop-shadow(0 0 8px color-mix(in srgb,var(--accent) 35%,transparent)); animation:crewc-bob 4s ease-in-out infinite; }
 .crewc__ship:nth-child(odd) .crewc__hull { animation-delay:-1.3s; }
 .crewc__ship:nth-child(3n) .crewc__hull { animation-delay:-2.4s; }

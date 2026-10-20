@@ -249,6 +249,7 @@ export function useLinks() {
 
   function goHome() {
     writeRoute("home");
+    if (typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("hashchange"));
   }
 
   function openCrew() {
@@ -264,7 +265,14 @@ export function useLinks() {
     if (!member) return false;
     openMember(member); return true;
   }
-  function openStart() { writeRoute("start"); }
+  // Legacy alias: Start Here is now the final section of Home. Point #start at Home and let
+  // LandingHome scroll to its embedded Start Here section; keeps old bookmarks working.
+  function openStart() {
+    const base = window.location.pathname + window.location.search;
+    if (window.location.hash !== "#start") window.history.pushState(window.history.state, "", base + "#start");
+    view.value = "home";
+    if (typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("hashchange"));
+  }
 
   function openAtlas(stageId?: string) {
     if (stageId && /^(?:0[1-8]|A|B)$/.test(stageId)) {

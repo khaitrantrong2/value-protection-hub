@@ -1,12 +1,45 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useLinks } from '../composables/useLinks';
 import { useReducedMotion } from '../composables/useReducedMotion';
 import { useLocale } from '../i18n';
 import Icon from './Icon.vue';
+defineProps<{ embedded?: boolean }>();
 const { openAtlas, openCrew, openSector } = useLinks();
 const { t, text } = useLocale();
 const { prefersReducedMotion } = useReducedMotion();
+const routes = ref<HTMLElement | null>(null);
+const routeLine = ref<SVGSVGElement | null>(null);
+const sparksPlaying = ref(false);
+let entryObserver: IntersectionObserver | undefined;
+let entered = false, disposed = false;
+watch(prefersReducedMotion, reduced => { if (reduced) sparksPlaying.value = false; }, { flush: 'sync' });
+
+async function playFlightPaths() {
+  if (entered || disposed) return;
+  entered = true;
+  entryObserver?.disconnect();
+  // These paths are decorative and desktop-only; the three route actions stay visible.
+  if (prefersReducedMotion.value || !window.matchMedia('(min-width: 901px)').matches) return;
+  sparksPlaying.value = true;
+  await nextTick();
+  if (disposed || prefersReducedMotion.value) { sparksPlaying.value = false; return; }
+  const motions = routeLine.value?.querySelectorAll<SVGAnimationElement>('animateMotion');
+  if (!motions?.length || !Array.from(motions).every(motion => typeof motion.beginElement === 'function')) {
+    sparksPlaying.value = false;
+    return;
+  }
+  motions.forEach(motion => motion.beginElement());
+}
+
+onMounted(() => {
+  if (!routes.value || typeof IntersectionObserver === 'undefined') return;
+  entryObserver = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= .15)) void playFlightPaths();
+  }, { threshold: .15 });
+  entryObserver.observe(routes.value);
+});
+onBeforeUnmount(() => { disposed = true; entryObserver?.disconnect(); });
 const paths = computed(() => [
   { key: 'auditor', icon: 'project', code: '01', accent: 'violet', action: () => openAtlas('01') },
   { key: 'onboarding', icon: 'globe', code: '02', accent: 'gold', action: openCrew },
@@ -15,19 +48,19 @@ const paths = computed(() => [
 </script>
 
 <template>
-  <section class="start-page vph-scroll">
+  <section class="start-page" :class="[embedded ? 'start-page--embedded' : 'vph-scroll']">
     <div class="start-page__inner">
       <header class="start-page__heading">
-        <div><p class="start-page__eyebrow">VALUE PROTECTION <span aria-hidden="true">/</span> {{ text('FLIGHT PATHS', 'HÀNH TRÌNH') }}</p><h1>{{ text('Choose your flight path.', 'Chọn hành trình của bạn.') }}</h1><p class="start-page__intro">{{ t('shell.startSubtitle') }}</p></div>
+        <div><p class="start-page__eyebrow">VALUE PROTECTION <span aria-hidden="true">/</span> {{ text('FLIGHT PATHS', 'HÀNH TRÌNH') }}</p><component :is="embedded ? 'h2' : 'h1'" class="start-page__title">{{ text('Choose your flight path.', 'Chọn hành trình của bạn.') }}</component><p class="start-page__intro">{{ t('shell.startSubtitle') }}</p></div>
         <svg class="start-page__compass" viewBox="0 0 100 100" fill="none" aria-hidden="true"><circle cx="50" cy="50" r="36"/><ellipse cx="50" cy="50" rx="49" ry="13" transform="rotate(-30 50 50)"/><path d="m50 26 5 20 19 4-19 4-5 20-5-20-19-4 19-4Z"/><circle cx="50" cy="50" r="3"/></svg>
       </header>
-      <div class="start-routes">
-        <svg class="start-route-line" viewBox="0 0 1200 340" fill="none" preserveAspectRatio="none" aria-hidden="true">
+      <div ref="routes" class="start-routes">
+        <svg ref="routeLine" class="start-route-line" viewBox="0 0 1200 340" fill="none" preserveAspectRatio="none" aria-hidden="true">
           <defs><linearGradient id="flight-route-light"><stop stop-color="#c3a1ee" stop-opacity=".06"/><stop offset=".45" stop-color="#d2b98b" stop-opacity=".62"/><stop offset="1" stop-color="#ac9cda" stop-opacity=".1"/></linearGradient></defs>
           <path class="start-route-line__trace" d="M28 248C80 248 65 105 178 102M28 248C165 248 355 10 580 48M28 248C270 320 760 310 1000 128"/>
           <path class="start-route-line__ghost" d="M28 264C290 350 790 337 1138 180"/>
           <circle cx="28" cy="248" r="5" class="start-route-line__origin"/><circle cx="28" cy="248" r="14" class="start-route-line__origin-ring"/>
-          <g v-if="!prefersReducedMotion" class="start-route-line__sparks"><circle r="2.5"><animateMotion path="M28 248C80 248 65 105 178 102" dur="2.8s" begin=".2s" repeatCount="1" fill="freeze"/></circle><circle r="2"><animateMotion path="M28 248C165 248 355 10 580 48" dur="3.4s" begin=".35s" repeatCount="1" fill="freeze"/></circle><circle r="2.5"><animateMotion path="M28 248C270 320 760 310 1000 128" dur="3.8s" begin=".5s" repeatCount="1" fill="freeze"/></circle></g>
+          <g v-if="sparksPlaying && !prefersReducedMotion" class="start-route-line__sparks"><circle r="2.5"><animateMotion path="M28 248C80 248 65 105 178 102" dur="2.8s" begin="indefinite" repeatCount="1" fill="freeze"/></circle><circle r="2"><animateMotion path="M28 248C165 248 355 10 580 48" dur="3.4s" begin="indefinite" repeatCount="1" fill="freeze"/></circle><circle r="2.5"><animateMotion path="M28 248C270 320 760 310 1000 128" dur="3.8s" begin="indefinite" repeatCount="1" fill="freeze"/></circle></g>
           <path class="start-route-line__star" d="M371 103v10m-5-5h10M877 269v8m-4-4h8M1077 67v8m-4-4h8"/>
         </svg>
         <article v-for="path in paths" :key="path.key" class="start-station" :class="'start-station--' + path.accent">
@@ -42,12 +75,14 @@ const paths = computed(() => [
 
 <style scoped>
 .start-page { height:100%; overflow:auto; overscroll-behavior:contain; background:radial-gradient(ellipse at 66% 47%,rgb(109 67 158 / .1),transparent 63%); }
+.start-page--embedded { height:auto; overflow:visible; }
+.start-page--embedded .start-page__inner { padding-top:0; padding-bottom:0; }
 .start-page__inner { width:100%; max-width:1380px; margin:auto; padding:28px clamp(24px,4.4vw,64px) 24px; }
 .start-page__heading { display:flex; justify-content:space-between; align-items:center; gap:36px; }
 .start-page__heading>div { max-width:720px; }
 .start-page__eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:9px; color:var(--color-cyan-400); font-size:9px; line-height:1.5; letter-spacing:.2em; margin-bottom:12px; }
 .start-page__eyebrow>span { color:var(--color-text-200); opacity:.5; }
-h1 { margin:0; color:var(--color-text-400); font-size:clamp(29px,3.1vw,43px); font-weight:600; line-height:1.15; letter-spacing:-.04em; text-wrap:balance; }
+.start-page__title { margin:0; color:var(--color-text-400); font-size:clamp(29px,3.1vw,43px); font-weight:600; line-height:1.15; letter-spacing:-.04em; text-wrap:balance; }
 .start-page__intro { max-width:61ch; margin-top:12px; color:var(--color-text-300); font-size:14px; line-height:1.65; }
 .start-page__compass { width:90px; height:90px; margin-right:18px; flex:none; stroke:#b79bd8; stroke-width:.65; opacity:.46; transform:rotate(8deg); }.start-page__compass path { fill:rgb(187 155 216 / .1); }.start-page__compass>circle:last-child { fill:#d6be80; stroke:none; }
 .start-routes { position:relative; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(18px,3vw,42px); align-items:start; padding:10px 12px 0 34px; margin-top:18px; }

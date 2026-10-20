@@ -23,7 +23,9 @@ export function parseHubHash(hash: string): HubRoute {
   const [path, query = ""] = hash.replace(/^#/, "").split("?", 2);
   const params = new URLSearchParams(query);
   if (path === "atlas") return { ...state, view: "atlas" };
-  if (path === "crew" || path === "start") return { ...state, view: path };
+  // #start is a legacy alias: open Home; LandingHome scrolls to its embedded Start Here section.
+  if (path === "start") return { ...state, view: "home" };
+  if (path === "crew") return { ...state, view: "crew" };
   if (path === "member") {
     const id = params.get("id") ?? "";
     return { ...state, view: "member", memberId: /^[a-z][a-z0-9-]{0,63}$/.test(id) ? id : "" };

@@ -10,7 +10,7 @@ import { getLinkDestination } from '../services/linkSafety';
 import { containDialogFocus } from '../services/focusScope';
 import Icon from './Icon.vue';
 
-const { links, paletteOpen, openSector, openCrew, openAtlas, openStart, openMember, source, isLoading } = useLinks();
+const { links, paletteOpen, openSector, openCrew, openAtlas, openMember, source, isLoading } = useLinks();
 const { t, locale } = useLocale();
 const query = ref('');
 const scope = ref('all');
@@ -23,7 +23,6 @@ const results = computed<SearchResult[]>(() => {
   const q = query.value.trim();
   const items: SearchResult[] = [];
   if (!q && scope.value === 'all') items.push(
-    { id: 'start', kind: 'shortcuts', label: t('shell.start'), detail: t('shell.startSubtitle'), run: openStart },
     { id: 'directory', kind: 'shortcuts', label: t('shell.directory'), detail: t('shell.findAsset'), run: () => openSector('all') },
     { id: 'team', kind: 'shortcuts', label: t('shell.crew'), detail: t('shell.ownershipTitle'), run: openCrew },
   );
